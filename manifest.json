@@ -1,0 +1,10 @@
+{
+    "name": "Fury Bundler",
+    "short_name": "Fury",
+    "display": "standalone",
+    "orientation": "portrait",
+    "theme_color": "#041726",
+    "background_color": "#041726",
+    "start_url": "/",
+    "icons": []
+  }
