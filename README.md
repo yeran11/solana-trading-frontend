@@ -6,6 +6,10 @@
 **Solana UI** is a multi-wallet trading platform designed for the Solana blockchain.
 It provides users with a seamless interface to connect various Solana wallets and execute trades efficiently.
 
+## 📚 Docs
+
+Full documentation is available at: [https://docs.fury.bot/fury-ui/solana-ui](https://docs.fury.bot/fury-ui/solana-ui)
+
 ## Features
 
 - **Multi-Wallet Support**: Connect and manage multiple Solana wallets effortlessly.
