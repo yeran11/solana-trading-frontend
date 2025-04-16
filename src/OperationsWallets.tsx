@@ -76,7 +76,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             onClick={() => openModal('distribute')}
             className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <Share2 size={14} />
+            <Share2 size={18} />
           </button>
         </Tooltip>
 
@@ -85,7 +85,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             onClick={() => openModal('consolidate')}
             className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <Network size={14} />
+            <Network size={18} />
           </button>
         </Tooltip>
 
@@ -94,7 +94,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             onClick={() => openModal('transfer')}
             className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <Send size={14} />
+            <Send size={18} />
           </button>
         </Tooltip>
 
@@ -103,7 +103,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             onClick={() => openModal('deposit')}
             className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <HandCoins size={14} />
+            <HandCoins size={18} />
           </button>
         </Tooltip>
       </div>

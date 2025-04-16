@@ -364,9 +364,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             onClick={handleSortWallets}
                 >
                   {sortDirection === 'asc' ? (
-                    <ArrowDownAZ size={14} />
+                    <ArrowDownAZ size={18} />
                   ) : (
-                    <ArrowUpAZ size={14} />
+                    <ArrowUpAZ size={18} />
                   )}
                 </button>
               </Tooltip>
