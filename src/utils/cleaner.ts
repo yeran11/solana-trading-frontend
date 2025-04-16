@@ -17,25 +17,9 @@ export interface WalletInfo {
   privateKey: string;
 }
 
-export interface DumpWalletInfo {
-  publicKey: string;
-  secretKey: string;
-}
-
-export interface CleanerTransactions {
-  sell: string;
-  toDump: string;
-  fromDump: string;
-  buy: string;
-}
-
 interface CleanerTransactionsResponse {
   success: boolean;
-  transactions: CleanerTransactions;
-  dumpWallets: DumpWalletInfo[];
-  expectedSolAmount: string;
-  buyAmount: string;
-  expectedTokenAmount: string;
+  transactions: string[];
   error?: string;
 }
 
@@ -182,32 +166,27 @@ const signTransactionMultiple = (txBase58: string, keypairs: Keypair[]): string 
  * Complete transaction signing for all transactions in the bundle
  */
 const completeTransactionSigning = (
-  transactions: CleanerTransactions,
+  transactions: string[],
   sellerKeypair: Keypair,
-  buyerKeypair: Keypair,
-  dumpWallets: DumpWalletInfo[]
+  buyerKeypair: Keypair
 ): string[] => {
   try {
     // Sign sell transaction with seller
-    const signedSellTx = signTransaction(transactions.sell, sellerKeypair);
+    const signedSellTx = signTransaction(transactions[0], sellerKeypair);
     
     // Sign toDump transaction with seller
-    const signedToDumpTx = signTransaction(transactions.toDump, sellerKeypair);
+    const signedToDumpTx = signTransaction(transactions[1], sellerKeypair);
     
-    // Create dump wallet keypairs
-    const dumpKeypairs = dumpWallets.map(wallet => 
-      Keypair.fromSecretKey(bs58.decode(wallet.secretKey))
-    );
-    
-    // Sign fromDump transaction with dump wallets, seller (fee payer), and buyer
+    // Sign fromDump transaction with seller and buyer
+    // This transaction is already partially signed by dump wallets on the backend
     const signedFromDumpTx = signTransactionMultiple(
-      transactions.fromDump, 
-      [sellerKeypair, ...dumpKeypairs, buyerKeypair]
+      transactions[2], 
+      [sellerKeypair, buyerKeypair]
     );
     
     // Sign buy transaction with seller (fee payer) and buyer
     const signedBuyTx = signTransactionMultiple(
-      transactions.buy,
+      transactions[3],
       [sellerKeypair, buyerKeypair]
     );
     
@@ -240,18 +219,17 @@ export const executeCleanerOperation = async (
       buyPercentage
     );
     
-    console.log(`Received transaction templates and ${transactionData.dumpWallets.length} dump wallets from backend`);
+    console.log(`Received transaction templates from backend`);
     
     // Step 2: Create keypairs from private keys
     const sellerKeypair = Keypair.fromSecretKey(bs58.decode(sellerWallet.privateKey));
     const buyerKeypair = Keypair.fromSecretKey(bs58.decode(buyerWallet.privateKey));
     
-    // Step 3: Complete transaction signing
+    // Step 3: Complete transaction signing (dump wallets are already signed on the backend)
     const fullySignedTransactions = completeTransactionSigning(
       transactionData.transactions,
       sellerKeypair,
-      buyerKeypair,
-      transactionData.dumpWallets
+      buyerKeypair
     );
     console.log(`Completed signing for ${fullySignedTransactions.length} transactions`);
     
@@ -264,10 +242,7 @@ export const executeCleanerOperation = async (
     return {
       success: true,
       result: {
-        bundleResult: result,
-        expectedSolAmount: transactionData.expectedSolAmount,
-        buyAmount: transactionData.buyAmount,
-        expectedTokenAmount: transactionData.expectedTokenAmount
+        bundleResult: result
       }
     };
   } catch (error) {

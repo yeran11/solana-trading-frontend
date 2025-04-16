@@ -6,6 +6,7 @@ import { useToast } from "./Notifications";
 import { executePumpCreate, WalletForPumpCreate, TokenCreationConfig } from './utils/pumpcreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
+const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -114,6 +115,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
       if (prev.includes(privateKey)) {
         return prev.filter(key => key !== privateKey);
       }
+      // Check if already at max capacity
+      if (prev.length >= MAX_WALLETS) {
+        showToast(`Maximum ${MAX_WALLETS} wallets can be selected`, "error");
+        return prev;
+      }
       return [...prev, privateKey];
     });
   };
@@ -138,6 +144,10 @@ export const DeployModal: React.FC<DeployModalProps> = ({
       case 1:
         if (selectedWallets.length === 0) {
           showToast("Please select at least one wallet", "error");
+          return false;
+        }
+        if (selectedWallets.length > MAX_WALLETS) {
+          showToast(`Maximum ${MAX_WALLETS} wallets can be selected`, "error");
           return false;
         }
         const hasAllAmounts = selectedWallets.every(wallet => 
@@ -490,15 +500,20 @@ export const DeployModal: React.FC<DeployModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    if (selectedWallets.length === wallets.length) {
+                    if (selectedWallets.length === wallets.length || selectedWallets.length > 0) {
                       setSelectedWallets([]);
                     } else {
-                      setSelectedWallets(wallets.map(w => w.privateKey));
+                      // Only select up to MAX_WALLETS
+                      const walletsToSelect = wallets.slice(0, MAX_WALLETS);
+                      setSelectedWallets(walletsToSelect.map(w => w.privateKey));
+                      if (wallets.length > MAX_WALLETS) {
+                        showToast(`Maximum ${MAX_WALLETS} wallets can be selected`, "error");
+                      }
                     }
                   }}
                   className="text-sm text-[#02b36d] hover:text-[#7ddfbd] font-medium transition duration-200 font-mono glitch-text"
                 >
-                  {selectedWallets.length === wallets.length ? 'DESELECT ALL' : 'SELECT ALL'}
+                  {selectedWallets.length > 0 ? 'DESELECT ALL' : 'SELECT ALL'}
                 </button>
               </div>
             </div>
@@ -544,6 +559,16 @@ export const DeployModal: React.FC<DeployModalProps> = ({
               </select>
             </div>
 
+            {/* Wallet Selection Limit Info */}
+            <div className="bg-[#091217] border border-[#02b36d40] rounded-lg p-3 mb-3 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Info size={14} className="text-[#02b36d]" />
+                <span className="text-sm text-[#7ddfbd] font-mono">
+                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING DEVELOPER WALLET)
+                </span>
+              </div>
+            </div>
+
             {/* Summary Stats */}
             {selectedWallets.length > 0 && (
               <div className="bg-[#050a0e] border border-[#02b36d40] rounded-lg p-3 mb-3 shadow-lg modal-glow">
@@ -551,7 +576,7 @@ export const DeployModal: React.FC<DeployModalProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-[#7ddfbd] font-mono">SELECTED:</span>
                     <span className="text-sm font-medium text-[#02b36d] font-mono">
-                      {selectedWallets.length} WALLET{selectedWallets.length !== 1 ? 'S' : ''}
+                      {selectedWallets.length} / {MAX_WALLETS} WALLET{selectedWallets.length !== 1 ? 'S' : ''}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -660,43 +685,57 @@ export const DeployModal: React.FC<DeployModalProps> = ({
                     </div>
                   )}
                   
-                  {/* Available Wallets */}
-                  <div>
-                    <div className="text-sm font-medium text-[#7ddfbd] mb-2 font-mono uppercase tracking-wider">
-                      <span className="text-[#02b36d]">&#62;</span> Available Wallets <span className="text-[#02b36d]">&#60;</span>
-                    </div>
-                    {filterWallets(wallets.filter(w => !selectedWallets.includes(w.privateKey)), searchTerm).map((wallet) => {
-                      const solBalance = solBalances.get(wallet.address) || 0;
-                      
-                      return (
-                        <div
-                          key={wallet.id}
-                          className="flex items-center justify-between p-3 rounded-lg border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#091217] transition-all duration-200 mb-2 cursor-pointer"
-                          onClick={() => handleWalletSelection(wallet.privateKey)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-5 h-5 rounded-full border border-[#02b36d40] flex items-center justify-center cursor-pointer hover:border-[#02b36d] transition-all">
-                              <PlusCircle size={14} className="text-[#7ddfbd]" />
-                            </div>
-                            <div className="space-y-1">
-                              <span className="text-sm font-medium text-[#e4fbf2] font-mono glitch-text">
-                                {formatAddress(wallet.address)}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#7ddfbd] font-mono">BALANCE:</span>
-                                <span className="text-sm font-medium text-[#e4fbf2] font-mono">{formatSolBalance(solBalance)} SOL</span>
+                  {/* Available Wallets - Only show if we haven't reached the maximum */}
+                  {selectedWallets.length < MAX_WALLETS && (
+                    <div>
+                      <div className="text-sm font-medium text-[#7ddfbd] mb-2 font-mono uppercase tracking-wider">
+                        <span className="text-[#02b36d]">&#62;</span> Available Wallets <span className="text-[#02b36d]">&#60;</span>
+                      </div>
+                      {filterWallets(wallets.filter(w => !selectedWallets.includes(w.privateKey)), searchTerm).map((wallet) => {
+                        const solBalance = solBalances.get(wallet.address) || 0;
+                        
+                        return (
+                          <div
+                            key={wallet.id}
+                            className="flex items-center justify-between p-3 rounded-lg border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#091217] transition-all duration-200 mb-2 cursor-pointer"
+                            onClick={() => handleWalletSelection(wallet.privateKey)}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-5 h-5 rounded-full border border-[#02b36d40] flex items-center justify-center cursor-pointer hover:border-[#02b36d] transition-all">
+                                <PlusCircle size={14} className="text-[#7ddfbd]" />
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-sm font-medium text-[#e4fbf2] font-mono glitch-text">
+                                  {formatAddress(wallet.address)}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-[#7ddfbd] font-mono">BALANCE:</span>
+                                  <span className="text-sm font-medium text-[#e4fbf2] font-mono">{formatSolBalance(solBalance)} SOL</span>
+                                </div>
                               </div>
                             </div>
                           </div>
+                        );
+                      })}
+                      {filterWallets(wallets.filter(w => !selectedWallets.includes(w.privateKey)), searchTerm).length === 0 && (
+                        <div className="text-center py-4 text-[#7ddfbd] font-mono">
+                          {searchTerm ? "NO WALLETS FOUND MATCHING YOUR SEARCH" : "NO WALLETS AVAILABLE"}
                         </div>
-                      );
-                    })}
-                    {filterWallets(wallets.filter(w => !selectedWallets.includes(w.privateKey)), searchTerm).length === 0 && (
-                      <div className="text-center py-4 text-[#7ddfbd] font-mono">
-                        {searchTerm ? "NO WALLETS FOUND MATCHING YOUR SEARCH" : "NO WALLETS AVAILABLE"}
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Message when max wallets reached */}
+                  {selectedWallets.length >= MAX_WALLETS && (
+                    <div className="text-center py-4 bg-[#091217] border border-[#02b36d40] rounded-lg">
+                      <div className="text-[#02b36d] font-mono">
+                        MAXIMUM NUMBER OF WALLETS ({MAX_WALLETS}) REACHED
                       </div>
-                    )}
-                  </div>
+                      <div className="text-[#7ddfbd] text-sm font-mono mt-1">
+                        REMOVE A WALLET TO ADD A DIFFERENT ONE
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

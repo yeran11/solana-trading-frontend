@@ -136,9 +136,9 @@ const getPartiallyPreparedTransactions = async (
     }
     
     // Handle different response formats to ensure compatibility
-    if (data.bundles && Array.isArray(data.bundles)) {
+    if (data.transactions && Array.isArray(data.transactions)) {
       // Wrap any bundle that is a plain array
-      return data.bundles.map((bundle: any) =>
+      return data.transactions.map((bundle: any) =>
         Array.isArray(bundle) ? { transactions: bundle } : bundle
       );
     } else if (data.transactions && Array.isArray(data.transactions)) {
