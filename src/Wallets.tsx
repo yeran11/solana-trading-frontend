@@ -326,7 +326,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     fetchSolBalances();
                   }}
                   disabled={isRefreshing}
-                  className="text-green-500 hover:text-green-400"
+                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
                   >
                   <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                 </button>
@@ -338,7 +338,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
               >
                 <button
                   onClick={handleBalanceToggle}
-                  className="text-green-500 hover:text-green-400"
+                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
                   >
                   {showingTokenWallets ? <Coins size={18} /> : <DollarSign size={18} />}
                 </button>
@@ -351,20 +351,12 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     saveWalletsToCookies(newWallets);
                     return newWallets;
                   })}
-                  className="text-green-500 hover:text-green-400"
+                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
                   >
                   {allWalletsActive ? <Square size={18} /> : <CheckSquare size={18} />}
                 </button>
               </Tooltip>
               
-              <Tooltip content="Manage Wallets" position="bottom">
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="text-green-500 hover:text-green-400"
-                  >
-                  <Wallet size={18} />
-                </button>
-              </Tooltip>
               
               <Tooltip content={`Sort by SOL ${sortDirection === 'asc' ? '↓' : '↑'}`} position="bottom">
                 <button
@@ -376,6 +368,14 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   ) : (
                     <ArrowUpAZ size={14} />
                   )}
+                </button>
+              </Tooltip>
+              <Tooltip content="Manage Wallets" position="bottom">
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
+                  >
+                  <Wallet size={18} />
                 </button>
               </Tooltip>
             </div>

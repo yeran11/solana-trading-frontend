@@ -74,36 +74,36 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
         <Tooltip content="Distribute SOL" position="bottom">
           <button
             onClick={() => openModal('distribute')}
-            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 p-2 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
+            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <Share2 size={16} />
+            <Share2 size={14} />
           </button>
         </Tooltip>
 
         <Tooltip content="Consolidate SOL" position="bottom">
           <button
             onClick={() => openModal('consolidate')}
-            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 p-2 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
+            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <Network size={16} />
+            <Network size={14} />
           </button>
         </Tooltip>
 
         <Tooltip content="Transfer Assets" position="bottom">
           <button
             onClick={() => openModal('transfer')}
-            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 p-2 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
+            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <Send size={16} />
+            <Send size={14} />
           </button>
         </Tooltip>
 
         <Tooltip content="Deposit SOL" position="bottom">
           <button
             onClick={() => openModal('deposit')}
-            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 p-2 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
+            className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
             >
-            <HandCoins size={16} />
+            <HandCoins size={14} />
           </button>
         </Tooltip>
       </div>
