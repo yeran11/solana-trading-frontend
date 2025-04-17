@@ -4,6 +4,7 @@ import { WalletType } from '../Utils';
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;
+const MAX_WALLETS_PER_REQUEST = 5; // New constant for maximum wallets per request
 
 // Rate limiting state
 const rateLimitState = {
@@ -85,17 +86,16 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
 };
 
 /**
- * Get partially prepared pump sell transactions from backend
+ * Get partially prepared pump sell transactions from backend for a batch of wallets
  * The backend will create transactions without signing them and group them into bundles
  */
-const getPartiallyPreparedSellTransactions = async (
+const getPartiallyPreparedSellTransactionsForBatch = async (
   walletAddresses: string[], 
   tokenConfig: TokenSellConfig
 ): Promise<PumpSellBundle[]> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
-
     const response = await fetch(`${baseUrl}/api/tokens/sell`, {
       method: 'POST',
       headers: {
@@ -138,6 +138,53 @@ const getPartiallyPreparedSellTransactions = async (
     console.error('Error getting partially prepared sell transactions:', error);
     throw error;
   }
+};
+
+/**
+ * Split an array into chunks of specified size
+ */
+const chunkArray = <T>(array: T[], chunkSize: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+};
+
+/**
+ * Get partially prepared pump sell transactions from backend for all wallets
+ * Handles chunking wallets into batches of MAX_WALLETS_PER_REQUEST
+ */
+const getPartiallyPreparedSellTransactions = async (
+  walletAddresses: string[], 
+  tokenConfig: TokenSellConfig
+): Promise<PumpSellBundle[]> => {
+  // Split wallet addresses into chunks of MAX_WALLETS_PER_REQUEST (5)
+  const walletChunks = chunkArray(walletAddresses, MAX_WALLETS_PER_REQUEST);
+  console.log(`Split ${walletAddresses.length} wallets into ${walletChunks.length} chunks of max ${MAX_WALLETS_PER_REQUEST} wallets`);
+  
+  // Process each chunk and collect all bundles
+  let allBundles: PumpSellBundle[] = [];
+  
+  for (let i = 0; i < walletChunks.length; i++) {
+    const chunk = walletChunks[i];
+    console.log(`Processing wallet chunk ${i + 1}/${walletChunks.length} with ${chunk.length} wallets`);
+    
+    // Get bundles for this chunk of wallets
+    const chunkBundles = await getPartiallyPreparedSellTransactionsForBatch(chunk, tokenConfig);
+    console.log(`Received ${chunkBundles.length} bundles for wallet chunk ${i + 1}`);
+    
+    // Add to our collection of all bundles
+    allBundles = [...allBundles, ...chunkBundles];
+    
+    // Add a small delay between requests to avoid overwhelming the backend
+    if (i < walletChunks.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay
+    }
+  }
+  
+  console.log(`Total bundles collected across all wallet chunks: ${allBundles.length}`);
+  return allBundles;
 };
 
 /**
@@ -193,12 +240,12 @@ export const executePumpSell = async (
     // Extract wallet addresses
     const walletAddresses = wallets.map(wallet => wallet.address);
     
-    // Step 1: Get partially prepared bundles from backend
+    // Step 1: Get partially prepared bundles from backend (now handles chunking wallets)
     const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions(
       walletAddresses,
       tokenConfig
     );
-    console.log(`Received ${partiallyPreparedBundles.length} bundles from backend`);
+    console.log(`Received total of ${partiallyPreparedBundles.length} bundles from backend`);
     
     // Step 2: Create keypairs from private keys
     const walletKeypairs = wallets.map(wallet => 

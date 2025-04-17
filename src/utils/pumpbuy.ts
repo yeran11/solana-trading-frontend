@@ -178,9 +178,8 @@ const completeBundleSigning = (
   
   return { transactions: signedTransactions };
 };
-
 /**
- * Execute pump buy operation
+ * Execute pump buy operation with batching for wallet limitations
  */
 export const executePumpBuy = async (
   wallets: WalletPumpBuy[],
@@ -190,47 +189,77 @@ export const executePumpBuy = async (
   try {
     console.log(`Preparing to pump buy ${tokenConfig.tokenAddress} using ${wallets.length} wallets`);
     
-    // Extract wallet addresses
-    const walletAddresses = wallets.map(wallet => wallet.address);
+    // Handle batching in chunks of 5 wallets
+    const BATCH_SIZE = 5;
+    const walletBatches: WalletPumpBuy[][] = [];
     
-    // Step 1: Get partially prepared bundles from backend
-    const partiallyPreparedBundles = await getPartiallyPreparedTransactions(
-      walletAddresses,
-      tokenConfig,
-      customAmounts
-    );
-    console.log(`Received ${partiallyPreparedBundles.length} bundles from backend`);
+    // Split wallets into batches of 5
+    for (let i = 0; i < wallets.length; i += BATCH_SIZE) {
+      walletBatches.push(wallets.slice(i, i + BATCH_SIZE));
+    }
     
-    // Step 2: Create keypairs from private keys
-    const walletKeypairs = wallets.map(wallet => 
-      Keypair.fromSecretKey(bs58.decode(wallet.privateKey))
-    );
+    console.log(`Split wallets into ${walletBatches.length} batches of max ${BATCH_SIZE} wallets each`);
     
-    // Step 3: Complete transaction signing for each bundle
-    const signedBundles = partiallyPreparedBundles.map(bundle =>
-      completeBundleSigning(bundle, walletKeypairs)
-    );
-    console.log(`Completed signing for ${signedBundles.length} bundles`);
+    const allResults: BundleResult[] = [];
     
-    // Step 4: Send each bundle with rate limiting and delay between bundles
-    let results: BundleResult[] = [];
-    for (let i = 0; i < signedBundles.length; i++) {
-      const bundle = signedBundles[i];
-      console.log(`Sending bundle ${i + 1}/${signedBundles.length} with ${bundle.transactions.length} transactions`);
+    // Process each batch
+    for (let batchIndex = 0; batchIndex < walletBatches.length; batchIndex++) {
+      const walletBatch = walletBatches[batchIndex];
+      console.log(`Processing batch ${batchIndex + 1}/${walletBatches.length} with ${walletBatch.length} wallets`);
       
-      await checkRateLimit();
-      const result = await sendBundle(bundle.transactions);
-      results.push(result);
+      // Extract wallet addresses for this batch
+      const batchWalletAddresses = walletBatch.map(wallet => wallet.address);
       
-      // Add delay between bundles (except after the last one)
-      if (i < signedBundles.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+      // Extract custom amounts for this batch if provided
+      let batchCustomAmounts: number[] | undefined;
+      if (customAmounts) {
+        const startIndex = batchIndex * BATCH_SIZE;
+        batchCustomAmounts = customAmounts.slice(startIndex, startIndex + BATCH_SIZE);
+      }
+      
+      // Step 1: Get partially prepared bundles from backend for this batch
+      const partiallyPreparedBundles = await getPartiallyPreparedTransactions(
+        batchWalletAddresses,
+        tokenConfig,
+        batchCustomAmounts
+      );
+      console.log(`Received ${partiallyPreparedBundles.length} bundles from backend for batch ${batchIndex + 1}`);
+      
+      // Step 2: Create keypairs from private keys for this batch
+      const batchWalletKeypairs = walletBatch.map(wallet => 
+        Keypair.fromSecretKey(bs58.decode(wallet.privateKey))
+      );
+      
+      // Step 3: Complete transaction signing for each bundle in this batch
+      const signedBundles = partiallyPreparedBundles.map(bundle =>
+        completeBundleSigning(bundle, batchWalletKeypairs)
+      );
+      console.log(`Completed signing for ${signedBundles.length} bundles in batch ${batchIndex + 1}`);
+      
+      // Step 4: Send each bundle with rate limiting and delay between bundles
+      for (let i = 0; i < signedBundles.length; i++) {
+        const bundle = signedBundles[i];
+        console.log(`Sending bundle ${i + 1}/${signedBundles.length} from batch ${batchIndex + 1} with ${bundle.transactions.length} transactions`);
+        
+        await checkRateLimit();
+        const result = await sendBundle(bundle.transactions);
+        allResults.push(result);
+        
+        // Add delay between bundles (except after the last one)
+        if (i < signedBundles.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+        }
+      }
+      
+      // Add delay between batches (except after the last one)
+      if (batchIndex < walletBatches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between batches
       }
     }
     
     return {
       success: true,
-      result: results
+      result: allResults
     };
   } catch (error) {
     console.error('Pump buy error:', error);
@@ -240,7 +269,6 @@ export const executePumpBuy = async (
     };
   }
 };
-
 /**
  * Validate pump buy inputs
  */
