@@ -136,13 +136,15 @@ const getPartiallyPreparedTransactions = async (
     }
     
     // Handle different response formats to ensure compatibility
-    if (data.transactions && Array.isArray(data.transactions)) {
+    if (data.bundles && Array.isArray(data.bundles)) {
       // Wrap any bundle that is a plain array
-      return data.transactions.map((bundle: any) =>
+      return data.bundles.map((bundle: any) =>
         Array.isArray(bundle) ? { transactions: bundle } : bundle
       );
     } else if (data.transactions && Array.isArray(data.transactions)) {
-      // If we get a flat array of transactions, create a single bundle
+      // New format: single flat array of transactions in data.transactions
+      // Create a single bundle with all transactions
+      console.log(`Received ${data.transactions.length} transactions in flat array format`);
       return [{ transactions: data.transactions }];
     } else if (Array.isArray(data)) {
       // Legacy format where data itself is an array
