@@ -2,7 +2,6 @@
 
 <div align="center">
 
-[![GitHub Sponsors](https://img.shields.io/badge/sponsor-%E2%9D%A4-lightgrey?logo=github)](https://github.com/sponsors/furydotbot)
 [![GitHub stars](https://img.shields.io/github/stars/furydotbot/solana-ui?style=social)](https://github.com/furydotbot/solana-ui/stargazers)
 
 </div>
