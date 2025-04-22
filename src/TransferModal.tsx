@@ -124,8 +124,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         throw new Error(buildResult.error);
       }
 
-      // Step 2: Deserialize the transaction message
-      const transactionBuffer = Buffer.from(buildResult.data.transaction, 'base64');
+      // Step 2: Deserialize the transaction message from Base58
+      const transactionBuffer = Buffer.from(bs58.decode(buildResult.data.transaction));
       const messageV0 = MessageV0.deserialize(transactionBuffer);
       
       // Step 3: Create and sign the versioned transaction

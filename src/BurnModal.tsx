@@ -202,9 +202,9 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         throw new Error(prepareResult.error || 'Failed to prepare transaction');
       }
 
-      // 2. Deserialize and sign the transaction
+      // 2. Deserialize and sign the transaction (now expecting base58)
       const transactionData = prepareResult.data;
-      const transactionBuffer = Buffer.from(transactionData.transaction, 'base64');
+      const transactionBuffer = bs58.decode(transactionData.transaction); // Changed from base64 to base58
       
       // Deserialize the transaction
       const transaction = web3.VersionedTransaction.deserialize(transactionBuffer);
