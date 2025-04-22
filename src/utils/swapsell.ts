@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { WalletType } from '../Utils'; // Assuming this is the same import as in existing code
+import { loadConfigFromCookies, WalletType } from '../Utils'; // Assuming this is the same import as in existing code
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -94,6 +94,10 @@ const getPartiallyPreparedTransactions = async (
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
 
+    const config = loadConfigFromCookies();
+    // Get fee in SOL (string) with default if not found
+    const feeInSol = config?.transactionFee || '0.005';
+    const feeInLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
     const response = await fetch(`${baseUrl}/api/tokens/sell`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,7 +105,8 @@ const getPartiallyPreparedTransactions = async (
         walletAddresses,
         tokenAddress: tokenConfig.tokenAddress,
         protocol: "pumpswap",
-        percentage: tokenConfig.sellPercent
+        percentage: tokenConfig.sellPercent,
+        jitoTipLamports: feeInLamports  // Now a number in lamports
       }),
     });
 

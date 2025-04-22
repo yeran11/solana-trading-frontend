@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { WalletType } from '../Utils';
+import { loadConfigFromCookies } from '../Utils';
 
 // Constants
 const JITO_ENDPOINT = 'https://mainnet.block-engine.jito.wtf/api/v1/block-engine';
@@ -125,6 +125,10 @@ const getPartiallyPreparedSwapTransactions = async (
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
+    const config = loadConfigFromCookies();
+    // Get fee in SOL (string) with default if not found
+    const feeInSol = config?.transactionFee || '0.005';
+    const feeInLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
     const response = await fetch(`${baseUrl}/api/tokens/buy`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -134,6 +138,7 @@ const getPartiallyPreparedSwapTransactions = async (
         solAmount: swapConfig.solAmount,
         protocol: "jupiter",
         amounts: customAmounts, // Optional custom amounts per wallet
+        jitoTipLamports: feeInLamports  // Now a number in lamports
       }),
     });
 
