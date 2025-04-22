@@ -100,7 +100,7 @@ const getPartiallyPreparedSellTransactions = async (
     const config = loadConfigFromCookies();
     // Get fee in SOL (string) with default if not found
     const feeInSol = config?.transactionFee || '0.005';
-    
+    console.log(config)
     // Convert fee from SOL (string) to lamports (number)
     // 1 SOL = 1,000,000,000 lamports
     const feeInLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
