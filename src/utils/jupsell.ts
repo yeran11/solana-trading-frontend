@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { WalletType } from '../Utils';
+import { loadConfigFromCookies } from '../Utils';
 
 // Constants
 const JITO_ENDPOINT = 'https://mainnet.block-engine.jito.wtf/api/v1/block-engine';
@@ -97,6 +97,14 @@ const getPartiallyPreparedSellTransactions = async (
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
+    const config = loadConfigFromCookies();
+    // Get fee in SOL (string) with default if not found
+    const feeInSol = config?.transactionFee || '0.005';
+    
+    // Convert fee from SOL (string) to lamports (number)
+    // 1 SOL = 1,000,000,000 lamports
+    const feeInLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
+    
     const response = await fetch(`${baseUrl}/api/tokens/sell`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,7 +112,8 @@ const getPartiallyPreparedSellTransactions = async (
         walletAddresses,
         tokenAddress: sellConfig.inputMint,
         protocol: "jupiter",
-        percentage: sellConfig.sellPercent
+        percentage: sellConfig.sellPercent,
+        jitoTipLamports: feeInLamports  // Now a number in lamports
       }),
     });
 

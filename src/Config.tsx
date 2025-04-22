@@ -43,7 +43,6 @@ const Config: React.FC<ConfigProps> = ({
             />
           </div>
 
-          {/* 
           <div className="space-y-2">
             <label className="block text-sm text-neutral-400">Transaction Fee (SOL)</label>
             <input
@@ -56,7 +55,6 @@ const Config: React.FC<ConfigProps> = ({
               placeholder="Enter transaction fee"
             />
           </div>
-          */}
           <div className="pt-4">
             <button
               onClick={onSave}
