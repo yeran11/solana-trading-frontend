@@ -924,7 +924,6 @@ const WalletManager: React.FC = () => {
             <div className="absolute right-3 top-3 text-[#02b36d40] text-xs font-mono">SOL</div>
           </div>
           
-          <Tooltip content="Paste from clipboard" position="bottom">
             <button
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
               onClick={async () => {
@@ -944,16 +943,13 @@ const WalletManager: React.FC = () => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-          </Tooltip>          
           
-          <Tooltip content="Open Settings" position="bottom">
             <button 
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
               onClick={() => setIsSettingsOpen(true)}
             >
               <Settings size={20} className="text-[#02b36d]" />
             </button>
-          </Tooltip>
 
           <div className="flex items-center ml-4">
             <div className="flex flex-col items-start">
