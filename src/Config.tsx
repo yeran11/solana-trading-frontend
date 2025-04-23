@@ -123,8 +123,13 @@ const Config: React.FC<ConfigProps> = ({
       `;
       document.head.appendChild(styleElement);
       
+      // Add a class to the body to prevent scrolling when modal is open
+      document.body.style.overflow = 'hidden';
+      
       return () => {
         document.head.removeChild(styleElement);
+        // Restore scrolling when modal is closed
+        document.body.style.overflow = '';
       };
     }
   }, [isOpen]);
@@ -132,15 +137,26 @@ const Config: React.FC<ConfigProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm config-cyberpunk-container" style={{backgroundColor: 'rgba(5, 10, 14, 0.85)'}}>
-      <div className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-md overflow-hidden transform config-cyberpunk-content config-glow">
+    <div 
+      className="fixed inset-0 flex items-center justify-center backdrop-blur-sm config-cyberpunk-container" 
+      style={{
+        backgroundColor: 'rgba(5, 10, 14, 0.85)',
+        zIndex: 9999, // Extremely high z-index to ensure it's on top
+      }}
+    >
+      <div 
+        className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-md overflow-hidden transform config-cyberpunk-content config-glow"
+        style={{ zIndex: 10000 }} // Even higher z-index for the modal content
+      >
         {/* Ambient grid background */}
-        <div className="absolute inset-0 z-0 opacity-10"
-             style={{
-               backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-               backgroundSize: '20px 20px',
-               backgroundPosition: 'center center',
-             }}>
+        <div 
+          className="absolute inset-0 z-0 opacity-10"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+            backgroundPosition: 'center center',
+          }}
+        >
         </div>
 
         {/* Header */}
