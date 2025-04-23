@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, lazy } from 'react';
 import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy, ArrowUpDown, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import ServiceSelector from './Menu.tsx'; // Adjust path as needed
+
 const Config = lazy(() => import('./Config'));
 const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
 const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
@@ -44,8 +44,8 @@ const WalletManager: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [importKey, setImportKey] = useState('');
   const [config, setConfig] = useState<ConfigType>({
-    rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
-    transactionFee: '0.000005'
+    rpcEndpoint: 'https://virulent-tame-leaf.solana-mainnet.quiknode.pro/81090e1cfe6e835c4c4e927efedea9f17c7fd2e3/',
+    transactionFee: '0.005'
   });
   const [currentPage, setCurrentPage] = useState<'wallets' | 'chart' | 'actions'>('wallets');
   const [wallets, setWallets] = useState<WalletType[]>([]);
@@ -910,8 +910,13 @@ const WalletManager: React.FC = () => {
       {/* Top Navigation */}
       <nav className="relative border-b border-[#02b36d70] p-4 backdrop-blur-sm bg-[#050a0e99] z-20">
         <div className="flex items-center gap-4">
-
-        <ServiceSelector />
+          <div className="flex items-center">
+            <img 
+              src="https://i.ibb.co/wZ7PmfPF/logo-2.png" 
+              alt="Fury Bundler" 
+              className="h-12 filter drop-shadow-[0_0_8px_rgba(2,179,109,0.7)]"
+            />
+          </div>
           
           <div className="relative flex-1 mx-4">
             <input
@@ -924,6 +929,7 @@ const WalletManager: React.FC = () => {
             <div className="absolute right-3 top-3 text-[#02b36d40] text-xs font-mono">SOL</div>
           </div>
           
+          <Tooltip content="Paste from clipboard" position="bottom">
             <button
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
               onClick={async () => {
@@ -943,14 +949,17 @@ const WalletManager: React.FC = () => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
+          </Tooltip>          
           
+          <Tooltip content="Open Settings" position="bottom">
             <button 
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
               onClick={() => setIsSettingsOpen(true)}
             >
               <Settings size={20} className="text-[#02b36d]" />
             </button>
-
+          </Tooltip>
+          
           <div className="flex items-center ml-4">
             <div className="flex flex-col items-start">
               <div className="text-xs text-[#7ddfbd] font-mono uppercase tracking-wider">WALLETS</div>
