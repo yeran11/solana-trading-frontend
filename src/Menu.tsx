@@ -153,33 +153,11 @@ const CyberpunkServiceSelector = () => {
                       </svg>
                     </div>} 
                     label="Solana" 
-                    url="https://solana.com"
-                    description="Solana Explorer"
+                    url="https://app.fury.bot"
+                    description="Launchpad"
                   />
                 </motion.div>
                 
-                {/* Binance */}
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 10 },
-                    show: { opacity: 1, y: 0 }
-                  }}
-                >
-                  <CyberpunkServiceButton 
-                    icon={<div className="bg-[#F0B90B] rounded-full w-8 h-8 flex items-center justify-center">
-                      <svg viewBox="0 0 24 24" width="20" height="20">
-                        <path d="M12 7.5L7.5 12 12 16.5 16.5 12 12 7.5z" fill="#FFFFFF" />
-                        <path d="M4.5 12L0 16.5 4.5 21 9 16.5 4.5 12z" fill="#FFFFFF" />
-                        <path d="M19.5 12L15 16.5 19.5 21 24 16.5 19.5 12z" fill="#FFFFFF" />
-                        <path d="M12 0L7.5 4.5 12 9 16.5 4.5 12 0z" fill="#FFFFFF" />
-                        <path d="M12 15L9 18 12 21 15 18 12 15z" fill="#FFFFFF" />
-                      </svg>
-                    </div>} 
-                    label="Binance" 
-                    url="https://binance.com"
-                    description="Binance Exchange"
-                  />
-                </motion.div>
                 
                 {/* Docs */}
                 <motion.div
@@ -199,7 +177,7 @@ const CyberpunkServiceSelector = () => {
                       </svg>
                     </div>} 
                     label="Docs" 
-                    url="https://docs.example.com"
+                    url="https://docs.fury.bot"
                     description="Documentation"
                   />
                 </motion.div>
@@ -218,7 +196,7 @@ const CyberpunkServiceSelector = () => {
                       </svg>
                     </div>} 
                     label="GitHub" 
-                    url="https://github.com"
+                    url="https://github.com/furydotbot"
                     description="GitHub Repository"
                   />
                 </motion.div>

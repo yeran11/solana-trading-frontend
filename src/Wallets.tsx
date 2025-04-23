@@ -360,8 +360,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
               
               <Tooltip content={`Sort by SOL ${sortDirection === 'asc' ? '↓' : '↑'}`} position="bottom">
                 <button
-            className="text-green-500 hover:text-green-400"
-            onClick={handleSortWallets}
+                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
+                  onClick={handleSortWallets}
                 >
                   {sortDirection === 'asc' ? (
                     <ArrowDownAZ size={18} />
