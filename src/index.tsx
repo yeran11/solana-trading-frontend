@@ -219,7 +219,7 @@ const Root = () => {
     style.textContent = `
       /* Force all elements to have a lower z-index than our modal */
       body > div:not(#modal-root) * {
-        z-index: 9000 !important; 
+        z-index: 0 !important; 
       }
       
       /* Make our modal absolutely on top */
