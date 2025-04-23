@@ -152,7 +152,7 @@ const CyberpunkServiceSelector = () => {
                         <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H3.6c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h320.3c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="#FFFFFF"/>
                       </svg>
                     </div>} 
-                    label="Solana" 
+                    label="Launchpad" 
                     url="https://app.fury.bot"
                     description="Launchpad"
                   />
