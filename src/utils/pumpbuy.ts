@@ -98,14 +98,13 @@ const getPartiallyPreparedTransactions = async (
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
     const config = loadConfigFromCookies();
-    const API_KEY = config?.apiKey || ''
     const feeInSol = config?.transactionFee || '0.005';
     const feeInLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
     const response = await fetch(`${baseUrl}/api/tokens/buy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY 
+        'X-API-Key': config?.apiKey || '' 
       },
       body: JSON.stringify({
         walletAddresses,

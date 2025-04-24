@@ -130,7 +130,8 @@ const getPartiallyPreparedSellTransactions = async (
     const response = await fetch(`${baseUrl}/api/tokens/sell`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-API-Key': config?.apiKey || '' 
       },
       body: JSON.stringify({
         walletAddresses,
