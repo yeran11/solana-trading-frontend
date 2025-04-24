@@ -131,7 +131,7 @@ const getPartiallyPreparedSellTransactions = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': config?.apiKey || '' 
+        'x-api-key': config?.apiKey || '' 
       },
       body: JSON.stringify({
         walletAddresses,
