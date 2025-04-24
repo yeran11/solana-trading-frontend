@@ -107,7 +107,10 @@ const getPartiallyPreparedSellTransactions = async (
     
     const response = await fetch(`${baseUrl}/api/tokens/sell`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': config?.apiKey || '' 
+      },
       body: JSON.stringify({
         walletAddresses,
         tokenAddress: sellConfig.inputMint,

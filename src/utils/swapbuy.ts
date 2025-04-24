@@ -97,7 +97,10 @@ const getPartiallyPreparedTransactions = async (
     const feeInLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
     const response = await fetch(`${baseUrl}/api/tokens/buy`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': config?.apiKey || '' 
+      },
       body: JSON.stringify({
         walletAddresses,
         tokenAddress: tokenConfig.tokenAddress,
