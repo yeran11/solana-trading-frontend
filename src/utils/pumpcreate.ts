@@ -6,7 +6,6 @@ const MAX_BUNDLES_PER_SECOND = 2;
 const MAX_RETRY_ATTEMPTS = 50;
 const MAX_CONSECUTIVE_ERRORS = 3;
 const BASE_RETRY_DELAY = 200; // milliseconds
-const BASE_BUNDLE_DELAY = 300; // milliseconds
 
 // Rate limiting state (same as in pumpbuy)
 const rateLimitState = {
@@ -294,22 +293,6 @@ export const executePumpCreate = async (
       }
     }
     
-    // Send remaining bundles with parallel approach for better throughput
-    if (signedBundles.length > 1) {
-      const remainingResults = await sendRemainingBundles(signedBundles.slice(1));
-      
-      // Process results
-      remainingResults.forEach(result => {
-        if (result.success) {
-          results.push(result.result);
-          successCount++;
-        } else {
-          failureCount++;
-        }
-      });
-      
-      console.log(`Bundle sending complete: ${successCount} succeeded, ${failureCount} failed`);
-    }
     
     return {
       success: successCount > 0,
@@ -369,66 +352,4 @@ const sendFirstBundle = async (bundle: PumpCreateBundle): Promise<{success: bool
     success: false, 
     error: `Failed to send first bundle after ${attempt} attempts` 
   };
-};
-
-/**
- * Send remaining bundles with parallel processing for improved throughput
- */
-const sendRemainingBundles = async (bundles: PumpCreateBundle[]): Promise<Array<{success: boolean, result?: any, error?: string}>> => {
-  console.log(`Sending ${bundles.length} remaining bundles...`);
-  
-  const results: Array<{success: boolean, result?: any, error?: string}> = [];
-  
-  // Process bundles in sequence but with parallelized retries
-  for (let i = 0; i < bundles.length; i++) {
-    const bundle = bundles[i];
-    console.log(`Processing bundle ${i + 1}/${bundles.length} with ${bundle.transactions.length} transactions`);
-    
-    let attempt = 0;
-    let consecutiveErrors = 0;
-    let bundleSuccess = false;
-    
-    // Start multiple attempts with increasing delays
-    while (attempt < MAX_RETRY_ATTEMPTS && consecutiveErrors < MAX_CONSECUTIVE_ERRORS && !bundleSuccess) {
-      try {
-        await checkRateLimit();
-        const result = await sendBundle(bundle.transactions);
-        
-        // Success! Record and move on
-        results.push({ success: true, result });
-        bundleSuccess = true;
-        console.log(`Bundle ${i + 1} sent successfully on attempt ${attempt + 1}`);
-      } catch (error) {
-        consecutiveErrors++;
-        
-        // Determine wait time with exponential backoff
-        const waitTime = getRetryDelay(attempt);
-        
-        console.warn(`Bundle ${i + 1} attempt ${attempt + 1} failed. Retrying in ${waitTime}ms...`, error);
-        
-        // Wait before trying again
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-      
-      attempt++;
-    }
-    
-    // If all attempts failed, record failure
-    if (!bundleSuccess) {
-      results.push({ 
-        success: false, 
-        error: `Failed to send bundle ${i + 1} after ${attempt} attempts` 
-      });
-    }
-    
-    // Add delay between bundles processing
-    if (i < bundles.length - 1) {
-      // Dynamic delay based on bundle count
-      const bundleDelay = Math.floor(BASE_BUNDLE_DELAY * Math.sqrt(bundles.length));
-      console.log(`Waiting ${bundleDelay}ms before processing next bundle...`);
-      await new Promise(resolve => setTimeout(resolve, bundleDelay));
-    }
-  }
-  
-  return results;
 };

@@ -45,7 +45,8 @@ const WalletManager: React.FC = () => {
   const [importKey, setImportKey] = useState('');
   const [config, setConfig] = useState<ConfigType>({
     rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
-    transactionFee: '0.000005'
+    transactionFee: '0.000005',
+    apiKey: ''
   });
   const [currentPage, setCurrentPage] = useState<'wallets' | 'chart' | 'actions'>('wallets');
   const [wallets, setWallets] = useState<WalletType[]>([]);
