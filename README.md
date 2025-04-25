@@ -24,7 +24,7 @@ Full documentation is available at: [https://docs.fury.bot/fury-ui/solana-ui](ht
 
 ## Demo
 
-Experience the live application at: [https://bundler.fury.bot](https://bundler.fury.bot)
+Experience the live application at: [https://sol.app.fury.bot](https://sol.app.fury.bot)
 
 ## Getting Started
 
