@@ -179,7 +179,7 @@ const completeBundleSigning = (
 };
 
 /**
- * Execute ray buy operation
+ * Execute ray buy operations
  */
 export const executeLaunchBuy = async (
   wallets: WalletLaunchBuy[],
