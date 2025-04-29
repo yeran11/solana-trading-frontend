@@ -189,6 +189,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     { value: 'pumpswap', label: 'PumpSwap' },
     { value: 'raydium', label: 'Raydium' },
     { value: 'jupiter', label: 'Jupiter' },
+    { value: 'launchpad', label: 'Launchpad' },
   ];
   
   const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean) => {
