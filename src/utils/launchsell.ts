@@ -107,7 +107,7 @@ const getPartiallyPreparedTransactions = async (
       body: JSON.stringify({
         walletAddresses,
         tokenAddress: tokenConfig.tokenAddress,
-        protocol: "raydium",
+        protocol: "launchpad",
         percentage: tokenConfig.sellPercent,
         jitoTipLamports: feeInLamports  // Now a number in lamports
       }),

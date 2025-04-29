@@ -105,7 +105,7 @@ const getPartiallyPreparedTransactions = async (
         walletAddresses,
         tokenAddress: tokenConfig.tokenAddress,
         solAmount: tokenConfig.solAmount,
-        protocol: "raydium",
+        protocol: "launchpad",
         amounts: amounts, // Optional custom amounts per wallet
         jitoTipLamports: feeInLamports  // Now a number in lamports
       }),
