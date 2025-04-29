@@ -585,6 +585,103 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
       }
       return;
     }
+    // Replace the raydium branch in handleTradeSubmit with this implementation
+    if (selectedDex === 'launchpad') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+          showToast("Please activate at least one wallet", "error");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Format wallets for RayBuy/Ray
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // Ray flow - implementation unchanged
+          const tokenConfig = {
+            tokenAddress: tokenAddress,
+            solAmount: parseFloat(buyAmount)
+          };
+          
+          // Create a balance map for validation
+          const walletBalances = new Map<string, number>();
+          activeWallets.forEach(wallet => {
+            const balance = solBalances.get(wallet.address) || 0;
+            walletBalances.set(wallet.address, balance);
+          });
+          
+          // Import and validate inputs before executing
+          const { validateLaunchBuyInputs, executeLaunchBuy } = await import('./utils/launchbuy');
+          
+          const validation = validateLaunchBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log(`Executing RayBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute MoonBuy operation
+          const result = await executeLaunchBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("RayBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`RayBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // RaySell flow - implementation unchanged
+          const tokenConfig = {
+            tokenAddress: tokenAddress,
+            sellPercent: parseFloat(sellAmount)
+          };
+          
+          // Create a token balance map for validation
+          const tokenBalanceMap = new Map<string, number>();
+          activeWallets.forEach(wallet => {
+            const balance = tokenBalances.get(wallet.address) || 0;
+            tokenBalanceMap.set(wallet.address, balance);
+          });
+          
+          // Import and validate inputs before executing
+          const { validateLaunchSellInputs, executeLaunchSell } = await import('./utils/launchsell');
+          
+          const validation = validateLaunchSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log(`Executing RaySell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute RaySell operation
+          const result = await executeLaunchSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("RaySell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`RaySell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Moonshot ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
     
     // Replace the pumpswap branch in handleTradeSubmit with this implementation
     if (selectedDex === 'pumpswap') {

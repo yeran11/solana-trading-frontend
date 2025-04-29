@@ -54,6 +54,8 @@ export const maxWalletsConfig = {
   'swapsell': 120,
   'jupsell': 120,
   'moonbuy': 160,
+  'launchsell': 160,
+  'launchbuy': 160,
   'moonsell': 160
 } as const;
 
@@ -161,6 +163,8 @@ export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptTy
       return isBuyMode ? 'swapbuy' : 'swapsell';
     case 'moonshot':
       return isBuyMode ? 'moonbuy' : 'moonsell';
+    case 'launchpad':
+      return isBuyMode ? 'launchbuy' : 'launchsell';
     default:
       return isBuyMode ? 'pumpbuy' : 'pumpsell';
   }
