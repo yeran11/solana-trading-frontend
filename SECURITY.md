@@ -1,13 +1,18 @@
 # Security Policy
 
 ## Supported Versions
-We support the latest stable release of this project.  
-For older versions, security fixes are not guaranteed.
+
+We support only the latest stable release of this project.  
+Security fixes for older versions are not guaranteed.
 
 ## Reporting a Vulnerability
-If you discover a security vulnerability, we encourage you to report it privately.
 
-Please **open a GitHub issue** and prefix the title with `[SECURITY]`.  
-We will review your report as promptly as possible and take the necessary action.
+If you discover a security vulnerability, we encourage you to report it **privately** and responsibly.
 
-Thank you for helping us keep the project safe!
+- Please **open a GitHub issue** and prefix the title with `[SECURITY]`.  
+- Alternatively, you can contact us via our Support Center:  
+  👉 [https://help.fury.bot/](https://help.fury.bot/)
+
+We will review and address your report as promptly as possible.
+
+Thank you for helping us keep Fury Bot and our users safe!
