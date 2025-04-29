@@ -13,7 +13,7 @@ const rateLimitState = {
 };
 
 // Interfaces
-interface WalletRayBuy {
+interface WalletLaunchBuy {
   address: string;
   privateKey: string;
 }
@@ -23,7 +23,7 @@ interface TokenConfig {
   solAmount: number;
 }
 
-export interface RayBuyBundle {
+export interface LaunchBuyBundle {
   transactions: string[]; // Base58 encoded transaction data
 }
 
@@ -87,7 +87,7 @@ const getPartiallyPreparedTransactions = async (
   walletAddresses: string[], 
   tokenConfig: TokenConfig,
   amounts?: number[]
-): Promise<RayBuyBundle[]> => {
+): Promise<LaunchBuyBundle[]> => {
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
@@ -143,9 +143,9 @@ const getPartiallyPreparedTransactions = async (
 };
 
 const completeBundleSigning = (
-  bundle: RayBuyBundle, 
+  bundle: LaunchBuyBundle, 
   walletKeypairs: Keypair[]
-): RayBuyBundle => {
+): LaunchBuyBundle => {
   // Check if the bundle has a valid transactions array
   if (!bundle.transactions || !Array.isArray(bundle.transactions)) {
     console.error("Invalid bundle format, transactions property is missing or not an array:", bundle);
@@ -182,7 +182,7 @@ const completeBundleSigning = (
  * Execute ray buy operation
  */
 export const executeLaunchBuy = async (
-  wallets: WalletRayBuy[],
+  wallets: WalletLaunchBuy[],
   tokenConfig: TokenConfig,
   customAmounts?: number[]
 ): Promise<{ success: boolean; result?: any; error?: string }> => {
@@ -243,8 +243,8 @@ export const executeLaunchBuy = async (
 /**
  * Validate ray buy inputs
  */
-export const validateRayBuyInputs = (
-  wallets: WalletRayBuy[],
+export const validateLaunchBuyInputs = (
+  wallets: WalletLaunchBuy[],
   tokenConfig: TokenConfig,
   walletBalances: Map<string, number>
 ): { valid: boolean; error?: string } => {
