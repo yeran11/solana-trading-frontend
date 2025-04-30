@@ -6,15 +6,14 @@
 
 </div>
 
-<p align="center"> 
-  <img src="https://komarev.com/ghpvc/?username=furydotbot&label=Profile%20views&color=952bff&style=flat-square" alt="furydotbot" /> 
-</p>
-
 <p align="center">
   <img src="https://img.shields.io/badge/Built%20on-Solana-3a0ca3?style=for-the-badge&logo=solana" alt="Built on Solana" />
   <img src="https://img.shields.io/badge/Open%20Source-Yes-00b386?style=for-the-badge&logo=github" alt="Open Source" />
-  [![GitHub stars](https://img.shields.io/github/stars/furydotbot/solana-ui?style=social)](https://github.com/furydotbot/solana-ui/stargazers)
+  <a href="https://github.com/furydotbot/solana-ui/stargazers">
+    <img src="https://img.shields.io/github/stars/furydotbot/solana-ui?style=social" alt="GitHub stars" />
+  </a>
 </p>
+
 
 ![Solana UI image](https://i.imgur.com/T9IzS4k.png)
 
