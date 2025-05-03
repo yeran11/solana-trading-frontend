@@ -497,9 +497,6 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                             }}
                           />
                         </div>
-                        <div className="flex-grow overflow-hidden">
-                          <p className="text-sm text-[#7ddfbd] font-mono truncate">{tokenData.file}</p>
-                        </div>
                         <button
                           type="button"
                           onClick={() => setTokenData(prev => ({ ...prev, file: '' }))}
