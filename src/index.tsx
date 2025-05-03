@@ -44,26 +44,54 @@ interface ModalPortalProps {
 }
 
 const ModalPortal: React.FC<ModalPortalProps> = ({ isOpen, onComplete, onSkip }) => {
-  if (!isOpen) return null;
+  const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
   
-  // Get modal root element or create it if it doesn't exist
-  let modalRoot = document.getElementById('modal-root');
-  if (!modalRoot) {
-    modalRoot = document.createElement('div');
-    modalRoot.id = 'modal-root';
-    modalRoot.style.position = 'fixed';
-    modalRoot.style.top = '0';
-    modalRoot.style.left = '0';
-    modalRoot.style.width = '100vw';
-    modalRoot.style.height = '100vh';
-    modalRoot.style.zIndex = '99999'; // Super high z-index
-    modalRoot.style.pointerEvents = 'auto';
-    document.body.appendChild(modalRoot);
-  }
+  useEffect(() => {
+    // Create or get the modal root element when component mounts
+    let rootElement = document.getElementById('modal-root');
+    
+    if (!rootElement && isOpen) {
+      rootElement = document.createElement('div');
+      rootElement.id = 'modal-root';
+      document.body.appendChild(rootElement);
+    }
+    
+    setModalRoot(rootElement);
+    
+    // Clean up function
+    return () => {
+      // Only remove if we created it
+      if (rootElement && rootElement.parentNode && !isOpen) {
+        document.body.removeChild(rootElement);
+      }
+    };
+  }, [isOpen]);
   
-  // Create our own portal
+  // Apply styles only when modal is open
+  useEffect(() => {
+    if (!modalRoot) return;
+    
+    if (isOpen) {
+      modalRoot.style.position = 'fixed';
+      modalRoot.style.top = '0';
+      modalRoot.style.left = '0';
+      modalRoot.style.width = '100vw';
+      modalRoot.style.height = '100vh';
+      modalRoot.style.zIndex = '99999';
+      modalRoot.style.pointerEvents = 'auto';
+    } else {
+      // When closed, disable pointer events
+      if (modalRoot) {
+        modalRoot.style.pointerEvents = 'none';
+      }
+    }
+  }, [isOpen, modalRoot]);
+
+  if (!isOpen || !modalRoot) return null;
+  
+  // Create our portal
   return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center" 
+    <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center"
          style={{ zIndex: 99999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div className="relative z-[99999]">
         <IntroModal 
@@ -143,6 +171,9 @@ const Root = () => {
     console.log("Intro completed");
     Cookies.set(INTRO_COMPLETED_COOKIE, 'true', { expires: 365 });
     setShowIntroModal(false);
+    
+    // Ensure any modal-related elements are properly cleaned up
+    cleanupModalElements();
   };
 
   // Handler for skipping the intro
@@ -150,6 +181,27 @@ const Root = () => {
     console.log("Intro skipped");
     Cookies.set(INTRO_COMPLETED_COOKIE, 'true', { expires: 365 });
     setShowIntroModal(false);
+    
+    // Ensure any modal-related elements are properly cleaned up
+    cleanupModalElements();
+  };
+  
+  // Function to clean up any modal-related elements
+  const cleanupModalElements = () => {
+    // Force pointer-events to be enabled on the body and html
+    document.body.style.pointerEvents = 'auto';
+    document.documentElement.style.pointerEvents = 'auto';
+    
+    // Remove any lingering modal-related elements or styles
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot) {
+      modalRoot.style.pointerEvents = 'none';
+      
+      // Optional: remove the element completely
+      // if (modalRoot.parentNode) {
+      //   modalRoot.parentNode.removeChild(modalRoot);
+      // }
+    }
   };
 
   // Forcefully show the modal after a short delay
@@ -212,33 +264,6 @@ const Root = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Force all UIs to have a lower z-index than our modal
-  useEffect(() => {
-    // Create a style element
-    const style = document.createElement('style');
-    style.textContent = `
-
-      
-      /* Make our modal absolutely on top */
-      #modal-root {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 99999 !important;
-        pointer-events: auto;
-      }
-    `;
-    
-    // Add it to the head
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
   if (isChecking) {
     return <ServerCheckLoading />;
   }
@@ -247,8 +272,9 @@ const Root = () => {
     <ToastProvider>
       {serverUrl ? (
         <>
-          {/* The App component with blur effect when modal is open */}
-          <div className={showIntroModal ? 'filter blur-sm' : ''}>
+          {/* The App component without blur effect */}
+          <div className={showIntroModal ? 'filter blur-sm' : ''} 
+               style={{ pointerEvents: showIntroModal ? 'none' : 'auto' }}>
             <Suspense fallback={<ServerCheckLoading />}>
               <App />
             </Suspense>
