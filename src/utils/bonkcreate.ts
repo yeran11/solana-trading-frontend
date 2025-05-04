@@ -1,6 +1,5 @@
 import { Connection, PublicKey, Keypair, VersionedTransaction, Transaction, TransactionMessage } from '@solana/web3.js';
 import bs58 from 'bs58';
-// Removed: import axios from 'axios';
 
 // Constants for rate limiting
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -15,7 +14,7 @@ const rateLimitState = {
   maxBundlesPerSecond: MAX_BUNDLES_PER_SECOND
 };
 
-// Interfaces (remain unchanged)
+// Interfaces
 export interface WalletForBonkCreate {
   address: string;
   privateKey: string;
@@ -41,7 +40,7 @@ export interface TokenCreationConfig {
         telegram?: string;
         twitter?: string;
         website?: string;
-        file: string; // Can be a URL or path - fetch handles URLs
+        file: string;
       };
       defaultSolAmount: number;
     };
@@ -70,6 +69,15 @@ interface TransactionsData {
   error?: string;
   tokenCreation: TokenCreationInfo;
   buyerTransactions: TransactionInfo[];
+  tokenInfo?: {
+    vaultA: string;
+    vaultB: string;
+    metadata: {
+      name: string;
+      symbol: string;
+      decimals: number;
+    };
+  };
 }
 
 interface ApiResponse {
@@ -127,7 +135,7 @@ function createKeypairFromPrivateKey(privateKey: string): Keypair {
  */
 async function convertToVersionedTransaction(
   serializedTransaction: string,
-  connection: Connection // Connection is no longer strictly needed here if blockhash is present
+  connection: Connection
 ): Promise<VersionedTransaction> {
   try {
     // Deserialize the legacy transaction
@@ -137,13 +145,11 @@ async function convertToVersionedTransaction(
     // Get the blockhash (reuse the one from the legacy transaction)
     const blockhash = legacyTransaction.recentBlockhash;
     if (!blockhash) {
-      // If blockhash isn't included, it *would* need fetching, but letsbonk API should provide it.
-      // const { blockhash } = await connection.getLatestBlockhash();
       throw new Error('Transaction is missing a recent blockhash');
     }
 
     if (!legacyTransaction.feePayer) {
-        throw new Error('Transaction is missing a fee payer');
+      throw new Error('Transaction is missing a fee payer');
     }
 
     // Create a TransactionMessage
@@ -167,7 +173,7 @@ async function convertToVersionedTransaction(
 async function signTransaction(
   serializedTransaction: string,
   wallet: Keypair,
-  connection: Connection // Pass connection to converter
+  connection: Connection
 ): Promise<string> {
   try {
     // Convert to versioned transaction
@@ -247,13 +253,10 @@ const sendBundle = async (encodedTransactions: string[]): Promise<any> => {
     return responseData;
 
   } catch (error) {
-    // Log fetch-specific errors or the custom HTTP error thrown above
     console.error('Error sending bundle via fetch:', error);
-    // No need for axios specific error checking (like isAxiosError)
-    throw error; // Re-throw the error to be caught by the retry logic
+    throw error;
   }
 };
-
 
 /**
  * Exponential backoff delay with jitter
@@ -265,49 +268,57 @@ const getRetryDelay = (attempt: number): number => {
 };
 
 /**
- * Fetch launch transactions from the letsbonk API using fetch
+ * Fetch launch transactions from the new endpoint
  */
-async function fetchLaunchTransactions(
-  tokenCreationConfig: TokenCreationConfig,
+async function fetchLaunchTransactionsFromNewEndpoint(
+  tokenMetadata: TokenMetadata,
   ownerPublicKey: string,
   buyerWallets: BuyerWallet[],
-  imageBuffer: Buffer
+  initialBuyAmount: number
 ): Promise<TransactionsData> {
   try {
-    // Convert token metadata from our format to letsbonk format
-    const tokenMetadata: TokenMetadata = {
-      name: tokenCreationConfig.config.tokenCreation.metadata.name,
-      symbol: tokenCreationConfig.config.tokenCreation.metadata.symbol,
-      description: tokenCreationConfig.config.tokenCreation.metadata.description || "desc",
-      decimals: 6, // Default for letsbonk
-      supply: "1000000000000000", // Default large supply for meme tokens
-      totalSellA: "793100000000000" // Default sell allocation
+    // API endpoint for getting launch transactions
+    const apiUrl = 'https://solana.fury.bot/api/getBonkCreateTransactions';
+
+    console.log("Fetching launch transactions from new API endpoint...");
+    console.log(`Owner: ${ownerPublicKey}, Initial Buy Amount: ${initialBuyAmount}`);
+    console.log(`Token: ${tokenMetadata.name} (${tokenMetadata.symbol})`);
+    console.log(`Buyer wallets: ${buyerWallets.length}`);
+
+    const requestData = {
+      tokenMetadata,
+      ownerPublicKey,
+      buyerWallets,
+      initialBuyAmount
     };
 
-    // API endpoint for getting launch transactions
-    const apiUrl = 'https://solana.fury.bot/api/letsbonk/create';
-
-    // Create FormData object for multipart request
+    // Create FormData for multipart request (since the endpoint expects image file)
     const formData = new FormData();
+    
+    // Add all the JSON data
     formData.append('tokenMetadata', JSON.stringify(tokenMetadata));
     formData.append('ownerPublicKey', ownerPublicKey);
     formData.append('buyerWallets', JSON.stringify(buyerWallets));
-    // Ensure initialBuyAmount is a string
-    const initialBuyAmount = buyerWallets.length > 0 ? buyerWallets[0].amount.toString() : "0";
-    formData.append('initialBuyAmount', initialBuyAmount);
-
-    // Add image data to FormData
-    // Create a Blob from the Buffer first
-    const imageBlob = new Blob([imageBuffer], { type: 'image/png' }); // Assuming png, adjust if needed
-    formData.append('image', imageBlob, 'image.png');
-
-    console.log("Fetching launch transactions from API via fetch...");
+    formData.append('initialBuyAmount', initialBuyAmount.toString());
+    
+    // Add a placeholder image - we still need to provide an image even with the new endpoint
+    // This creates a small transparent PNG as a placeholder
+    const placeholderImageBlob = new Blob([
+      new Uint8Array([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+        0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+        0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+        0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+      ])
+    ], { type: 'image/png' });
+    
+    formData.append('image', placeholderImageBlob, 'placeholder.png');
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       body: formData
-      // Note: Do NOT manually set Content-Type for FormData with fetch,
-      // the browser/runtime does it automatically with the correct boundary.
     });
 
     if (!response.ok) {
@@ -318,48 +329,21 @@ async function fetchLaunchTransactions(
       throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}. Body: ${errorBody}`);
     }
 
-    const result = await response.json() as ApiResponse;
+    const result = await response.json();
 
-    if (!result.success || !result.data) {
+    if (!result.success) {
       throw new Error(result.error || 'Failed to fetch launch transactions (API indicated failure)');
     }
 
-    return result.data;
+    return result;
   } catch (error) {
-    console.error('Error fetching launch transactions via fetch:', error);
+    console.error('Error fetching launch transactions via new endpoint:', error);
     throw error;
   }
 }
 
-
 /**
- * Fetches image data from a URL using fetch and returns a Buffer
- */
-async function fetchImageAsBuffer(imageUrl: string): Promise<Buffer> {
-    try {
-        console.log(`Fetching image from: ${imageUrl}`);
-        const response = await fetch(imageUrl);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error fetching image! Status: ${response.status} ${response.statusText}`);
-        }
-
-        // Get response body as ArrayBuffer
-        const arrayBuffer = await response.arrayBuffer();
-
-        // Convert ArrayBuffer to Node.js Buffer
-        return Buffer.from(arrayBuffer);
-
-    } catch (error) {
-        console.error(`Error fetching image from ${imageUrl}:`, error);
-        throw new Error(`Failed to fetch or process token image from URL: ${imageUrl}`);
-    }
-}
-
-
-/**
- * Send first bundle with extensive retry logic - this is critical for success
- * (No changes needed here as it uses the sendBundle function which was updated)
+ * Send first bundle with extensive retry logic
  */
 const sendFirstBundle = async (transactions: string[]): Promise<{success: boolean, result?: any, error?: string}> => {
   console.log(`Sending first bundle with ${transactions.length} transactions (critical)...`);
@@ -372,7 +356,7 @@ const sendFirstBundle = async (transactions: string[]): Promise<{success: boolea
       // Apply rate limiting
       await checkRateLimit();
 
-      // Send the bundle (uses the updated fetch-based sendBundle)
+      // Send the bundle
       const result = await sendBundle(transactions);
 
       // Success!
@@ -384,7 +368,7 @@ const sendFirstBundle = async (transactions: string[]): Promise<{success: boolea
       // Determine wait time with exponential backoff
       const waitTime = getRetryDelay(attempt);
 
-      // Log the error (error object might be different from AxiosError)
+      // Log the error
       console.warn(`First bundle attempt ${attempt + 1} failed. Retrying in ${waitTime}ms... Error:`, error instanceof Error ? error.message : error);
 
       // Wait before trying again
@@ -401,16 +385,16 @@ const sendFirstBundle = async (transactions: string[]): Promise<{success: boolea
 };
 
 /**
- * Prepare and execute bonk token creation
+ * Prepare and execute bonk token creation using the new endpoint
  */
 export const executeBonkCreate = async (
   wallets: WalletForBonkCreate[],
   tokenCreationConfig: TokenCreationConfig,
   customAmounts?: number[],
-  imageBlob?: Blob // Keep accepting Blob for direct input
+  imageBlob?: Blob
 ): Promise<{ success: boolean; mintAddress?: string; poolId?: string; result?: any; error?: string }> => {
   try {
-    console.log(`Preparing to create token using ${wallets.length} wallets`);
+    console.log(`Preparing to create token using ${wallets.length} wallets with new endpoint`);
 
     if (wallets.length < 1) {
       throw new Error('At least one wallet is required for token creation');
@@ -441,31 +425,27 @@ export const executeBonkCreate = async (
       };
     });
 
-    // Get image data as Buffer
-    let imageBuffer: Buffer;
-    if (imageBlob) {
-      // Convert provided Blob to Buffer
-      console.log("Using provided image Blob.");
-      const arrayBuffer = await imageBlob.arrayBuffer();
-      imageBuffer = Buffer.from(arrayBuffer);
-    } else if (typeof tokenCreationConfig.config.tokenCreation.metadata.file === 'string' &&
-               tokenCreationConfig.config.tokenCreation.metadata.file.startsWith('http')) {
-      // Fetch image from URL if no Blob provided and file is a URL
-      console.log("Fetching image from URL specified in config.");
-      imageBuffer = await fetchImageAsBuffer(tokenCreationConfig.config.tokenCreation.metadata.file);
-    } else {
-      // Handle cases where file is a local path or invalid - this might require different handling
-      // depending on the environment (Node.js vs Browser). For now, throw an error.
-       throw new Error("Image file path provided is not a URL, and no image Blob was given. Local file paths require specific handling.");
-      // If needed in Node.js: import fs from 'fs'; imageBuffer = fs.readFileSync(tokenCreationConfig.config.tokenCreation.metadata.file);
-    }
+    // Convert token metadata from our format to API format
+    const tokenMetadata: TokenMetadata = {
+      name: tokenCreationConfig.config.tokenCreation.metadata.name,
+      symbol: tokenCreationConfig.config.tokenCreation.metadata.symbol,
+      description: tokenCreationConfig.config.tokenCreation.metadata.description || "A new token on Solana",
+      decimals: 6, // Default for letsbonk
+      supply: "1000000000000000", // Default large supply for meme tokens
+      totalSellA: "793100000000000" // Default sell allocation
+    };
 
-    // Fetch token launch transactions from the API (unsigned) using the updated fetch function
-    const transactionsData = await fetchLaunchTransactions(
-      tokenCreationConfig,
+    // Get the initial buy amount from the first buyer wallet, or use default
+    const initialBuyAmount = buyerWallets.length > 0
+      ? buyerWallets[0].amount / 1e9 // Convert lamports to SOL
+      : tokenCreationConfig.config.tokenCreation.defaultSolAmount;
+
+    // Fetch token launch transactions from the new API endpoint
+    const transactionsData = await fetchLaunchTransactionsFromNewEndpoint(
+      tokenMetadata,
       ownerPublicKey,
       buyerWallets,
-      imageBuffer // Pass the buffer directly
+      initialBuyAmount
     );
 
     console.log("Token creation and buyer transactions prepared successfully");
@@ -495,7 +475,6 @@ export const executeBonkCreate = async (
         const buyerWallet = walletKeypairs[buyerWalletIndex];
 
         // Convert to versioned transaction and sign
-        // Pass connection for potential blockhash fetching inside converter (though unlikely needed)
         const signedTx = await signTransaction(txInfo.transaction, buyerWallet, connection);
         signedBuyerTransactions.push(signedTx);
 
@@ -505,7 +484,7 @@ export const executeBonkCreate = async (
     // Combine all transactions in the correct order
     const allTransactions = [signedTokenCreationTx, ...signedBuyerTransactions];
 
-    // Send the first bundle (which is all transactions in letsbonk case)
+    // Send the first bundle (which is all transactions in this case)
     const bundleResult = await sendFirstBundle(allTransactions);
 
     if (bundleResult.success) {
@@ -526,7 +505,7 @@ export const executeBonkCreate = async (
     console.error('Bonk create error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error) // Ensure error is stringified
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 };

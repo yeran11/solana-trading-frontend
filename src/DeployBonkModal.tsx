@@ -294,13 +294,14 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       };
       
       console.log(`Starting client-side token creation with ${bonkCreateWallets.length} wallets`);
+      console.log("Using updated bonkcreate.ts with new API endpoint");
       
-      // Call our client-side execution function
+      // Call our client-side execution function with the updated implementation
       const result = await executeBonkCreate(
         bonkCreateWallets,
         tokenCreationConfig,
         customAmounts,
-        imageBlob || undefined
+        imageBlob || undefined // Image blob is still needed for the new API endpoint
       );
       
       if (result.success) {
@@ -321,6 +322,14 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         setImageBlob(null);
         setIsConfirmed(false);
         setCurrentStep(0);
+        
+        // Call the onDeploy callback with the result
+        onDeploy({
+          mintAddress: result.mintAddress,
+          poolId: result.poolId,
+          result: result.result
+        });
+        
         onClose();
       } else {
         throw new Error(result.error || "Token deployment failed");
