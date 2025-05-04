@@ -49,7 +49,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const [balanceFilter, setBalanceFilter] = useState('all');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateMintPubkey = async () => {
@@ -87,7 +86,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     
     setIsUploading(true);
     setUploadProgress(0);
-    setImageBlob(file); // Store the blob for later use
     
     try {
       const formData = new FormData();
@@ -286,7 +284,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
               telegram: tokenData.telegram,
               twitter: tokenData.twitter,
               website: tokenData.website,
-              file: tokenData.file
+              file: tokenData.file // URL to the token image
             },
             defaultSolAmount: customAmounts[0] || 0.1 // Use first wallet's amount as default
           },
@@ -294,14 +292,12 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       };
       
       console.log(`Starting client-side token creation with ${bonkCreateWallets.length} wallets`);
-      console.log("Using updated bonkcreate.ts with new API endpoint");
       
-      // Call our client-side execution function with the updated implementation
+      // Call our client-side execution function (simplified call without imageBlob)
       const result = await executeBonkCreate(
         bonkCreateWallets,
         tokenCreationConfig,
-        customAmounts,
-        imageBlob || undefined // Image blob is still needed for the new API endpoint
+        customAmounts
       );
       
       if (result.success) {
@@ -319,17 +315,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
           website: '',
           file: ''
         });
-        setImageBlob(null);
         setIsConfirmed(false);
         setCurrentStep(0);
-        
-        // Call the onDeploy callback with the result
-        onDeploy({
-          mintAddress: result.mintAddress,
-          poolId: result.poolId,
-          result: result.result
-        });
-        
         onClose();
       } else {
         throw new Error(result.error || "Token deployment failed");
@@ -469,7 +456,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                           type="button"
                           onClick={() => {
                             setTokenData(prev => ({ ...prev, file: '' }));
-                            setImageBlob(null);
                           }}
                           className="p-1.5 rounded-full hover:bg-[#091217] text-[#7ddfbd] hover:text-[#e4fbf2] transition-all"
                         >
@@ -568,6 +554,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         );
         
       case 1:
+        // Wallet selection UI content remains the same
         return (
           <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
             <div className="flex items-center justify-between mb-2">
@@ -836,6 +823,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         );
   
       case 2:
+        // Review step UI content remains the same
         return (
           <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
             <div className="flex items-center space-x-3 mb-2">
