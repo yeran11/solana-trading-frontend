@@ -285,7 +285,7 @@ async function fetchLaunchTransactions(
     };
 
     // API endpoint for getting launch transactions
-    const apiUrl = 'https://solana.fury.bot/letsbonk/create';
+    const apiUrl = 'https://solana.fury.bot/api/letsbonk/create';
 
     // Create FormData object for multipart request
     const formData = new FormData();
