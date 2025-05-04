@@ -27,6 +27,7 @@ export interface TokenMetadata {
   decimals: number;
   supply: string;
   totalSellA: string;
+  uri?: string; // Added URI field for image URL
 }
 
 export interface TokenCreationConfig {
@@ -278,14 +279,18 @@ async function fetchLaunchTransactionsFromNewEndpoint(
 ): Promise<TransactionsData> {
   try {
     // API endpoint for getting launch transactions
-
     const apiUrl = 'https://solana.fury.bot/api/letsbonk/create';
     console.log("Fetching launch transactions from new API endpoint...");
     console.log(`Owner: ${ownerPublicKey}, Initial Buy Amount: ${initialBuyAmount}`);
     console.log(`Token: ${tokenMetadata.name} (${tokenMetadata.symbol})`);
     console.log(`Buyer wallets: ${buyerWallets.length}`);
+    
+    // Validate that image URL is provided
+    if (!tokenMetadata.uri) {
+      throw new Error('Token image URL (uri) is required');
+    }
 
-    // Create standard JSON request data (not FormData)
+    // Create standard JSON request data
     const requestData = {
       tokenMetadata,
       ownerPublicKey,
@@ -323,6 +328,7 @@ async function fetchLaunchTransactionsFromNewEndpoint(
     throw error;
   }
 }
+
 /**
  * Send first bundle with extensive retry logic
  */
@@ -372,13 +378,18 @@ export const executeBonkCreate = async (
   wallets: WalletForBonkCreate[],
   tokenCreationConfig: TokenCreationConfig,
   customAmounts?: number[],
-  imageBlob?: Blob
+  imageUrl?: string // Changed from imageBlob to imageUrl
 ): Promise<{ success: boolean; mintAddress?: string; poolId?: string; result?: any; error?: string }> => {
   try {
     console.log(`Preparing to create token using ${wallets.length} wallets with new endpoint`);
 
     if (wallets.length < 1) {
       throw new Error('At least one wallet is required for token creation');
+    }
+
+    // Validate image URL
+    if (!imageUrl) {
+      throw new Error('Token image URL is required');
     }
 
     // Set up Solana connection
@@ -413,7 +424,8 @@ export const executeBonkCreate = async (
       description: tokenCreationConfig.config.tokenCreation.metadata.description || "A new token on Solana",
       decimals: 6, // Default for letsbonk
       supply: "1000000000000000", // Default large supply for meme tokens
-      totalSellA: "793100000000000" // Default sell allocation
+      totalSellA: "793100000000000", // Default sell allocation
+      uri: imageUrl // Add the image URL to the token metadata
     };
 
     // Get the initial buy amount from the first buyer wallet, or use default
