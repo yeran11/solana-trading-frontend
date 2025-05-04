@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw } from 'lucide-react';
 import { getWallets } from './Utils';
 import { useToast } from "./Notifications";
-import { executePumpCreate, WalletForPumpCreate, TokenCreationConfig } from './utils/pumpcreate';
+import { executeBonkCreate, WalletForBonkCreate, TokenCreationConfig } from './utils/bonkcreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -13,13 +13,13 @@ interface BaseModalProps {
   onClose: () => void;
 }
 
-interface DeployPumpModalProps extends BaseModalProps {
+interface DeployBonkModalProps extends BaseModalProps {
   onDeploy: (data: any) => void;
   handleRefresh: () => void;
   solBalances: Map<string, number>;
 }
 
-export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
+export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   isOpen,
   onClose,
   onDeploy,
@@ -49,6 +49,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const [balanceFilter, setBalanceFilter] = useState('all');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateMintPubkey = async () => {
@@ -86,6 +87,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
     
     setIsUploading(true);
     setUploadProgress(0);
+    setImageBlob(file); // Store the blob for later use
     
     try {
       const formData = new FormData();
@@ -211,14 +213,18 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const validateStep = () => {
     switch (currentStep) {
       case 0:
-        if (!tokenData.name || !tokenData.symbol || !tokenData.file || !mintPubkey) {
-          showToast("Name, symbol, logo image, and mint pubkey are required", "error");
+        if (!tokenData.name || !tokenData.symbol || !tokenData.file) {
+          showToast("Name, symbol, and logo image are required", "error");
           return false;
         }
         break;
       case 1:
         if (selectedWallets.length === 0) {
           showToast("Please select at least one wallet", "error");
+          return false;
+        }
+        if (selectedWallets.length < 2) {
+          showToast("At least 2 wallets are required for letsbonk (1 owner + 1 buyer)", "error");
           return false;
         }
         if (selectedWallets.length > MAX_WALLETS) {
@@ -248,13 +254,13 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
 
   const handleDeploy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isConfirmed || !mintPubkey) return;
+    if (!isConfirmed) return;
 
     setIsSubmitting(true);
     
     try {
-      // Format wallets for pump create with address and private key
-      const pumpCreateWallets: WalletForPumpCreate[] = selectedWallets.map(privateKey => {
+      // Format wallets for bonk create with address and private key
+      const bonkCreateWallets: WalletForBonkCreate[] = selectedWallets.map(privateKey => {
         const wallet = wallets.find(w => w.privateKey === privateKey);
         if (!wallet) {
           throw new Error(`Wallet not found`);
@@ -270,7 +276,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       
       // Create token configuration object
       const tokenCreationConfig: TokenCreationConfig = {
-        mintPubkey: mintPubkey,
+        mintPubkey: mintPubkey || 'auto', // If no mintPubkey is provided, use 'auto'
         config: {
           tokenCreation: {
             metadata: {
@@ -287,13 +293,14 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
         }
       };
       
-      console.log(`Starting client-side token creation with ${pumpCreateWallets.length} wallets`);
+      console.log(`Starting client-side token creation with ${bonkCreateWallets.length} wallets`);
       
-      // Call our client-side execution function instead of the backend
-      const result = await executePumpCreate(
-        pumpCreateWallets,
+      // Call our client-side execution function
+      const result = await executeBonkCreate(
+        bonkCreateWallets,
         tokenCreationConfig,
-        customAmounts
+        customAmounts,
+        imageBlob || undefined
       );
       
       if (result.success) {
@@ -311,6 +318,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
           website: '',
           file: ''
         });
+        setImageBlob(null);
         setIsConfirmed(false);
         setCurrentStep(0);
         onClose();
@@ -361,55 +369,6 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               </h3>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Mint Pubkey <span className="text-[#02b36d]">&#60;</span>
-                  </label>
-                  <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
-                    <Info size={14} className="text-[#7ddfbd] cursor-help" />
-                    {showInfoTip && (
-                      <div className="absolute left-0 bottom-full mb-2 p-2 bg-[#091217] border border-[#02b36d30] rounded shadow-lg text-xs text-[#e4fbf2] w-48 z-10 font-mono">
-                        This key is sensitive! Do not share.
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={generateMintPubkey}
-                  disabled={isGenerating}
-                  className={`px-4 py-1.5 text-sm rounded-lg transition-all flex items-center gap-1 modal-btn-cyberpunk
-                    ${isGenerating 
-                      ? 'bg-[#091217] text-[#7ddfbd] cursor-not-allowed' 
-                      : 'bg-[#091217] hover:bg-[#0a1419] border border-[#02b36d40] hover:border-[#02b36d] text-[#e4fbf2] shadow-lg hover:shadow-[#02b36d40] transform hover:-translate-y-0.5'
-                    }`}
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw size={14} className="animate-spin text-[#02b36d]" />
-                      <span className="font-mono tracking-wider">GENERATING...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw size={14} className="text-[#02b36d]" />
-                      <span className="font-mono tracking-wider">GENERATE</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={mintPubkey}
-                  onChange={(e) => setMintPubkey(e.target.value)}
-                  className="w-full pl-4 pr-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] placeholder-[#7ddfbd70] focus:outline-none focus:ring-1 focus:ring-[#02b36d50] focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
-                  placeholder="ENTER OR GENERATE A MINT PUBKEY"
-                />
-              </div>
-            </div>
-
             <div className="bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg modal-glow">
               <div className="p-6 space-y-6 relative">
                 {/* Ambient grid background */}
@@ -499,7 +458,10 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => setTokenData(prev => ({ ...prev, file: '' }))}
+                          onClick={() => {
+                            setTokenData(prev => ({ ...prev, file: '' }));
+                            setImageBlob(null);
+                          }}
                           className="p-1.5 rounded-full hover:bg-[#091217] text-[#7ddfbd] hover:text-[#e4fbf2] transition-all"
                         >
                           <X size={14} />
@@ -629,6 +591,16 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Bonk Specific Info */}
+            <div className="bg-[#091217] border border-[#02b36d40] rounded-lg p-3 mb-3 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Info size={14} className="text-[#02b36d]" />
+                <span className="text-sm text-[#7ddfbd] font-mono">
+                  FOR LETSBONK, THE FIRST WALLET WILL BE THE OWNER AND SUBSEQUENT WALLETS WILL BE BUYERS. YOU NEED AT LEAST 2 WALLETS.
+                </span>
+              </div>
+            </div>
   
             {/* Search and Filter Controls */}
             <div className="flex items-center space-x-3 mb-3">
@@ -676,7 +648,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <div className="flex items-center gap-2">
                 <Info size={14} className="text-[#02b36d]" />
                 <span className="text-sm text-[#7ddfbd] font-mono">
-                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING DEVELOPER WALLET)
+                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING OWNER WALLET)
                 </span>
               </div>
             </div>
@@ -760,7 +732,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                                 </div>
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-[#02b36d] font-mono">{index === 0 ? 'DEVELOPER' : `#${index + 1}`}</span>
+                                    <span className="text-sm font-medium text-[#02b36d] font-mono">{index === 0 ? 'OWNER' : `BUYER #${index}`}</span>
                                     <span className="text-sm font-medium text-[#e4fbf2] font-mono glitch-text">
                                       {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
                                     </span>
@@ -985,7 +957,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       return (
                         <div key={index} className="flex justify-between items-center p-3 bg-[#091217] rounded-lg mb-2 border border-[#02b36d30] hover:border-[#02b36d] transition-all">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#02b36d] text-xs font-medium w-6 font-mono">{index === 0 ? 'DEV' : `#${index + 1}`}</span>
+                            <span className="text-[#02b36d] text-xs font-medium w-16 font-mono">{index === 0 ? 'OWNER' : `BUYER #${index}`}</span>
                             <span className="font-mono text-sm text-[#e4fbf2] glitch-text">
                               {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
                             </span>
@@ -1033,7 +1005,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                     onClick={() => setIsConfirmed(!isConfirmed)}
                     className="text-sm text-[#e4fbf2] leading-relaxed cursor-pointer select-none font-mono"
                   >
-                    I CONFIRM THAT I WANT TO DEPLOY THIS TOKEN USING {selectedWallets.length} WALLET{selectedWallets.length !== 1 ? 'S' : ''}.
+                    I CONFIRM THAT I WANT TO DEPLOY THIS TOKEN USING {selectedWallets.length} WALLET{selectedWallets.length !== 1 ? 'S' : ''} ON LETSBONK.
                     THIS ACTION CANNOT BE UNDONE.
                   </label>
                 </div>
@@ -1199,7 +1171,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <PlusCircle size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPLOY PUMPFUN <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> DEPLOY LETSBONK <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 
