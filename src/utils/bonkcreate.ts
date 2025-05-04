@@ -278,13 +278,14 @@ async function fetchLaunchTransactionsFromNewEndpoint(
 ): Promise<TransactionsData> {
   try {
     // API endpoint for getting launch transactions
-    const apiUrl = 'https://solana.fury.bot/api/letsbonk/create';
+    const apiUrl = 'https://solana.fury.bot/api/getBonkCreateTransactions';
 
     console.log("Fetching launch transactions from new API endpoint...");
     console.log(`Owner: ${ownerPublicKey}, Initial Buy Amount: ${initialBuyAmount}`);
     console.log(`Token: ${tokenMetadata.name} (${tokenMetadata.symbol})`);
     console.log(`Buyer wallets: ${buyerWallets.length}`);
 
+    // Create standard JSON request data (not FormData)
     const requestData = {
       tokenMetadata,
       ownerPublicKey,
@@ -292,33 +293,14 @@ async function fetchLaunchTransactionsFromNewEndpoint(
       initialBuyAmount
     };
 
-    // Create FormData for multipart request (since the endpoint expects image file)
-    const formData = new FormData();
-    
-    // Add all the JSON data
-    formData.append('tokenMetadata', JSON.stringify(tokenMetadata));
-    formData.append('ownerPublicKey', ownerPublicKey);
-    formData.append('buyerWallets', JSON.stringify(buyerWallets));
-    formData.append('initialBuyAmount', initialBuyAmount.toString());
-    
-    // Add a placeholder image - we still need to provide an image even with the new endpoint
-    // This creates a small transparent PNG as a placeholder
-    const placeholderImageBlob = new Blob([
-      new Uint8Array([
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-        0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
-        0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-        0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
-        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
-      ])
-    ], { type: 'image/png' });
-    
-    formData.append('image', placeholderImageBlob, 'placeholder.png');
-
+    // Make a regular JSON request
     const response = await fetch(apiUrl, {
       method: 'POST',
-      body: formData
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestData)
     });
 
     if (!response.ok) {
@@ -341,7 +323,6 @@ async function fetchLaunchTransactionsFromNewEndpoint(
     throw error;
   }
 }
-
 /**
  * Send first bundle with extensive retry logic
  */
