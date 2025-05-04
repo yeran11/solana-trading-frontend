@@ -278,8 +278,8 @@ async function fetchLaunchTransactionsFromNewEndpoint(
 ): Promise<TransactionsData> {
   try {
     // API endpoint for getting launch transactions
-    const apiUrl = 'https://solana.fury.bot/api/getBonkCreateTransactions';
 
+    const apiUrl = 'https://solana.fury.bot/api/letsbonk/create';
     console.log("Fetching launch transactions from new API endpoint...");
     console.log(`Owner: ${ownerPublicKey}, Initial Buy Amount: ${initialBuyAmount}`);
     console.log(`Token: ${tokenMetadata.name} (${tokenMetadata.symbol})`);
