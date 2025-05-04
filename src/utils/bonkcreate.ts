@@ -278,7 +278,7 @@ async function fetchLaunchTransactions(
     const tokenMetadata: TokenMetadata = {
       name: tokenCreationConfig.config.tokenCreation.metadata.name,
       symbol: tokenCreationConfig.config.tokenCreation.metadata.symbol,
-      description: tokenCreationConfig.config.tokenCreation.metadata.description || "",
+      description: tokenCreationConfig.config.tokenCreation.metadata.description || "desc",
       decimals: 6, // Default for letsbonk
       supply: "1000000000000000", // Default large supply for meme tokens
       totalSellA: "793100000000000" // Default sell allocation
