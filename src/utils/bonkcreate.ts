@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Keypair, VersionedTransaction, Transaction, TransactionMessage } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 
 // Constants for rate limiting
@@ -16,60 +16,43 @@ const rateLimitState = {
 
 // Interfaces
 export interface WalletForBonkCreate {
-  address: string;
+  publicKey: string;
   privateKey: string;
+  amount?: number; // Optional amount for each wallet
 }
 
 export interface TokenMetadata {
   name: string;
   symbol: string;
-  description: string;
-  decimals: number;
-  supply: string;
-  totalSellA: string;
-  uri?: string; // Added URI field for image URL
+  description?: string;
+  decimals?: number;
+  supply?: string;
+  totalSellA?: string;
+  uri: string; // Image URL
+  telegram?: string;
+  twitter?: string;
+  website?: string;
+  createdOn?: string;
 }
 
-export interface TokenCreationConfig {
-  mintPubkey: string;
-  config: {
-    tokenCreation: {
-      metadata: {
-        name: string;
-        symbol: string;
-        description: string;
-        telegram?: string;
-        twitter?: string;
-        website?: string;
-        file: string;
-      };
-      defaultSolAmount: number;
-    };
-  };
+export interface BonkCreateConfig {
+  tokenMetadata: TokenMetadata;
+  ownerPublicKey: string;
+  initialBuyAmount: number; // SOL amount for initial buy
 }
 
-export interface BuyerWallet {
-  publicKey: string;
-  amount: number;
-}
-
-interface TransactionInfo {
-  index: number;
-  publicKey: string;
-  transaction: string;
-}
-
-interface TokenCreationInfo {
-  mint: string;
-  poolId: string;
-  transaction: string;
-}
-
-interface TransactionsData {
+export interface BonkCreateResponse {
   success: boolean;
-  error?: string;
-  tokenCreation: TokenCreationInfo;
-  buyerTransactions: TransactionInfo[];
+  tokenCreation?: {
+    transaction: string;
+    mint: string;
+    poolId: string;
+  };
+  buyerTransactions?: Array<{
+    transaction: string;
+    publicKey: string;
+    index: number;
+  }>;
   tokenInfo?: {
     vaultA: string;
     vaultB: string;
@@ -77,24 +60,9 @@ interface TransactionsData {
       name: string;
       symbol: string;
       decimals: number;
-    };
+    }
   };
-}
-
-interface ApiResponse {
-  success: boolean;
   error?: string;
-  data?: TransactionsData;
-}
-
-interface BundleResult {
-  jsonrpc: string;
-  id: number;
-  result?: string;
-  error?: {
-    code: number;
-    message: string;
-  };
 }
 
 /**
@@ -102,159 +70,51 @@ interface BundleResult {
  */
 const checkRateLimit = async (): Promise<void> => {
   const now = Date.now();
-
+  
   if (now - rateLimitState.lastReset >= 1000) {
     rateLimitState.count = 0;
     rateLimitState.lastReset = now;
   }
-
+  
   if (rateLimitState.count >= rateLimitState.maxBundlesPerSecond) {
     const waitTime = 1000 - (now - rateLimitState.lastReset);
     await new Promise(resolve => setTimeout(resolve, waitTime));
     rateLimitState.count = 0;
     rateLimitState.lastReset = Date.now();
   }
-
+  
   rateLimitState.count++;
 };
 
 /**
- * Creates a Solana keypair from a private key
+ * Send bundle to Jito block engine through backend proxy with improved error handling
  */
-function createKeypairFromPrivateKey(privateKey: string): Keypair {
+const sendBundle = async (encodedBundle: string[]): Promise<any> => {
   try {
-    const privateKeyBytes = bs58.decode(privateKey);
-    return Keypair.fromSecretKey(privateKeyBytes);
-  } catch (error) {
-    console.error('Error creating keypair from private key:', error);
-    throw error;
-  }
-}
-
-/**
- * Converts a legacy transaction to a versioned transaction
- */
-async function convertToVersionedTransaction(
-  serializedTransaction: string,
-  connection: Connection
-): Promise<VersionedTransaction> {
-  try {
-    // Deserialize the legacy transaction
-    const transactionBuffer = bs58.decode(serializedTransaction);
-    const legacyTransaction = Transaction.from(transactionBuffer);
-
-    // Get the blockhash (reuse the one from the legacy transaction)
-    const blockhash = legacyTransaction.recentBlockhash;
-    if (!blockhash) {
-      throw new Error('Transaction is missing a recent blockhash');
-    }
-
-    if (!legacyTransaction.feePayer) {
-      throw new Error('Transaction is missing a fee payer');
-    }
-
-    // Create a TransactionMessage
-    const messageV0 = new TransactionMessage({
-      payerKey: legacyTransaction.feePayer,
-      recentBlockhash: blockhash,
-      instructions: legacyTransaction.instructions
-    }).compileToV0Message();
-
-    // Create the versioned transaction
-    return new VersionedTransaction(messageV0);
-  } catch (error) {
-    console.error('Error converting to versioned transaction:', error);
-    throw error;
-  }
-}
-
-/**
- * Signs a transaction with the provided wallet, converting to versioned if needed
- */
-async function signTransaction(
-  serializedTransaction: string,
-  wallet: Keypair,
-  connection: Connection
-): Promise<string> {
-  try {
-    // Convert to versioned transaction
-    const versionedTx = await convertToVersionedTransaction(serializedTransaction, connection);
-
-    // Sign the transaction
-    versionedTx.sign([wallet]);
-
-    // Serialize and return the signed transaction
-    const signedBuffer = versionedTx.serialize();
-    return bs58.encode(signedBuffer);
-  } catch (error) {
-    console.error('Error signing transaction:', error);
-    throw error;
-  }
-}
-
-/**
- * Signs a versioned transaction with the provided wallet
- */
-function signVersionedTransaction(base64Transaction: string, wallet: Keypair): string {
-  try {
-    // Deserialize the transaction
-    const transactionBuffer = Buffer.from(base64Transaction, 'base64');
-    const versionedTx = VersionedTransaction.deserialize(transactionBuffer);
-
-    // Sign the transaction
-    versionedTx.sign([wallet]);
-
-    // Serialize and return the signed transaction
-    const signedBuffer = versionedTx.serialize();
-    return bs58.encode(signedBuffer);
-  } catch (error) {
-    console.error('Error signing versioned transaction:', error);
-    throw error;
-  }
-}
-
-/**
- * Send bundle to Fury API using fetch
- */
-const sendBundle = async (encodedTransactions: string[]): Promise<any> => {
-  const url = 'https://solana.fury.bot/api/transactions/send';
-  const headers = {
-    'accept': 'application/json',
-    'content-type': 'application/json',
-  };
-
-  // Prepare the request body
-  const data = {
-    transactions: encodedTransactions,
-    useRpc: false
-  };
-
-  console.log(`Sending ${encodedTransactions.length} transactions to Fury API via fetch`);
-
-  try {
-    const response = await fetch(url, {
+    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    
+    // Send to our backend proxy instead of directly to Jito
+    const response = await fetch(`${baseUrl}/api/transactions/send`, {
       method: 'POST',
-      headers: headers,
-      body: JSON.stringify(data)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transactions: encodedBundle
+      }),
     });
 
     if (!response.ok) {
-      // Try to get error details from the response body
-      let errorBody = 'Could not read error body';
-      try {
-        errorBody = await response.text();
-      } catch (e) {
-        // Ignore error reading body
-      }
-      throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}. Body: ${errorBody}`);
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    // Parse the JSON response
-    const responseData = await response.json();
-    return responseData;
-
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error.message || 'Unknown error from bundle server');
+    }
+    
+    return data.result;
   } catch (error) {
-    console.error('Error sending bundle via fetch:', error);
+    console.error('Error sending bundle:', error);
     throw error;
   }
 };
@@ -269,236 +129,270 @@ const getRetryDelay = (attempt: number): number => {
 };
 
 /**
- * Fetch launch transactions from the new endpoint
+ * Get partially prepared bonk create transactions from backend
  */
-async function fetchLaunchTransactionsFromNewEndpoint(
-  tokenMetadata: TokenMetadata,
-  ownerPublicKey: string,
-  buyerWallets: BuyerWallet[],
-  initialBuyAmount: number
-): Promise<TransactionsData> {
+const getPartiallyPreparedBonkTransactions = async (
+  config: BonkCreateConfig,
+  buyerWallets: WalletForBonkCreate[]
+): Promise<BonkCreateResponse> => {
   try {
-    // API endpoint for getting launch transactions
-    const apiUrl = 'https://solana.fury.bot/api/letsbonk/create';
-    console.log("Fetching launch transactions from new API endpoint...");
-    console.log(`Owner: ${ownerPublicKey}, Initial Buy Amount: ${initialBuyAmount}`);
-    console.log(`Token: ${tokenMetadata.name} (${tokenMetadata.symbol})`);
-    console.log(`Buyer wallets: ${buyerWallets.length}`);
+    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
-    // Validate that image URL is provided
-    if (!tokenMetadata.uri) {
-      throw new Error('Token image URL (uri) is required');
-    }
-
-    // Create standard JSON request data
-    const requestData = {
-      tokenMetadata,
-      ownerPublicKey,
-      buyerWallets,
-      initialBuyAmount
-    };
-
-    // Make a regular JSON request
-    const response = await fetch(apiUrl, {
+    // Format buyer wallets for the API request
+    const formattedBuyerWallets = buyerWallets.map(wallet => ({
+      publicKey: wallet.publicKey,
+      amount: wallet.amount || config.initialBuyAmount * 1e9 // Convert to lamports if not specified
+    }));
+    
+    const response = await fetch(`${baseUrl}/api/letsbonk/create`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(requestData)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tokenMetadata: config.tokenMetadata,
+        ownerPublicKey: config.ownerPublicKey,
+        buyerWallets: formattedBuyerWallets,
+        initialBuyAmount: config.initialBuyAmount
+      }),
     });
 
     if (!response.ok) {
-      let errorBody = 'Could not read error body';
-      try {
-        errorBody = await response.text();
-      } catch (e) { /* ignore */ }
-      throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}. Body: ${errorBody}`);
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch launch transactions (API indicated failure)');
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to get partially prepared bonk transactions');
     }
-
-    return result;
+    
+    return data as BonkCreateResponse;
+    
   } catch (error) {
-    console.error('Error fetching launch transactions via new endpoint:', error);
+    console.error('Error getting partially prepared bonk transactions:', error);
     throw error;
   }
-}
+};
 
 /**
- * Send first bundle with extensive retry logic
+ * Decode transaction string handling both base58 and base64 formats
  */
-const sendFirstBundle = async (transactions: string[]): Promise<{success: boolean, result?: any, error?: string}> => {
-  console.log(`Sending first bundle with ${transactions.length} transactions (critical)...`);
+const decodeTransaction = (transactionStr: string): Uint8Array => {
+  // Try base58 first
+  try {
+    return bs58.decode(transactionStr);
+  } catch (error) {
+    try {
+      // If base58 fails, try base64
+      return Buffer.from(transactionStr, 'base64');
+    } catch (error) {
+      // If both fail, log more context and rethrow
+      console.error('Failed to decode transaction. First few characters:', transactionStr.substring(0, 20));
+      throw new Error(`Could not decode transaction: ${error.message}`);
+    }
+  }
+};
 
+/**
+ * Sign a transaction for the owner wallet
+ */
+const signOwnerTransaction = (
+  transactionStr: string,
+  ownerKeypair: Keypair
+): string => {
+  try {
+    // Decode transaction with improved handling
+    const txBuffer = decodeTransaction(transactionStr);
+    const transaction = VersionedTransaction.deserialize(txBuffer);
+    
+    // Find owner's index in account keys
+    const ownerPubkey = ownerKeypair.publicKey.toBase58();
+    const accountKeys = transaction.message.staticAccountKeys;
+    
+    const signers: Keypair[] = [];
+    for (let i = 0; i < accountKeys.length; i++) {
+      if (accountKeys[i].toBase58() === ownerPubkey) {
+        signers.push(ownerKeypair);
+        break;
+      }
+    }
+    
+    // Sign the transaction
+    transaction.sign(signers);
+    
+    // Serialize and encode the signed transaction
+    return bs58.encode(transaction.serialize());
+  } catch (error) {
+    console.error('Error signing owner transaction:', error);
+    throw error;
+  }
+};
+
+/**
+ * Sign buyer transactions
+ */
+const signBuyerTransactions = (
+  buyerTransactions: Array<{
+    transaction: string;
+    publicKey: string;
+    index: number;
+  }>,
+  buyerKeypairs: Map<string, Keypair>
+): string[] => {
+  return buyerTransactions.map(txInfo => {
+    try {
+      // Get the appropriate keypair
+      const keypair = buyerKeypairs.get(txInfo.publicKey);
+      if (!keypair) {
+        throw new Error(`No keypair found for buyer: ${txInfo.publicKey}`);
+      }
+      
+      // Decode transaction with improved handling
+      const txBuffer = decodeTransaction(txInfo.transaction);
+      const transaction = VersionedTransaction.deserialize(txBuffer);
+      
+      // Sign with the buyer's keypair
+      transaction.sign([keypair]);
+      
+      // Return serialized and encoded transaction
+      return bs58.encode(transaction.serialize());
+    } catch (error) {
+      console.error(`Error signing transaction for buyer ${txInfo.publicKey}:`, error);
+      throw error;
+    }
+  });
+};
+
+/**
+ * Send first bundle with extensive retry logic - this is critical for success
+ */
+const sendFirstBundle = async (bundle: string[]): Promise<{success: boolean, result?: any, error?: string}> => {
+  console.log(`Sending first bundle with ${bundle.length} transactions (critical)...`);
+  
   let attempt = 0;
   let consecutiveErrors = 0;
-
+  
   while (attempt < MAX_RETRY_ATTEMPTS && consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
     try {
       // Apply rate limiting
       await checkRateLimit();
-
+      
       // Send the bundle
-      const result = await sendBundle(transactions);
-
+      const result = await sendBundle(bundle);
+      
       // Success!
       console.log(`First bundle sent successfully on attempt ${attempt + 1}`);
       return { success: true, result };
     } catch (error) {
       consecutiveErrors++;
-
+      
       // Determine wait time with exponential backoff
       const waitTime = getRetryDelay(attempt);
-
-      // Log the error
-      console.warn(`First bundle attempt ${attempt + 1} failed. Retrying in ${waitTime}ms... Error:`, error instanceof Error ? error.message : error);
-
+      
+      console.warn(`First bundle attempt ${attempt + 1} failed. Retrying in ${waitTime}ms...`, error);
+      
       // Wait before trying again
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-
+    
     attempt++;
   }
-
-  return {
-    success: false,
-    error: `Failed to send first bundle after ${attempt} attempts`
+  
+  return { 
+    success: false, 
+    error: `Failed to send first bundle after ${attempt} attempts` 
   };
 };
 
 /**
- * Prepare and execute bonk token creation using the new endpoint
+ * Execute bonk token creation operation
  */
 export const executeBonkCreate = async (
-  wallets: WalletForBonkCreate[],
-  tokenCreationConfig: TokenCreationConfig,
-  customAmounts?: number[],
-  imageUrl?: string // Changed from imageBlob to imageUrl
-): Promise<{ success: boolean; mintAddress?: string; poolId?: string; result?: any; error?: string }> => {
+  config: BonkCreateConfig,
+  ownerWallet: { publicKey: string, privateKey: string },
+  buyerWallets: WalletForBonkCreate[]
+): Promise<{ 
+  success: boolean; 
+  mintAddress?: string; 
+  poolId?: string;
+  result?: any; 
+  error?: string 
+}> => {
   try {
-    console.log(`Preparing to create token using ${wallets.length} wallets with new endpoint`);
-
-    if (wallets.length < 1) {
-      throw new Error('At least one wallet is required for token creation');
-    }
-
-    // Validate image URL
-    if (!imageUrl) {
-      throw new Error('Token image URL is required');
-    }
-
-    // Set up Solana connection
-    const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-
-    // Create keypairs from private keys
-    const walletKeypairs = wallets.map(wallet =>
-      createKeypairFromPrivateKey(wallet.privateKey)
+    console.log(`Preparing to create token with name: ${config.tokenMetadata.name} using ${buyerWallets.length} buyer wallets`);
+    
+    // Step 1: Get partially prepared transactions from backend
+    const preparedData = await getPartiallyPreparedBonkTransactions(
+      config,
+      buyerWallets
     );
-
-    // Owner wallet is the first wallet
-    const ownerWallet = walletKeypairs[0];
-    const ownerPublicKey = ownerWallet.publicKey.toString();
-
-    // Format buyer wallets (all wallets except the first one)
-    const buyerWallets: BuyerWallet[] = wallets.slice(1).map((wallet, index) => {
-      // Index for customAmounts needs to align with the original wallets array (index + 1)
-      const amount = customAmounts && customAmounts[index + 1] !== undefined
-        ? customAmounts[index + 1] * 1e9 // Convert SOL to lamports
-        : tokenCreationConfig.config.tokenCreation.defaultSolAmount * 1e9;
-
-      return {
-        publicKey: wallet.address,
-        amount: amount
-      };
+    
+    if (!preparedData.success || !preparedData.tokenCreation) {
+      throw new Error(preparedData.error || 'Failed to prepare bonk token creation');
+    }
+    
+    console.log(`Token mint address: ${preparedData.tokenCreation.mint}`);
+    console.log(`Pool ID: ${preparedData.tokenCreation.poolId}`);
+    
+    // Step 2: Create keypairs from private keys
+    const ownerKeypair = Keypair.fromSecretKey(bs58.decode(ownerWallet.privateKey));
+    
+    const buyerKeypairsMap = new Map<string, Keypair>();
+    buyerWallets.forEach(wallet => {
+      buyerKeypairsMap.set(
+        wallet.publicKey, 
+        Keypair.fromSecretKey(bs58.decode(wallet.privateKey))
+      );
     });
-
-    // Convert token metadata from our format to API format
-    const tokenMetadata: TokenMetadata = {
-      name: tokenCreationConfig.config.tokenCreation.metadata.name,
-      symbol: tokenCreationConfig.config.tokenCreation.metadata.symbol,
-      description: tokenCreationConfig.config.tokenCreation.metadata.description || "A new token on Solana",
-      decimals: 6, // Default for letsbonk
-      supply: "1000000000000000", // Default large supply for meme tokens
-      totalSellA: "793100000000000", // Default sell allocation
-      uri: imageUrl // Add the image URL to the token metadata
-    };
-
-    // Get the initial buy amount from the first buyer wallet, or use default
-    const initialBuyAmount = buyerWallets.length > 0
-      ? buyerWallets[0].amount / 1e9 // Convert lamports to SOL
-      : tokenCreationConfig.config.tokenCreation.defaultSolAmount;
-
-    // Fetch token launch transactions from the new API endpoint
-    const transactionsData = await fetchLaunchTransactionsFromNewEndpoint(
-      tokenMetadata,
-      ownerPublicKey,
-      buyerWallets,
-      initialBuyAmount
+    
+    // Step 3: Sign transactions
+    // Sign owner's token creation transaction
+    const signedOwnerTx = signOwnerTransaction(
+      preparedData.tokenCreation.transaction,
+      ownerKeypair
     );
-
-    console.log("Token creation and buyer transactions prepared successfully");
-    console.log(`Mint Address: ${transactionsData.tokenCreation.mint}`);
-    console.log(`Pool ID: ${transactionsData.tokenCreation.poolId}`);
-
-    // Sign the token creation transaction (already versioned)
-    const signedTokenCreationTx = signVersionedTransaction(
-      transactionsData.tokenCreation.transaction,
-      ownerWallet
-    );
-
-    console.log("Token creation transaction signed successfully");
-
-    // Sign buyer transactions (convert to versioned transactions first)
-    const signedBuyerTransactions: string[] = [];
-
-    for (const txInfo of transactionsData.buyerTransactions) {
-        // Find the correct buyer wallet keypair. Buyer wallets start at index 1 of walletKeypairs.
-        const buyerWalletIndex = walletKeypairs.findIndex((kp, idx) => idx > 0 && kp.publicKey.toString() === txInfo.publicKey);
-
-        if (buyerWalletIndex === -1) {
-             console.warn(`No matching keypair found for buyer public key ${txInfo.publicKey} provided by API, skipping transaction index ${txInfo.index}`);
-            continue;
-        }
-
-        const buyerWallet = walletKeypairs[buyerWalletIndex];
-
-        // Convert to versioned transaction and sign
-        const signedTx = await signTransaction(txInfo.transaction, buyerWallet, connection);
-        signedBuyerTransactions.push(signedTx);
-
-        console.log(`Converted and signed buyer transaction for wallet: ${txInfo.publicKey}`);
-    }
-
-    // Combine all transactions in the correct order
-    const allTransactions = [signedTokenCreationTx, ...signedBuyerTransactions];
-
-    // Send the first bundle (which is all transactions in this case)
+    
+    // Sign buyer transactions if they exist
+    const signedBuyerTxs = preparedData.buyerTransactions ? 
+      signBuyerTransactions(preparedData.buyerTransactions, buyerKeypairsMap) : 
+      [];
+    
+    // Step 4: Create a single bundle with all transactions
+    // Add owner transaction first followed by all buyer transactions
+    const allTransactions = [signedOwnerTx, ...signedBuyerTxs];
+    
+    console.log(`Creating one bundle with ${allTransactions.length} transactions (1 owner + ${signedBuyerTxs.length} buyer transactions)`);
+    
+    // Step 5: Send the single bundle with all transactions
+    // This ensures all transactions land in the same block (like pumpfun)
     const bundleResult = await sendFirstBundle(allTransactions);
-
-    if (bundleResult.success) {
-      console.log("Transaction bundle submitted successfully");
-      return {
-        success: true,
-        mintAddress: transactionsData.tokenCreation.mint,
-        poolId: transactionsData.tokenCreation.poolId,
-        result: bundleResult.result
-      };
-    } else {
+    if (!bundleResult.success) {
       return {
         success: false,
-        error: bundleResult.error || "Failed to send transactions"
+        error: bundleResult.error || 'Failed to send transactions bundle'
       };
     }
+    
+    console.log("✅ All transactions sent successfully in one bundle!");
+    
+    // Simple result count
+    const successCount = 1; // Count as one successful bundle
+    const failureCount = 0;
+    
+    return {
+      success: true,
+      mintAddress: preparedData.tokenCreation.mint,
+      poolId: preparedData.tokenCreation.poolId,
+      result: {
+        totalBundles: 1, // Only one bundle now
+        successCount,
+        failureCount
+      }
+    };
   } catch (error) {
     console.error('Bonk create error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error.message
     };
   }
 };

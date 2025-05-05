@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw } from 'lucide-react';
 import { getWallets } from './Utils';
 import { useToast } from "./Notifications";
-import { executeBonkCreate, WalletForBonkCreate, TokenCreationConfig } from './utils/bonkcreate';
+import { executeBonkCreate, WalletForBonkCreate, TokenMetadata, BonkCreateConfig } from './utils/bonkcreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -30,16 +30,20 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [mintPubkey, setMintPubkey] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [tokenData, setTokenData] = useState({
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [tokenData, setTokenData] = useState<TokenMetadata>({
     name: '',
     symbol: '',
     description: '',
+    decimals: 6,
+    supply: '1000000000000000',
+    totalSellA: '793100000000000',
     telegram: '',
     twitter: '',
     website: '',
-    file: ''
+    createdOn: 'https://bonk.fun',
+    uri: '' // image URL
   });
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,24 +51,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const [sortOption, setSortOption] = useState('address');
   const [sortDirection, setSortDirection] = useState('asc');
   const [balanceFilter, setBalanceFilter] = useState('all');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const generateMintPubkey = async () => {
-    setIsGenerating(true);
-    try {
-      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
-      const mintResponse = await fetch(`${baseUrl}/api/utilities/generate-mint`);
-      const data = await mintResponse.json();
-      setMintPubkey(data.pubkey);
-      showToast("Mint pubkey generated successfully", "success");
-    } catch (error) {
-      console.error('Error generating mint pubkey:', error);
-      showToast("Failed to generate mint pubkey", "error");
-    }
-    setIsGenerating(false);
-  };
 
   // Function to handle image upload
   const handleImageUpload = async (e) => {
@@ -108,7 +95,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           const response = JSON.parse(xhr.responseText);
-          setTokenData(prev => ({ ...prev, file: response.url }));
+          setTokenData(prev => ({ ...prev, uri: response.url }));
           showToast("Image uploaded successfully", "success");
         } else {
           showToast("Failed to upload image", "error");
@@ -211,18 +198,14 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const validateStep = () => {
     switch (currentStep) {
       case 0:
-        if (!tokenData.name || !tokenData.symbol || !tokenData.file) {
-          showToast("Name, symbol, and logo image are required", "error");
+        if (!tokenData.name || !tokenData.symbol || !tokenData.uri || !tokenData.description) {
+          showToast("Name, symbol, description and logo image are required", "error");
           return false;
         }
         break;
       case 1:
         if (selectedWallets.length === 0) {
           showToast("Please select at least one wallet", "error");
-          return false;
-        }
-        if (selectedWallets.length < 2) {
-          showToast("At least 2 wallets are required for letsbonk (1 owner + 1 buyer)", "error");
           return false;
         }
         if (selectedWallets.length > MAX_WALLETS) {
@@ -257,47 +240,48 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Format wallets for bonk create with address and private key
-      const bonkCreateWallets: WalletForBonkCreate[] = selectedWallets.map(privateKey => {
+      // Get owner wallet (first wallet)
+      if (selectedWallets.length === 0) {
+        throw new Error("No wallets selected");
+      }
+      
+      const ownerPrivateKey = selectedWallets[0];
+      const ownerWallet = wallets.find(w => w.privateKey === ownerPrivateKey);
+      
+      if (!ownerWallet) {
+        throw new Error("Owner wallet not found");
+      }
+      
+      // Format buyer wallets (all wallets except the first/owner)
+      const buyerWallets: WalletForBonkCreate[] = selectedWallets.slice(1).map(privateKey => {
         const wallet = wallets.find(w => w.privateKey === privateKey);
         if (!wallet) {
           throw new Error(`Wallet not found`);
         }
         return {
-          address: wallet.address,
-          privateKey: privateKey
+          publicKey: wallet.address,
+          privateKey: privateKey,
+          amount: parseFloat(walletAmounts[privateKey]) * 1e9 // Convert to lamports
         };
       });
       
-      // Format amounts as numbers
-      const customAmounts = selectedWallets.map(key => parseFloat(walletAmounts[key]));
-      
-      // Create token configuration object
-      const tokenCreationConfig: TokenCreationConfig = {
-        mintPubkey: mintPubkey || 'auto', // If no mintPubkey is provided, use 'auto'
-        config: {
-          tokenCreation: {
-            metadata: {
-              name: tokenData.name,
-              symbol: tokenData.symbol,
-              description: tokenData.description,
-              telegram: tokenData.telegram,
-              twitter: tokenData.twitter,
-              website: tokenData.website,
-              file: tokenData.file // URL to the token image
-            },
-            defaultSolAmount: customAmounts[0] || 0.1 // Use first wallet's amount as default
-          },
-        }
+      // Create config object
+      const config: BonkCreateConfig = {
+        tokenMetadata: tokenData,
+        ownerPublicKey: ownerWallet.address,
+        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.1
       };
       
-      console.log(`Starting client-side token creation with ${bonkCreateWallets.length} wallets`);
+      console.log(`Starting token creation with ${buyerWallets.length + 1} wallets`);
       
-      // Call our client-side execution function (simplified call without imageBlob)
+      // Call our bonk create execution function
       const result = await executeBonkCreate(
-        bonkCreateWallets,
-        tokenCreationConfig,
-        customAmounts
+        config,
+        {
+          publicKey: ownerWallet.address, 
+          privateKey: ownerPrivateKey
+        },
+        buyerWallets
       );
       
       if (result.success) {
@@ -305,19 +289,28 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         // Reset form state
         setSelectedWallets([]);
         setWalletAmounts({});
-        setMintPubkey('');
         setTokenData({
           name: '',
           symbol: '',
           description: '',
+          decimals: 6,
+          supply: '1000000000000000',
+          totalSellA: '793100000000000',
           telegram: '',
           twitter: '',
           website: '',
-          file: ''
+          createdOn: 'https://bonk.fun',
+          uri: ''
         });
         setIsConfirmed(false);
         setCurrentStep(0);
         onClose();
+        
+        // Pass result to onDeploy callback
+        onDeploy({
+          mintAddress: result.mintAddress,
+          poolId: result.poolId
+        });
       } else {
         throw new Error(result.error || "Token deployment failed");
       }
@@ -439,11 +432,11 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       )}
                     </button>
                     
-                    {tokenData.file && (
+                    {tokenData.uri && (
                       <div className="flex items-center gap-3 flex-grow">
                         <div className="h-12 w-12 rounded overflow-hidden border border-[#02b36d40] bg-[#091217] flex items-center justify-center">
                           <img 
-                            src={tokenData.file}
+                            src={tokenData.uri}
                             alt="Logo Preview"
                             className="max-h-full max-w-full object-contain"
                             onError={(e) => {
@@ -454,9 +447,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            setTokenData(prev => ({ ...prev, file: '' }));
-                          }}
+                          onClick={() => setTokenData(prev => ({ ...prev, uri: '' }))}
                           className="p-1.5 rounded-full hover:bg-[#091217] text-[#7ddfbd] hover:text-[#e4fbf2] transition-all"
                         >
                           <X size={14} />
@@ -478,7 +469,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   
                 <div className="space-y-2 relative z-10">
                   <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Description <span className="text-[#02b36d]">&#60;</span>
+                  <span className="text-[#02b36d]">&#62;</span> Description <span className="text-[#02b36d]">*</span> <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <textarea
                     value={tokenData.description}
@@ -554,7 +545,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         );
         
       case 1:
-        // Wallet selection UI content remains the same
         return (
           <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
             <div className="flex items-center justify-between mb-2">
@@ -585,16 +575,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                 >
                   {selectedWallets.length > 0 ? 'DESELECT ALL' : 'SELECT ALL'}
                 </button>
-              </div>
-            </div>
-
-            {/* Bonk Specific Info */}
-            <div className="bg-[#091217] border border-[#02b36d40] rounded-lg p-3 mb-3 shadow-lg">
-              <div className="flex items-center gap-2">
-                <Info size={14} className="text-[#02b36d]" />
-                <span className="text-sm text-[#7ddfbd] font-mono">
-                  FOR LETSBONK, THE FIRST WALLET WILL BE THE OWNER AND SUBSEQUENT WALLETS WILL BE BUYERS. YOU NEED AT LEAST 2 WALLETS.
-                </span>
               </div>
             </div>
   
@@ -644,7 +624,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
               <div className="flex items-center gap-2">
                 <Info size={14} className="text-[#02b36d]" />
                 <span className="text-sm text-[#7ddfbd] font-mono">
-                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING OWNER WALLET)
+                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING DEVELOPER WALLET)
                 </span>
               </div>
             </div>
@@ -728,7 +708,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                                 </div>
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-[#02b36d] font-mono">{index === 0 ? 'OWNER' : `BUYER #${index}`}</span>
+                                    <span className="text-sm font-medium text-[#02b36d] font-mono">{index === 0 ? 'DEVELOPER' : `#${index + 1}`}</span>
                                     <span className="text-sm font-medium text-[#e4fbf2] font-mono glitch-text">
                                       {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
                                     </span>
@@ -823,7 +803,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         );
   
       case 2:
-        // Review step UI content remains the same
         return (
           <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
             <div className="flex items-center space-x-3 mb-2">
@@ -868,12 +847,12 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                         </span>
                       </div>
                     )}
-                    {tokenData.file && (
+                    {tokenData.uri && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-[#7ddfbd] font-mono">LOGO:</span>
                         <div className="bg-[#091217] border border-[#02b36d40] rounded-lg p-1 w-12 h-12 flex items-center justify-center">
                           <img 
-                            src={tokenData.file}
+                            src={tokenData.uri}
                             alt="Token Logo"
                             className="max-w-full max-h-full rounded object-contain"
                             onError={(e) => {
@@ -954,7 +933,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       return (
                         <div key={index} className="flex justify-between items-center p-3 bg-[#091217] rounded-lg mb-2 border border-[#02b36d30] hover:border-[#02b36d] transition-all">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#02b36d] text-xs font-medium w-16 font-mono">{index === 0 ? 'OWNER' : `BUYER #${index}`}</span>
+                            <span className="text-[#02b36d] text-xs font-medium w-6 font-mono">{index === 0 ? 'DEV' : `#${index + 1}`}</span>
                             <span className="font-mono text-sm text-[#e4fbf2] glitch-text">
                               {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
                             </span>
@@ -1002,7 +981,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     onClick={() => setIsConfirmed(!isConfirmed)}
                     className="text-sm text-[#e4fbf2] leading-relaxed cursor-pointer select-none font-mono"
                   >
-                    I CONFIRM THAT I WANT TO DEPLOY THIS TOKEN USING {selectedWallets.length} WALLET{selectedWallets.length !== 1 ? 'S' : ''} ON LETSBONK.
+                    I CONFIRM THAT I WANT TO DEPLOY THIS TOKEN USING {selectedWallets.length} WALLET{selectedWallets.length !== 1 ? 'S' : ''}.
                     THIS ACTION CANNOT BE UNDONE.
                   </label>
                 </div>
@@ -1168,7 +1147,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
               <PlusCircle size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPLOY LETSBONK <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> DEPLOY BONK TOKEN <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 

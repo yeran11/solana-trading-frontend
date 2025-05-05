@@ -101,6 +101,51 @@ export const DeployModal: React.FC<DeployModalProps> = ({
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d10] to-transparent rounded-xl" />
           </div>
+          <div 
+            onClick={() => showToast("PUMPKIN.FUN deployment coming soon!", "error")}
+            className="group relative cursor-not-allowed bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 opacity-60"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
+                <Utensils size={24} className="text-[#02b36d]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">PUMPKIN.FUN</h3>
+              <p className="text-[#7ddfbd] text-xs leading-relaxed">
+                Create a new PUMPKIN.FUN token. Advanced features including customizable tokenomics and marketing.
+              </p>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d10] to-transparent rounded-xl" />
+          </div>
+          <div 
+            onClick={() => showToast("REVSHARE.DEV deployment coming soon!", "error")}
+            className="group relative cursor-not-allowed bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 opacity-60"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
+                <Utensils size={24} className="text-[#02b36d]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">REVSHARE.DEV</h3>
+              <p className="text-[#7ddfbd] text-xs leading-relaxed">
+                Create a new REVSHARE.DEV token. Advanced features including customizable tokenomics and marketing.
+              </p>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d10] to-transparent rounded-xl" />
+          </div>
+          <div 
+            onClick={() => showToast("LETSJULIA.FUN deployment coming soon!", "error")}
+            className="group relative cursor-not-allowed bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 opacity-60"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
+                <Utensils size={24} className="text-[#02b36d]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">LETSJULIA.FUN</h3>
+              <p className="text-[#7ddfbd] text-xs leading-relaxed">
+                Create a new LETSJULIA.FUN token. Advanced features including customizable tokenomics and marketing.
+              </p>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d10] to-transparent rounded-xl" />
+          </div>
         </div>
 
         {/* Render selected modal */}
