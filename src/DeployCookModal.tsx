@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
 import { getWallets } from './Utils';
 import { useToast } from "./Notifications";
-import { executeBonkCreate, WalletForBonkCreate, TokenMetadata, BonkCreateConfig } from './utils/bonkcreate';
+import { executeCookCreate, WalletForCookCreate, TokenMetadata, CookCreateConfig } from './utils/cookcreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -13,13 +13,13 @@ interface BaseModalProps {
   onClose: () => void;
 }
 
-interface DeployBonkModalProps extends BaseModalProps {
+interface DeployCookModalProps extends BaseModalProps {
   onDeploy: (data: any) => void;
   handleRefresh: () => void;
   solBalances: Map<string, number>;
 }
 
-export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
+export const DeployCookModal: React.FC<DeployCookModalProps> = ({
   isOpen,
   onClose,
   onDeploy,
@@ -42,12 +42,10 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     symbol: '',
     description: '',
     decimals: 6,
-    supply: '1000000000000000',
-    totalSellA: '793100000000000',
     telegram: '',
     twitter: '',
     website: '',
-    createdOn: 'https://bonk.fun',
+    discord: '', // Cook.meme has discord field
     uri: '' // image URL
   });
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({});
@@ -57,6 +55,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const [sortDirection, setSortDirection] = useState('asc');
   const [balanceFilter, setBalanceFilter] = useState('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tradingTimestamp, setTradingTimestamp] = useState(0);
+  const [settingsVersion, setSettingsVersion] = useState(1);
 
   // Function to handle image upload
   const handleImageUpload = async (e) => {
@@ -298,7 +298,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       }
       
       // Format buyer wallets (all wallets except the first/owner)
-      const buyerWallets: WalletForBonkCreate[] = selectedWallets.slice(1).map(privateKey => {
+      const buyerWallets: WalletForCookCreate[] = selectedWallets.slice(1).map(privateKey => {
         const wallet = wallets.find(w => w.privateKey === privateKey);
         if (!wallet) {
           throw new Error(`Wallet not found`);
@@ -311,16 +311,18 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       });
       
       // Create config object
-      const config: BonkCreateConfig = {
+      const config: CookCreateConfig = {
         tokenMetadata: tokenData,
         ownerPublicKey: ownerWallet.address,
-        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.1
+        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.01,
+        tradingTimestamp: tradingTimestamp,
+        settingsVersion: settingsVersion
       };
       
       console.log(`Starting token creation with ${buyerWallets.length + 1} wallets`);
       
-      // Call our bonk create execution function
-      const result = await executeBonkCreate(
+      // Call our cook create execution function
+      const result = await executeCookCreate(
         config,
         {
           publicKey: ownerWallet.address, 
@@ -366,12 +368,10 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       symbol: '',
       description: '',
       decimals: 6,
-      supply: '1000000000000000',
-      totalSellA: '793100000000000',
       telegram: '',
       twitter: '',
       website: '',
-      createdOn: 'https://bonk.fun',
+      discord: '',
       uri: ''
     });
     setIsConfirmed(false);
@@ -537,7 +537,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                   />
                 </div>
   
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
                       <span className="text-[#02b36d]">&#62;</span> Telegram <span className="text-[#02b36d]">&#60;</span>
@@ -576,6 +576,9 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       </div>
                     </div>
                   </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
                       <span className="text-[#02b36d]">&#62;</span> Website <span className="text-[#02b36d]">&#60;</span>
@@ -591,6 +594,25 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg className="w-4 h-4 text-[#7ddfbd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0zm14-6a9 9 0 0 0-4-2m-6 2a9 9 0 0 0-2 4m2 6a9 9 0 0 0 4 2m6-2a9 9 0 0 0 2-4" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
+                      <span className="text-[#02b36d]">&#62;</span> Discord <span className="text-[#02b36d]">&#60;</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={tokenData.discord}
+                        onChange={(e) => setTokenData(prev => ({ ...prev, discord: e.target.value }))}
+                        className="w-full pl-9 pr-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] placeholder-[#7ddfbd70] focus:outline-none focus:ring-1 focus:ring-[#02b36d50] focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                        placeholder="DISCORD.GG/YOURSERVER"
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="w-4 h-4 text-[#7ddfbd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M9 12h6m-6 4h6m-2 4l-2-2m0 0L9 16m2 2l2-2m0 0l2 2M9 8l2 2 4-4"></path>
                         </svg>
                       </div>
                     </div>
@@ -922,7 +944,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     )}
                   </div>
                   
-                  {(tokenData.telegram || tokenData.twitter || tokenData.website) && (
+                  {(tokenData.telegram || tokenData.twitter || tokenData.website || tokenData.discord) && (
                     <>
                       <div className="h-px bg-[#02b36d30] my-3"></div>
                       <h4 className="text-sm font-medium text-[#7ddfbd] mb-2 font-mono uppercase tracking-wider">
@@ -945,6 +967,12 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#7ddfbd] font-mono">WEBSITE:</span>
                             <span className="text-sm text-[#02b36d] font-mono">{tokenData.website}</span>
+                          </div>
+                        )}
+                        {tokenData.discord && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-[#7ddfbd] font-mono">DISCORD:</span>
+                            <span className="text-sm text-[#02b36d] font-mono">{tokenData.discord}</span>
                           </div>
                         )}
                       </div>
@@ -1156,7 +1184,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     <h4 className="text-sm font-medium text-[#7ddfbd] font-mono">NEXT STEPS:</h4>
                   </div>
                   <ul className="space-y-2 text-sm text-[#e4fbf2] font-mono pl-6 list-disc">
-                    <li>Your token is now tradable on Bonk.fun</li>
+                    <li>Your token is now tradable on Cook.meme</li>
                     <li>Add liquidity or use the mint address to trade on DEXs</li>
                     <li>Share your token with the community through your social channels</li>
                   </ul>
@@ -1329,7 +1357,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
               <PlusCircle size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPLOY BONK TOKEN <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> DEPLOY COOK TOKEN <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 

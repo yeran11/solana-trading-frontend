@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Rocket, Zap, X, Utensils } from 'lucide-react';
 import { DeployPumpModal } from './DeployPumpModal';
 import { DeployBonkModal } from './DeployBonkModal';
+import { DeployCookModal } from './DeployCookModal';
 import { useToast } from "./Notifications";
 
 interface BaseModalProps {
@@ -23,7 +24,7 @@ export const DeployModal: React.FC<DeployModalProps> = ({
   handleRefresh,
   solBalances,
 }) => {
-  const [selectedDeployType, setSelectedDeployType] = useState<'pump' | 'bonk' | null>(null);
+  const [selectedDeployType, setSelectedDeployType] = useState<'pump' | 'bonk' | 'cook' | null>(null);
   const { showToast } = useToast();
 
   if (!isOpen) return null;
@@ -87,20 +88,21 @@ export const DeployModal: React.FC<DeployModalProps> = ({
 
           {/* Cook.Meme Deploy Option */}
           <div 
-            onClick={() => showToast("COOK.MEME deployment coming soon!", "error")}
-            className="group relative cursor-not-allowed bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 opacity-60"
+            onClick={() => setSelectedDeployType('cook')}
+            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 transition-all duration-300 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
-                <Utensils size={24} className="text-[#02b36d]" />
+                <Utensils size={24} className="text-[#02b36d] group-hover:animate-pulse" />
               </div>
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">COOK.MEME</h3>
               <p className="text-[#7ddfbd] text-xs leading-relaxed">
                 Create a new COOK.MEME token. Advanced features including customizable tokenomics and marketing.
               </p>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d10] to-transparent rounded-xl" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d10] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
           </div>
+          
           <div 
             onClick={() => showToast("PUMPKIN.FUN deployment coming soon!", "error")}
             className="group relative cursor-not-allowed bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 opacity-60"
@@ -162,6 +164,17 @@ export const DeployModal: React.FC<DeployModalProps> = ({
         {/* Render Bonk Deploy Modal when selected */}
         {selectedDeployType === 'bonk' && (
           <DeployBonkModal
+            isOpen={true}
+            onClose={() => setSelectedDeployType(null)}
+            onDeploy={onDeploy}
+            handleRefresh={handleRefresh}
+            solBalances={solBalances}
+          />
+        )}
+        
+        {/* Render Cook Deploy Modal when selected */}
+        {selectedDeployType === 'cook' && (
+          <DeployCookModal
             isOpen={true}
             onClose={() => setSelectedDeployType(null)}
             onDeploy={onDeploy}
