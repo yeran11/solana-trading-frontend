@@ -28,7 +28,7 @@ const Tooltip = ({ children, content, position = 'top' }) => {
 // Cyberpunk Input component
 const Input = ({ className = '', ...props }) => (
   <input
-    className={`w-full px-4 py-2.5 bg-[#050a0e80] rounded-lg
+    className={`w-full px-2 py-2.5 bg-[#050a0e80] rounded-lg
               text-[#e4fbf2] placeholder-[#7ddfbd60] font-mono tracking-wide
               border border-[#02b36d40] 
               focus:outline-none focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d40]
