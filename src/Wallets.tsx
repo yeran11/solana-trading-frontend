@@ -195,7 +195,6 @@ interface WalletsPageProps {
   activeTokens?: number;
   setActiveTokens?: (active: number) => void;
 }
-
 export const WalletsPage: React.FC<WalletsPageProps> = ({
   wallets,
   setWallets,
@@ -234,7 +233,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   const tokenBalances = externalTokenBalances || internalTokenBalances;
   const setTokenBalances = setExternalTokenBalances || setInternalTokenBalances;
   
-  const allWalletsActive = wallets.every(wallet => wallet.isActive);
   const { showToast } = useToast();
 
   // Fetch SOL balances for all wallets
@@ -320,79 +318,25 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       
       <div className="top-0 sticky backdrop-blur-sm bg-[#050a0e99] border-b border-[#02b36d40] relative z-20">
         {/* First row - Buttons */}
-        <div className="p-3 border-b border-[#02b36d20]">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1">
-              <Tooltip content="Refresh Balances" position="bottom">
-                <button
-                  onClick={() => {
-                    handleRefresh();
-                    fetchSolBalances();
-                  }}
-                  disabled={isRefreshing}
-                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
-                  >
-                  <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-                </button>
-              </Tooltip>
-              
-              <Tooltip
-                content={showingTokenWallets ? "Filter: Wallets with SOL only" : "Filter: Wallets with tokens"}
-                position="bottom"
-              >
-                <button
-                  onClick={handleBalanceToggle}
-                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
-                  >
-                  {showingTokenWallets ? <Coins size={18} /> : <DollarSign size={18} />}
-                </button>
-              </Tooltip>
-              
-              <Tooltip content={allWalletsActive ? "Deselect All Wallets" : "Select All Wallets"} position="bottom">
-                <button
-                  onClick={() => setWallets(prev => {
-                    const newWallets = toggleAllWallets(prev);
-                    saveWalletsToCookies(newWallets);
-                    return newWallets;
-                  })}
-                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
-                  >
-                  {allWalletsActive ? <Square size={18} /> : <CheckSquare size={18} />}
-                </button>
-              </Tooltip>
-              
-              
-              <Tooltip content={`Sort by SOL ${sortDirection === 'asc' ? '↓' : '↑'}`} position="bottom">
-                <button
-                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
-                  onClick={handleSortWallets}
-                >
-                  {sortDirection === 'asc' ? (
-                    <ArrowDownAZ size={18} />
-                  ) : (
-                    <ArrowUpAZ size={18} />
-                  )}
-                </button>
-              </Tooltip>
-              <Tooltip content="Manage Wallets" position="bottom">
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 border border-[#02b36d30] hover:border-[#02b36d60] rounded transition-all duration-300 cyberpunk-btn"
-                  >
-                  <Wallet size={18} />
-                </button>
-              </Tooltip>
-            </div>
-            
-            {/* Wallet operations buttons aligned to the right */}
-            <div className="text-[#02b36d] text-sm font-mono flex items-center gap-1 border-l border-[#02b36d30] pl-3">
-              <WalletOperationsButtons
-                wallets={wallets}
-                solBalances={solBalances}
-                connection={connection}
-              />
-            </div>
-          </div>
+        <div className="p-1 border-b border-[#02b36d20]">
+          {/* Now using the WalletOperationsButtons component for all buttons */}
+          <WalletOperationsButtons
+            wallets={wallets}
+            solBalances={solBalances}
+            connection={connection}
+            tokenBalances={tokenBalances}
+            handleRefresh={() => {
+              handleRefresh();
+              fetchSolBalances();
+            }}
+            isRefreshing={isRefreshing}
+            showingTokenWallets={showingTokenWallets}
+            handleBalanceToggle={handleBalanceToggle}
+            setWallets={setWallets}
+            sortDirection={sortDirection}
+            handleSortWallets={handleSortWallets}
+            setIsModalOpen={setIsModalOpen}
+          />
         </div>
         
         {/* Second row - Balance information */}
