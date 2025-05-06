@@ -82,6 +82,11 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
     });
   };
 
+  // Function to open wallets modal
+  const openWalletsModal = () => {
+    setIsModalOpen(true);
+  };
+
   // Primary action buttons
   const primaryActions = [
     {
@@ -203,22 +208,37 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
         <div className="flex justify-between items-center">
           {/* Primary action buttons - without tooltips */}
           <div className="flex items-center gap-0.5 flex-1">
-            {primaryActions.map((action, index) => (
+            {wallets.length === 0 ? (
               <motion.button
-                key={index}
                 variants={buttonVariants}
                 initial="rest"
                 whileHover="hover"
                 whileTap="tap"
-                onClick={action.onClick}
-                disabled={action.disabled}
-                className="p-1.5 text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 
-                         bg-[#071015] border border-[#02b36d20] hover:border-[#02b36d40] rounded 
-                         transition-colors duration-200 flex-shrink-0 flex items-center justify-center"
+                onClick={openWalletsModal}
+                className="flex items-center text-xs font-mono tracking-wider text-[#02b36d] 
+                           hover:text-[#7ddfbd] px-2 py-1 rounded bg-[#071015] border 
+                           border-[#02b36d30] hover:border-[#02b36d50] transition-colors duration-200"
               >
-                <span>{action.icon}</span>
+                <span>Start Here &gt;</span>
               </motion.button>
-            ))}
+            ) : (
+              primaryActions.map((action, index) => (
+                <motion.button
+                  key={index}
+                  variants={buttonVariants}
+                  initial="rest"
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  className="p-1.5 text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 
+                           bg-[#071015] border border-[#02b36d20] hover:border-[#02b36d40] rounded 
+                           transition-colors duration-200 flex-shrink-0 flex items-center justify-center"
+                >
+                  <span>{action.icon}</span>
+                </motion.button>
+              ))
+            )}
           </div>
           
           {/* Menu toggle button */}
@@ -249,7 +269,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             className="bg-[#05080a95] backdrop-blur-sm rounded-lg overflow-hidden
                      border border-[#02b36d30] shadow-lg shadow-[#02b36d10]"
           >
-            <div className="p-2">
+            <div className="p-3">
               {/* Drawer header */}
               <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#02b36d20]">
                 <div className="flex items-center gap-2">
