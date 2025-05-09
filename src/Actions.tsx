@@ -20,6 +20,8 @@ import TradingCard from './TradingForm';
 
 import { executePumpSell, validatePumpSellInputs } from './utils/pumpsell';
 import { executePumpBuy, validatePumpBuyInputs } from './utils/pumpbuy';
+import { executeBoopSell, validateBoopSellInputs } from './utils/boopsell';
+import { executeBoopBuy, validateBoopBuyInputs } from './utils/boopbuy';
 
 // Enhanced cyberpunk-styled Switch component
 const Switch = React.forwardRef<
@@ -190,6 +192,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     { value: 'raydium', label: 'Raydium' },
     { value: 'jupiter', label: 'Jupiter' },
     { value: 'launchpad', label: 'Launchpad' },
+    { value: 'boopfun', label: 'BoopFun' },
   ];
   
   const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean) => {
@@ -291,6 +294,100 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         }
       } catch (error) {
         console.error(`Moonshot ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+    
+    // Special handling for boopFun operations with client-side transaction signing
+    if (selectedDex === 'boopfun') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+          showToast("Please activate at least one wallet", "error");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Format wallets for BoopBuy/BoopSell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // BoopBuy flow 
+          const tokenConfig = {
+            tokenAddress: tokenAddress,
+            solAmount: parseFloat(buyAmount)
+          };
+          
+          // Create a balance map for validation
+          const walletBalances = new Map<string, number>();
+          activeWallets.forEach(wallet => {
+            const balance = solBalances.get(wallet.address) || 0;
+            walletBalances.set(wallet.address, balance);
+          });
+          
+          // Validate inputs before executing
+          const validation = validateBoopBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log(`Executing BoopBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute BoopBuy operation
+          const result = await executeBoopBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("BoopBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`BoopBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // BoopSell flow - implementation unchanged
+          const tokenConfig = {
+            tokenAddress: tokenAddress,
+            sellPercent: parseFloat(sellAmount)
+          };
+          
+          // Create a token balance map for validation
+          const tokenBalanceMap = new Map<string, number>();
+          activeWallets.forEach(wallet => {
+            const balance = tokenBalances.get(wallet.address) || 0;
+            tokenBalanceMap.set(wallet.address, balance);
+          });
+          
+          // Validate inputs before executing
+          const validation = validateBoopSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log(`Executing BoopSell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute BoopSell operation
+          const result = await executeBoopSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("BoopSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`BoopSell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Boop${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
         showToast(`Error: ${error.message}`, "error");
       } finally {
         setIsLoading(false);
