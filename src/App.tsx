@@ -1044,6 +1044,7 @@ const WalletManager: React.FC = () => {
                 isLoadingChart={isLoadingChart}
                 tokenAddress={tokenAddress}
                 ammKey={ammKey}
+                walletAddresses={wallets.map(w => w.address)}
               />
             </div>
 
@@ -1102,6 +1103,7 @@ const WalletManager: React.FC = () => {
                 isLoadingChart={isLoadingChart}
                 tokenAddress={tokenAddress}
                 ammKey={ammKey}
+                walletAddresses={wallets.map(w => w.address)}
               />
             ),
             ActionsPage: (
