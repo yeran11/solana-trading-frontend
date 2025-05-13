@@ -119,7 +119,7 @@ const getPartiallyPreparedTransactions = async (
   try {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
-    const response = await fetch(`${baseUrl}/api/boopshot/create`, {
+    const response = await fetch(`${baseUrl}/api/boopfun/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
