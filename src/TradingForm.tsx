@@ -113,7 +113,7 @@ const TradingCard = ({
         };
         
         const matchedDex = protocolToDex[data.protocol.toLowerCase()];
-        if (matchedDex && matchedDex !== selectedDex) {
+        if (matchedDex) {
           setBestDex(matchedDex);
         }
       }
@@ -187,7 +187,7 @@ const TradingCard = ({
         };
         
         const matchedDex = protocolToDex[data.protocol.toLowerCase()];
-        if (matchedDex && matchedDex !== selectedDex) {
+        if (matchedDex) {
           setBestDex(matchedDex);
         }
       }
@@ -224,12 +224,18 @@ const TradingCard = ({
     }
   }, [sellAmount, tokenAddress, selectedDex]);
   
-  // Apply the best DEX if Auto is selected
-  useEffect(() => {
+  // Modified to handle trade submission with the best DEX when auto is selected
+  const handleTradeWithBestDex = (wallets, isBuy) => {
+    // If auto is selected and we have a best DEX, use that for the trade
+    // but keep the UI showing "auto"
     if (selectedDex === 'auto' && bestDex) {
-      setSelectedDex(bestDex);
+      // Call the handleTradeSubmit with the best DEX instead of 'auto'
+      handleTradeSubmit(wallets, isBuy, bestDex);
+    } else {
+      // Normal flow with selected DEX
+      handleTradeSubmit(wallets, isBuy);
     }
-  }, [bestDex]);
+  };
   
   // Animated variants
   const containerVariants = {
@@ -265,7 +271,7 @@ const TradingCard = ({
       // Update the selected DEX
       setSelectedDex(dexValue);
       
-      // Reset best DEX if manually selecting
+      // Reset best DEX if manually selecting something other than auto
       if (dexValue !== 'auto') {
         setBestDex(null);
       }
@@ -392,7 +398,7 @@ const TradingCard = ({
   const TradeButton = ({ isBuy, amount }) => (
     <Tooltip content={isBuy ? "BUY SOL" : "SELL TOKENS"} position="top">
       <motion.button
-        onClick={() => handleTradeSubmit(wallets, isBuy)}
+        onClick={() => handleTradeWithBestDex(wallets, isBuy)}
         disabled={!selectedDex || !amount || isLoading || !tokenAddress}
         className={`p-2 rounded-lg border
                   transition-all duration-300
@@ -445,11 +451,6 @@ const TradingCard = ({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
-        {isLoadingEstimate ? (
-          <RefreshCw size={10} className="animate-spin" style={{ animationDuration: '1s' }} />
-        ) : (
-          <RefreshCw size={10} className="animate-spin" style={{ animationDuration: '3s' }} />
-        )}
         <span className={`font-bold ${isBuy ? 'text-[#02b36d]' : 'text-[#ff3232]'}`}>
           {estimatedValue}
         </span>
