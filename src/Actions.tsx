@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
 import { 
   Download, 
   Settings2,
@@ -24,7 +23,7 @@ import { executePumpBuy, validatePumpBuyInputs } from './utils/pumpbuy';
 import { executeBoopSell, validateBoopSellInputs } from './utils/boopsell';
 import { executeBoopBuy, validateBoopBuyInputs } from './utils/boopbuy';
 
-// Enhanced cyberpunk-styled Switch component
+// Enhanced cyberpunk-styled Switch component (simplified)
 const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>
@@ -41,17 +40,12 @@ const Switch = React.forwardRef<
     {...props}
     ref={ref}
   >
-    {/* Glow effect */}
-    <span className="absolute inset-0 data-[state=checked]:bg-[#02b36d20] data-[state=unchecked]:bg-transparent
-                    data-[state=checked]:blur-md transition-all duration-300"></span>
-    
     <SwitchPrimitive.Thumb
       className={`
         pointer-events-none block h-5 w-5 rounded-full
         bg-white shadow-lg ring-0 transition-transform
         data-[state=checked]:translate-x-5 data-[state=checked]:bg-[#e4fbf2]
-        data-[state=unchecked]:translate-x-0 data-[state=unchecked]:bg-[#7ddfbd]
-        data-[state=checked]:shadow-[0_0_8px_2px_rgba(2,179,109,0.7)]`}
+        data-[state=unchecked]:translate-x-0 data-[state=unchecked]:bg-[#7ddfbd]`}
     />
   </SwitchPrimitive.Root>
 ));
@@ -84,7 +78,7 @@ interface ActionsPageProps {
   wallets: WalletType[];
   solBalances: Map<string, number>;
   tokenBalances: Map<string, number>;
-  currentMarketCap: number | null; // Add this line
+  currentMarketCap: number | null;
   setBurnModalOpen: (open: boolean) => void;
   setCalculatePNLModalOpen: (open: boolean) => void;
   setDeployModalOpen: (open: boolean) => void;
@@ -92,7 +86,7 @@ interface ActionsPageProps {
   setCustomBuyModalOpen: (open: boolean) => void;
 }
 
-// Enhanced cyberpunk-styled Tooltip component
+// Simplified Tooltip component without animations
 export const Tooltip = ({ 
   children, 
   content,
@@ -120,17 +114,12 @@ export const Tooltip = ({
         {children}
       </div>
       {isVisible && (
-        <motion.div 
-          initial={{ opacity: 0, y: position === 'top' ? 10 : position === 'bottom' ? -10 : 0, 
-                     x: position === 'left' ? 10 : position === 'right' ? -10 : 0 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
-          className={`absolute z-50 ${positionClasses[position]}`}
-        >
+        <div className={`absolute z-50 ${positionClasses[position]}`}>
           <div className="bg-[#051014] border border-[#02b36d40] text-[#02b36d] text-xs px-2 py-1 rounded 
                          shadow-lg shadow-[#02b36d20] whitespace-nowrap font-mono tracking-wide">
             {content}
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );
@@ -455,7 +444,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             showToast(`BoopBuy failed: ${result.error}`, "error");
           }
         } else {
-          // BoopSell flow - implementation unchanged
+          // BoopSell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             sellPercent: parseFloat(sellAmount)
@@ -549,7 +538,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             showToast(`PumpBuy failed: ${result.error}`, "error");
           }
         } else {
-          // PumpSell flow - implementation unchanged
+          // PumpSell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             sellPercent: parseFloat(sellAmount)
@@ -610,7 +599,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         }));
         
         if (isBuyMode) {
-          // Jupiter Buy flow - implementation unchanged
+          // Jupiter Buy flow
           const swapConfig = {
             inputMint: "So11111111111111111111111111111111111111112", // SOL
             outputMint: tokenAddress,
@@ -647,7 +636,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             showToast(`Jupiter Buy failed: ${result.error}`, "error");
           }
         } else {
-          // Jupiter Sell flow - implementation unchanged
+          // Jupiter Sell flow
           const sellConfig = {
             inputMint: tokenAddress, // Token to sell
             outputMint: "So11111111111111111111111111111111111111112", // SOL
@@ -706,7 +695,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         }));
         
         if (isBuyMode) {
-          // Ray flow - implementation unchanged
+          // Ray flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             solAmount: parseFloat(buyAmount)
@@ -741,7 +730,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             showToast(`RayBuy failed: ${result.error}`, "error");
           }
         } else {
-          // RaySell flow - implementation unchanged
+          // RaySell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             sellPercent: parseFloat(sellAmount)
@@ -803,7 +792,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         }));
         
         if (isBuyMode) {
-          // Ray flow - implementation unchanged
+          // Ray flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             solAmount: parseFloat(buyAmount)
@@ -838,7 +827,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             showToast(`RayBuy failed: ${result.error}`, "error");
           }
         } else {
-          // RaySell flow - implementation unchanged
+          // RaySell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             sellPercent: parseFloat(sellAmount)
@@ -901,7 +890,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         }));
         
         if (isBuyMode) {
-          // MoonBuy flow - implementation unchanged
+          // MoonBuy flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             solAmount: parseFloat(buyAmount)
@@ -936,7 +925,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             showToast(`MoonBuy failed: ${result.error}`, "error");
           }
         } else {
-          // MoonSell flow - implementation unchanged
+          // MoonSell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
             sellPercent: parseFloat(sellAmount)
@@ -983,102 +972,44 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     setIsLoading(false);
   };
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { 
-        staggerChildren: 0.1,
-        delayChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1,
-      transition: { type: "spring", stiffness: 300, damping: 24 }
-    },
-    hover: { 
-      scale: 1.05,
-      boxShadow: "0px 10px 20px rgba(2, 179, 109, 0.2)",
-      transition: { type: "spring", stiffness: 400, damping: 10 }
-    }
-  };
-
-  const statsVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: "easeOut" }
-    }
-  };
-  
-  // Cyberpunk grid background with scanlines
-  const backgroundElement = (
-    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-      {/* Grid background */}
-      <div className="absolute inset-0 bg-[#050a0e] opacity-90">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#02b36d05] to-transparent"></div>
-        <div 
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(2, 179, 109, 0.05) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(2, 179, 109, 0.05) 1px, transparent 1px)
-            `,
-            backgroundSize: '20px 20px',
-            backgroundPosition: 'center center',
-          }}
-        ></div>
-      </div>
-      
-      {/* Scanline effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div 
-          className="absolute w-full h-8 bg-gradient-to-b from-transparent via-[#02b36d10] to-transparent"
-          animate={{ top: ['-10%', '120%'] }}
-          transition={{ 
-            duration: 8, 
-            repeat: Infinity, 
-            ease: "linear",
-            repeatType: "loop"
-          }}
-        ></motion.div>
-      </div>
-      
-      {/* Glowing corner accents */}
-      <div className="absolute top-0 left-0 w-32 h-32 opacity-20">
-        <div className="absolute top-0 left-0 w-px h-16 bg-gradient-to-b from-[#02b36d] to-transparent"></div>
-        <div className="absolute top-0 left-0 w-16 h-px bg-gradient-to-r from-[#02b36d] to-transparent"></div>
-      </div>
-      <div className="absolute top-0 right-0 w-32 h-32 opacity-20">
-        <div className="absolute top-0 right-0 w-px h-16 bg-gradient-to-b from-[#02b36d] to-transparent"></div>
-        <div className="absolute top-0 right-0 w-16 h-px bg-gradient-to-l from-[#02b36d] to-transparent"></div>
-      </div>
-      <div className="absolute bottom-0 left-0 w-32 h-32 opacity-20">
-        <div className="absolute bottom-0 left-0 w-px h-16 bg-gradient-to-t from-[#02b36d] to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-16 h-px bg-gradient-to-r from-[#02b36d] to-transparent"></div>
-      </div>
-      <div className="absolute bottom-0 right-0 w-32 h-32 opacity-20">
-        <div className="absolute bottom-0 right-0 w-px h-16 bg-gradient-to-t from-[#02b36d] to-transparent"></div>
-        <div className="absolute bottom-0 right-0 w-16 h-px bg-gradient-to-l from-[#02b36d] to-transparent"></div>
-      </div>
-    </div>
-  );
-
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex-1 overflow-y-auto bg-[#050a0e] p-4 md:p-6 relative"
-    >
-      {/* Background effects */}
-      {backgroundElement}
+    <div className="flex-1 overflow-y-auto bg-[#050a0e] p-4 md:p-6 relative">
+      {/* Background effects - keeping original */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Grid background */}
+        <div className="absolute inset-0 bg-[#050a0e] opacity-90">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#02b36d05] to-transparent"></div>
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(2, 179, 109, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(2, 179, 109, 0.05) 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+              backgroundPosition: 'center center',
+            }}
+          ></div>
+        </div>
+        
+        {/* Glowing corner accents */}
+        <div className="absolute top-0 left-0 w-32 h-32 opacity-20">
+          <div className="absolute top-0 left-0 w-px h-16 bg-gradient-to-b from-[#02b36d] to-transparent"></div>
+          <div className="absolute top-0 left-0 w-16 h-px bg-gradient-to-r from-[#02b36d] to-transparent"></div>
+        </div>
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-20">
+          <div className="absolute top-0 right-0 w-px h-16 bg-gradient-to-b from-[#02b36d] to-transparent"></div>
+          <div className="absolute top-0 right-0 w-16 h-px bg-gradient-to-l from-[#02b36d] to-transparent"></div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 opacity-20">
+          <div className="absolute bottom-0 left-0 w-px h-16 bg-gradient-to-t from-[#02b36d] to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-px bg-gradient-to-r from-[#02b36d] to-transparent"></div>
+        </div>
+        <div className="absolute bottom-0 right-0 w-32 h-32 opacity-20">
+          <div className="absolute bottom-0 right-0 w-px h-16 bg-gradient-to-t from-[#02b36d] to-transparent"></div>
+          <div className="absolute bottom-0 right-0 w-16 h-px bg-gradient-to-l from-[#02b36d] to-transparent"></div>
+        </div>
+      </div>
       
       <div className="max-w-4xl mx-auto space-y-8 relative z-10">
         {/* Trading Card (unchanged) */}
@@ -1106,47 +1037,37 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         
         {/* Token Operations */}
         <div className="space-y-4">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex items-center gap-2"
-          >
-            <motion.div 
-              whileHover={{ scale: 1.1, rotate: 15 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg"
-            >
-              <Settings2 size={16} className="text-[#02b36d]" />
-            </motion.div>
-            <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Token Operations</span>
-          </motion.div>
-          
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-4 shadow-xl border border-[#02b36d20] relative overflow-hidden"
-          >
-            {/* Highlight effect */}
-            <motion.div 
-              className="absolute inset-0 bg-gradient-to-br from-[#02b36d05] to-transparent"
-              animate={{ 
-                opacity: [0.3, 0.6, 0.3],
-              }}
-              transition={{ 
-                duration: 5, 
-                repeat: Infinity,
-                ease: "easeInOut" 
-              }}
-            />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
+                <Settings2 size={16} className="text-[#02b36d]" />
+              </div>
+              <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Operations</span>
+            </div>
             
+            {/* PNL Button moved to Token Operations row */}
+            <button
+              onClick={() => {
+                if (!tokenAddress) {
+                  showToast("Please select a token first", "error");
+                  return;
+                }
+                setCalculatePNLModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg
+                        bg-gradient-to-r from-[#02b36d] to-[#01a35f] hover:from-[#01a35f] hover:to-[#029359]
+                        shadow-md shadow-[#02b36d40] hover:shadow-[#02b36d60]
+                        transition-all duration-300 relative overflow-hidden"
+            >
+              <ChartSpline size={16} className="text-black relative z-10" />
+              <span className="text-sm font-mono tracking-wider text-black font-medium relative z-10">Share PNL</span>
+            </button>
+          </div>
+          
+          <div className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-4 shadow-xl border border-[#02b36d20] relative overflow-hidden">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
               {/* Cleaner Button */}
-              <motion.button
-                variants={itemVariants}
-                whileHover="hover"
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => {
                   if (!tokenAddress) {
                     showToast("Please select a token first", "error");
@@ -1158,45 +1079,27 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                           bg-gradient-to-br from-[#0a141990] to-[#05080a90] border border-[#02b36d30] hover:border-[#02b36d60]
                           transition-all duration-300"
               >
-                <motion.div 
-                  className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg"
-                  animate={{ 
-                    boxShadow: ["0px 0px 0px rgba(2, 179, 109, 0)", "0px 0px 8px rgba(2, 179, 109, 0.5)", "0px 0px 0px rgba(2, 179, 109, 0)"],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
+                <div className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
                   <Waypoints size={20} className="text-[#02b36d]" />
-                </motion.div>
+                </div>
                 <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">Cleaner</span>
-              </motion.button>
+              </button>
               
               {/* Deploy Button */}
-              <motion.button
-                variants={itemVariants}
-                whileHover="hover"
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => setDeployModalOpen(true)}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg
                           bg-gradient-to-br from-[#0a141990] to-[#05080a90] border border-[#02b36d30] hover:border-[#02b36d60]
                           transition-all duration-300"
               >
-                <motion.div 
-                  className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg"
-                  animate={{ 
-                    boxShadow: ["0px 0px 0px rgba(2, 179, 109, 0)", "0px 0px 8px rgba(2, 179, 109, 0.5)", "0px 0px 0px rgba(2, 179, 109, 0)"],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-                >
+                <div className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
                   <Blocks size={20} className="text-[#02b36d]" />
-                </motion.div>
+                </div>
                 <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">Deploy</span>
-              </motion.button>
+              </button>
               
               {/* Burn Button */}
-              <motion.button
-                variants={itemVariants}
-                whileHover="hover"
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => {
                   if (!tokenAddress) {
                     showToast("Please select a token first", "error");
@@ -1208,23 +1111,14 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                           bg-gradient-to-br from-[#0a141990] to-[#05080a90] border border-[#02b36d30] hover:border-[#02b36d60]
                           transition-all duration-300"
               >
-                <motion.div 
-                  className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg"
-                  animate={{ 
-                    boxShadow: ["0px 0px 0px rgba(2, 179, 109, 0)", "0px 0px 8px rgba(2, 179, 109, 0.5)", "0px 0px 0px rgba(2, 179, 109, 0)"],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-                >
+                <div className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
                   <Trash2 size={20} className="text-[#02b36d]" />
-                </motion.div>
+                </div>
                 <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">Burn</span>
-              </motion.button>
+              </button>
               
               {/* PumpBuy Button */}
-              <motion.button
-                variants={itemVariants}
-                whileHover="hover"
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => {
                   if (!tokenAddress) {
                     showToast("Please select a token first", "error");
@@ -1236,259 +1130,44 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                           bg-gradient-to-br from-[#0a141990] to-[#05080a90] border border-[#02b36d30] hover:border-[#02b36d60]
                           transition-all duration-300"
               >
-                <motion.div 
-                  className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg"
-                  animate={{ 
-                    boxShadow: ["0px 0px 0px rgba(2, 179, 109, 0)", "0px 0px 8px rgba(2, 179, 109, 0.5)", "0px 0px 0px rgba(2, 179, 109, 0)"],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
-                >
+                <div className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
                   <Workflow size={20} className="text-[#02b36d]" />
-                </motion.div>
+                </div>
                 <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">PumpBuy</span>
-              </motion.button>
+              </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Token Stats Dashboard */}
-      <AnimatePresence>
-        {tokenAddress && (
-          <motion.div 
-            key="token-stats"
-            initial="hidden"
-            animate="visible"
-            exit={{ opacity: 0, y: 20 }}
-            variants={statsVariants}
-            className="mt-8 mx-auto max-w-4xl"
-          >
-            <motion.div 
-              className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-6 
-                         relative overflow-hidden shadow-lg border border-[#02b36d20]"
-              whileHover={{ boxShadow: "0px 8px 30px rgba(2, 179, 109, 0.2)" }}
-            >
-              {/* Background glow effect */}
-              <motion.div 
-                className="absolute inset-0 bg-gradient-to-br from-[#02b36d05] to-transparent"
-                animate={{ 
-                  opacity: [0.3, 0.6, 0.3],
-                  scale: [1, 1.05, 1],
-                }}
-                transition={{ 
-                  duration: 5, 
-                  repeat: Infinity,
-                  ease: "easeInOut" 
-                }}
-              />
-            
-              {/* Dashboard Header */}
-              <div className="relative z-10 mb-4 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <motion.div 
-                    className="p-2 bg-[#02b36d20] rounded-lg"
-                    whileHover={{ rotate: 15, scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <ChartSpline size={18} className="text-[#02b36d]" />
-                  </motion.div>
-                </div>
-                
-                {/* PNL Button in Header */}
-                <motion.button
-                  onClick={() => {
-                    if (!tokenAddress) {
-                      showToast("Please select a token first", "error");
-                      return;
-                    }
-                    setCalculatePNLModalOpen(true);
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg
-                            bg-gradient-to-r from-[#02b36d] to-[#01a35f] hover:from-[#01a35f] hover:to-[#029359]
-                            shadow-md shadow-[#02b36d40] hover:shadow-[#02b36d60]
-                            transition-all duration-300 relative overflow-hidden"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  {/* Glow effect */}
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-[#ffffff30] to-transparent"
-                    animate={{ 
-                      x: ['-100%', '200%'],
-                    }}
-                    transition={{ 
-                      duration: 1.5, 
-                      repeat: Infinity,
-                      repeatDelay: 3
-                    }}
-                  />
-                  
-                  <ChartSpline size={16} className="text-black relative z-10" />
-                  <span className="text-sm font-mono tracking-wider text-black font-medium relative z-10">Calculate PNL</span>
-                </motion.button>
-              </div>
-              
-              <div className="relative z-10 space-y-6">
-                {/* Stats Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Holdings Value */}
-                  <motion.div 
-                    className="p-5 rounded-lg bg-gradient-to-br from-[#0a141990] to-[#05080a90] border border-[#02b36d30]
-                               flex flex-col relative overflow-hidden"
-                    whileHover={{ y: -5, boxShadow: "0px 10px 20px rgba(2, 179, 109, 0.2)" }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  >
-                    {/* Circuit line decoration */}
-                    <div className="absolute bottom-0 right-0 w-32 h-32 opacity-10">
-                      <div className="absolute bottom-8 right-0 w-16 h-px bg-[#02b36d]"></div>
-                      <div className="absolute bottom-8 right-16 w-px h-16 bg-[#02b36d]"></div>
-                      <div className="absolute bottom-0 right-8 w-px h-8 bg-[#02b36d]"></div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-mono tracking-wider text-[#7ddfbd] uppercase">Holdings</span>
-                    </div>
-                    <div className="mt-auto text-3xl font-bold font-mono tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#02b36d] to-[#7ddfbd]">
-                      {priceLoading ? (
-                        <div className="flex items-center space-x-2">
-                          <motion.div 
-                            className="h-8 w-8 bg-[#02b36d20] rounded"
-                            animate={{ opacity: [0.5, 0.8, 0.5] }}
-                            transition={{ duration: 0.8, repeat: Infinity }}
-                          />
-                          <motion.div 
-                            className="h-8 w-16 bg-[#02b36d20] rounded"
-                            animate={{ opacity: [0.5, 0.8, 0.5] }}
-                            transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
-                          />
-                          <motion.div 
-                            className="h-8 w-12 bg-[#02b36d20] rounded"
-                            animate={{ opacity: [0.5, 0.8, 0.5] }}
-                            transition={{ duration: 0.8, repeat: Infinity, delay: 0.4 }}
-                          />
-                        </div>
-                      ) : tokenPrice ? (
-                        `${wallets.reduce((total, wallet) => 
-                          total + (Number(wallet.tokenBalance) || 0) * Number(tokenPrice), 0
-                        ).toLocaleString('en-US', { 
-                          maximumFractionDigits: 2,
-                          minimumFractionDigits: 2 
-                        })}`
-                      ) : (
-                        'N/A'
-                      )}
-                    </div>
-                  </motion.div>
-
-                  {/* Market Cap with K/M formatting */}
-                  <motion.div 
-                    className="p-5 rounded-lg bg-gradient-to-br from-[#0a141990] to-[#05080a90] border border-[#02b36d30]
-                               flex flex-col relative overflow-hidden"
-                    whileHover={{ y: -5, boxShadow: "0px 10px 20px rgba(2, 179, 109, 0.2)" }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  >
-                    {/* Circuit line decoration */}
-                    <div className="absolute top-0 left-0 w-32 h-32 opacity-10">
-                      <div className="absolute top-8 left-0 w-16 h-px bg-[#02b36d]"></div>
-                      <div className="absolute top-8 left-16 w-px h-16 bg-[#02b36d]"></div>
-                      <div className="absolute top-24 left-8 w-px h-8 bg-[#02b36d]"></div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-mono tracking-wider text-[#7ddfbd] uppercase">Market Cap</span>
-                    </div>
-                    <div className="mt-auto text-3xl font-bold font-mono tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#02b36d] to-[#7ddfbd]">
-                      {priceLoading ? (
-                        <div className="flex items-center space-x-2">
-                          <motion.div 
-                            className="h-8 w-12 bg-[#02b36d20] rounded"
-                            animate={{ opacity: [0.5, 0.8, 0.5] }}
-                            transition={{ duration: 0.8, repeat: Infinity }}
-                          />
-                          <motion.div 
-                            className="h-8 w-8 bg-[#02b36d20] rounded"
-                            animate={{ opacity: [0.5, 0.8, 0.5] }}
-                            transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
-                          />
-                        </div>
-                      ) : tokenPrice ? (
-                        (() => {
-                          const marketCap = Number(tokenPrice) * 1_000_000_000;
-                          if (marketCap >= 1_000_000) {
-                            return `${(marketCap / 1_000_000).toFixed(2)}M`;
-                          } else if (marketCap >= 1_000) {
-                            return `${(marketCap / 1_000).toFixed(2)}K`;
-                          } else {
-                            return `${marketCap.toFixed(2)}`;
-                          }
-                        })()
-                      ) : (
-                        'N/A'
-                      )}
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <br></br>
       
-      {/* GitHub Download Box */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.4 }}
-        className="mb-4 mx-auto max-w-4xl"
-      >
-        <motion.div 
-          className="bg-gradient-to-br from-[#0a141950] to-[#05080a50] backdrop-blur-sm 
+      {/* GitHub Download Box - simplified */}
+      <div className="mb-4 mx-auto max-w-4xl">
+        <div className="bg-gradient-to-br from-[#0a141950] to-[#05080a50] backdrop-blur-sm 
                      rounded-xl p-3 relative overflow-hidden border border-[#02b36d10] 
-                     hover:border-[#02b36d30] transition-all duration-300"
-          whileHover={{ 
-            boxShadow: "0px 4px 15px rgba(2, 179, 109, 0.15)",
-            y: -2
-          }}
-        >
-          {/* Pulse effect */}
-          <motion.div 
-            className="absolute inset-0 bg-[#02b36d]"
-            initial={{ opacity: 0 }}
-            animate={{ 
-              opacity: [0, 0.03, 0],
-              scale: [0.85, 1.05, 0.85]
-            }}
-            transition={{ 
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
+                     hover:border-[#02b36d30] transition-all duration-300">
           
           {/* GitHub link content */}
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center">
-              <motion.svg 
+              <svg 
                 viewBox="0 0 24 24" 
                 width="18" 
                 height="18" 
                 className="text-[#02b36d] mr-2"
-                initial={{ rotate: 0 }}
-                whileHover={{ rotate: 15 }}
               >
                 <path
                   fill="currentColor"
                   d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.934.359.31.678.92.678 1.855 0 1.337-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"
                 />
-              </motion.svg>
+              </svg>
               <span className="text-xs font-mono tracking-wider text-[#7ddfbd]">
                 OPEN SOURCE 
               </span>
             </div>
             
-            <motion.a 
+            <a 
               href="https://github.com/furydotbot/solana-ui" 
               target="_blank" 
               rel="noopener noreferrer"
@@ -1496,8 +1175,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                          from-[#02b36d20] to-[#02b36d10] border border-[#02b36d30]
                          hover:from-[#02b36d30] hover:to-[#02b36d20] 
                          transition-all duration-300"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
             >
               <svg 
                 viewBox="0 0 24 24" 
@@ -1511,13 +1188,13 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 />
               </svg>
               <span className="text-xs font-mono tracking-wider text-[#02b36d]">
-                DOWNLOAD REPOSITORY
+                OFFICIAL REPO
               </span>
-            </motion.a>
+            </a>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
       
-    </motion.div>
+    </div>
   );
 };
