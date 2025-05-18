@@ -265,7 +265,7 @@ export const validateDistributionInputs = (
   return { valid: true };
 };
 /**
- * Batch distribute SOL to multiple recipients, splitting into groups of max 6 recipients per request
+ * Batch distribute SOL to multiple recipients, splitting into groups of max 3 recipients per request
  */
 export const batchDistributeSOL = async (
   senderWallet: WalletDistribution,
@@ -279,8 +279,8 @@ export const batchDistributeSOL = async (
       return { success: true, results: [] };
     }
     
-    // If 6 or fewer recipients, just call distributeSOL directly
-    if (recipientWallets.length <= 6) {
+    // If 3 or fewer recipients, just call distributeSOL directly
+    if (recipientWallets.length <= 3) {
       const result = await distributeSOL(senderWallet, recipientWallets);
       return { 
         success: result.success, 
@@ -289,8 +289,8 @@ export const batchDistributeSOL = async (
       };
     }
     
-    // Split recipients into batches of max 6
-    const MAX_RECIPIENTS_PER_BATCH = 6;
+    // Split recipients into batches of max 3
+    const MAX_RECIPIENTS_PER_BATCH = 3;
     const batches: WalletDistribution[][] = [];
     
     for (let i = 0; i < recipientWallets.length; i += MAX_RECIPIENTS_PER_BATCH) {
@@ -325,7 +325,7 @@ export const batchDistributeSOL = async (
       
       // Add delay between batches (except after the last one)
       if (i < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between batches
+        await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay between batches
       }
     }
     

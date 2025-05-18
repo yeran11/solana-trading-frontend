@@ -242,8 +242,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           body: JSON.stringify({
             action: action,
             tokenMintAddress: tokenAddress,
-            amount: amount,
-            rpcUrl: "https://api.mainnet-beta.solana.com"
+            amount: amount
           })
         });
         
@@ -1188,7 +1187,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 />
               </svg>
               <span className="text-xs font-mono tracking-wider text-[#02b36d]">
-                OFFICIAL REPO
+                SOLANA-UI
               </span>
             </a>
           </div>
