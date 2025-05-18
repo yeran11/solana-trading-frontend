@@ -74,6 +74,14 @@ const TradingCard = ({
   const fetchEstimatedTokens = async (amount) => {
     if (!amount || isNaN(parseFloat(amount)) || !tokenAddress) return "0";
     
+    // Count active wallets
+    const activeWallets = wallets.filter(wallet => wallet.isActive).length;
+    if (activeWallets === 0) return "0";
+    
+    // Multiply amount by number of active wallets
+    const totalAmount = (parseFloat(amount) * activeWallets).toString();
+    console.log(`Buy estimate: ${amount} SOL × ${activeWallets} wallets = ${totalAmount} SOL total`);
+    
     try {
       setIsLoadingEstimate(true);
       const response = await fetch('https://solana.fury.bot/api/tokens/route', {
@@ -85,7 +93,7 @@ const TradingCard = ({
         body: JSON.stringify({
           action: "buy",
           tokenMintAddress: tokenAddress,
-          amount: amount,
+          amount: totalAmount,
           rpcUrl: "https://api.mainnet-beta.solana.com"
         })
       });
@@ -199,16 +207,20 @@ const TradingCard = ({
     }
   };
   
-  // Update estimates when amounts change
+  // Update estimates when amounts change - MODIFIED to only fetch if amount > 0
   useEffect(() => {
-    if (buyAmount) {
+    if (buyAmount && parseFloat(buyAmount) > 0) {
       fetchEstimatedTokens(buyAmount);
+    } else {
+      setEstimatedBuyTokens("0"); // Reset the estimate if amount is 0 or invalid
     }
   }, [buyAmount, tokenAddress, selectedDex]);
   
   useEffect(() => {
-    if (sellAmount) {
+    if (sellAmount && parseFloat(sellAmount) > 0) {
       fetchEstimatedSell(sellAmount);
+    } else {
+      setEstimatedSellSol("0"); // Reset the estimate if amount is 0 or invalid
     }
   }, [sellAmount, tokenAddress, selectedDex]);
   
@@ -315,7 +327,7 @@ const TradingCard = ({
               whileTap={{ scale: 0.98 }}
             >
               <Sparkles size={12} className="text-[#02b36d] mr-1" />
-              <span>Auto (Best Rate)</span>
+              <span>Auto</span>
             </motion.button>
             
             {/* Thin separator */}
@@ -332,7 +344,7 @@ const TradingCard = ({
                   onClick={(e) => handleDexSelect(dex.value, e)}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {dex.label.replace(' (Best Rate)', '')}
+                  {dex.label.replace('', '')}
                 </motion.button>
               ))}
             </div>
@@ -420,6 +432,9 @@ const TradingCard = ({
       ? estimatedBuyTokens
       : estimatedSellSol;
       
+    // Get active wallet count for buy info
+    const activeWalletCount = countActiveWallets(wallets);
+    
     return (
       <motion.div 
         className={`flex items-center justify-center gap-1 text-xs font-mono w-full px-2 py-1 rounded
@@ -435,7 +450,6 @@ const TradingCard = ({
         ) : (
           <RefreshCw size={10} className="animate-spin" style={{ animationDuration: '3s' }} />
         )}
-        <span>{isBuy ? "Est. Tokens: " : "Est. SOL: "}</span>
         <span className={`font-bold ${isBuy ? 'text-[#02b36d]' : 'text-[#ff3232]'}`}>
           {estimatedValue}
         </span>

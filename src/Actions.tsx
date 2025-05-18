@@ -187,7 +187,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   }, [tokenAddress, showToast]);
 
   const dexOptions = [
-    { value: 'auto', label: 'Auto (Best Rate)' },
+    { value: 'auto', label: 'Auto Route' },
     { value: 'pumpfun', label: 'PumpFun' },
     { value: 'moonshot', label: 'Moonshot' },
     { value: 'pumpswap', label: 'PumpSwap' },
