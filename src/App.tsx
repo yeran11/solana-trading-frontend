@@ -1,20 +1,8 @@
-import React, { useState, useEffect, useRef, lazy } from 'react';
-import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy, ArrowUpDown, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
+import React, { useState, useEffect, useRef, lazy, useCallback } from 'react';
+import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import ServiceSelector from './Menu.tsx'; // Adjust path as needed
-const Config = lazy(() => import('./Config'));
-const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
-const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
-const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: module.ActionsPage })));
-const MobileLayout = lazy(() => import('./Mobile'));
-
-// Import modal components 
-const BurnModal = lazy(() => import('./BurnModal').then(module => ({ default: module.BurnModal })));
-const PnlModal = lazy(() => import('./CalculatePNLModal').then(module => ({ default: module.PnlModal })));
-const DeployModal = lazy(() => import('./DeployModal').then(module => ({ default: module.DeployModal })));
-const CleanerTokensModal = lazy(() => import('./CleanerModal').then(module => ({ default: module.CleanerTokensModal })));
-const CustomBuyModal = lazy(() => import('./CustomBuyModal').then(module => ({ default: module.CustomBuyModal })));
-
+import ServiceSelector from './Menu.tsx';
+import { WalletTooltip, initStyles } from './Styles';
 import { 
   createNewWallet,
   importWallet,
@@ -34,9 +22,44 @@ import {
   fetchTokenBalance,
 } from './Utils';
 import Split from 'react-split';
-import { useToast } from "./Notifications"
+import { useToast } from "./Notifications";
+import { 
+  fetchSolBalances,
+  fetchTokenBalances,
+  fetchAmmKey,
+  handleMarketCapUpdate,
+  handleCleanupWallets,
+  handleSortWallets,
+  handleApiKeyFromUrl
+} from './Manager';
+
+// Lazy loaded components
+const Config = lazy(() => import('./Config'));
+const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
+const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
+const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: module.ActionsPage })));
+const MobileLayout = lazy(() => import('./Mobile'));
+
+// Import modal components 
+const BurnModal = lazy(() => import('./BurnModal').then(module => ({ default: module.BurnModal })));
+const PnlModal = lazy(() => import('./CalculatePNLModal').then(module => ({ default: module.PnlModal })));
+const DeployModal = lazy(() => import('./DeployModal').then(module => ({ default: module.DeployModal })));
+const CleanerTokensModal = lazy(() => import('./CleanerModal').then(module => ({ default: module.CleanerTokensModal })));
+const CustomBuyModal = lazy(() => import('./CustomBuyModal').then(module => ({ default: module.CustomBuyModal })));
 
 const WalletManager: React.FC = () => {
+  // Apply styles
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = initStyles();
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  // State declarations
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [tokenAddress, setTokenAddress] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,436 +82,31 @@ const WalletManager: React.FC = () => {
   const [isLoadingChart, setIsLoadingChart] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentMarketCap, setCurrentMarketCap] = useState<number | null>(null);
   const { showToast } = useToast();
   
-  // Add state for modals
+  // Modal states
   const [burnModalOpen, setBurnModalOpen] = useState(false);
   const [calculatePNLModalOpen, setCalculatePNLModalOpen] = useState(false);
   const [deployModalOpen, setDeployModalOpen] = useState(false);
   const [cleanerTokensModalOpen, setCleanerTokensModalOpen] = useState(false);
   const [customBuyModalOpen, setCustomBuyModalOpen] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [tickEffect, setTickEffect] = useState(false);
 
-  // Add cyberpunk-themed animations with keyframes
-  const styles = `
-  /* Background grid animation */
-  @keyframes grid-pulse {
-    0% { opacity: 0.1; }
-    50% { opacity: 0.15; }
-    100% { opacity: 0.1; }
-  }
-
-  .cyberpunk-bg {
-    background-color: #050a0e;
-    background-image: 
-      linear-gradient(rgba(2, 179, 109, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(2, 179, 109, 0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
-    background-position: center center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .cyberpunk-bg::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      linear-gradient(rgba(2, 179, 109, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(2, 179, 109, 0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
-    background-position: center center;
-    animation: grid-pulse 4s infinite;
-    z-index: 0;
-  }
-
-  /* Glowing border effect */
-  @keyframes border-glow {
-    0% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), inset 0 0 5px rgba(2, 179, 109, 0.2); }
-    50% { box-shadow: 0 0 10px rgba(2, 179, 109, 0.8), inset 0 0 10px rgba(2, 179, 109, 0.3); }
-    100% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), inset 0 0 5px rgba(2, 179, 109, 0.2); }
-  }
-
-  .cyberpunk-border {
-    border: 1px solid rgba(2, 179, 109, 0.5);
-    border-radius: 4px;
-    animation: border-glow 4s infinite;
-  }
-
-  /* Button hover animations */
-  @keyframes btn-glow {
-    0% { box-shadow: 0 0 5px #02b36d; }
-    50% { box-shadow: 0 0 15px #02b36d; }
-    100% { box-shadow: 0 0 5px #02b36d; }
-  }
-
-  .cyberpunk-btn {
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .cyberpunk-btn:hover {
-    animation: btn-glow 2s infinite;
-  }
-
-  .cyberpunk-btn::after {
-    content: "";
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-      to bottom right,
-      rgba(2, 179, 109, 0) 0%,
-      rgba(2, 179, 109, 0.3) 50%,
-      rgba(2, 179, 109, 0) 100%
-    );
-    transform: rotate(45deg);
-    transition: all 0.5s ease;
-    opacity: 0;
-  }
-
-  .cyberpunk-btn:hover::after {
-    opacity: 1;
-    transform: rotate(45deg) translate(50%, 50%);
-  }
-
-  /* Glitch effect for text */
-  @keyframes glitch {
-    2%, 8% { transform: translate(-2px, 0) skew(0.3deg); }
-    4%, 6% { transform: translate(2px, 0) skew(-0.3deg); }
-    62%, 68% { transform: translate(0, 0) skew(0.33deg); }
-    64%, 66% { transform: translate(0, 0) skew(-0.33deg); }
-  }
-
-  .cyberpunk-glitch {
-    position: relative;
-  }
-
-  .cyberpunk-glitch:hover {
-    animation: glitch 2s infinite;
-  }
-
-  /* Input focus effect */
-  .cyberpunk-input:focus {
-    box-shadow: 0 0 0 1px rgba(2, 179, 109, 0.7), 0 0 15px rgba(2, 179, 109, 0.5);
-    transition: all 0.3s ease;
-  }
-
-  /* Card hover effect */
-  .cyberpunk-card {
-    transition: all 0.3s ease;
-  }
-
-  .cyberpunk-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3), 0 0 15px rgba(2, 179, 109, 0.3);
-  }
-
-  /* Scan line effect */
-  @keyframes scanline {
-    0% { 
-      transform: translateY(-100%);
-      opacity: 0.7;
-    }
-    100% { 
-      transform: translateY(100%);
-      opacity: 0;
-    }
-  }
-
-  .cyberpunk-scanline {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .cyberpunk-scanline::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 10px;
-    background: linear-gradient(to bottom, 
-      transparent 0%,
-      rgba(2, 179, 109, 0.2) 50%,
-      transparent 100%);
-    z-index: 10;
-    animation: scanline 8s linear infinite;
-  }
-
-  /* Split gutter styling */
-  .split-custom .gutter {
-    background-color: transparent;
-    position: relative;
-    transition: background-color 0.3s ease;
-  }
-
-  .split-custom .gutter-horizontal {
-    cursor: col-resize;
-  }
-
-  .split-custom .gutter-horizontal:hover {
-    background-color: rgba(2, 179, 109, 0.3);
-  }
-
-  .split-custom .gutter-horizontal::before,
-  .split-custom .gutter-horizontal::after {
-    content: "";
-    position: absolute;
-    width: 1px;
-    height: 15px;
-    background-color: rgba(2, 179, 109, 0.7);
-    left: 50%;
-    transform: translateX(-50%);
-    transition: all 0.3s ease;
-  }
-
-  .split-custom .gutter-horizontal::before {
-    top: calc(50% - 10px);
-  }
-
-  .split-custom .gutter-horizontal::after {
-    top: calc(50% + 10px);
-  }
-
-  .split-custom .gutter-horizontal:hover::before,
-  .split-custom .gutter-horizontal:hover::after {
-    background-color: #02b36d;
-    box-shadow: 0 0 10px rgba(2, 179, 109, 0.7);
-  }
-
-  /* Neo-futuristic table styling */
-  .cyberpunk-table {
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-
-  .cyberpunk-table thead th {
-    background-color: rgba(2, 179, 109, 0.1);
-    border-bottom: 2px solid rgba(2, 179, 109, 0.5);
-  }
-
-  .cyberpunk-table tbody tr {
-    transition: all 0.2s ease;
-  }
-
-  .cyberpunk-table tbody tr:hover {
-    background-color: rgba(2, 179, 109, 0.05);
-  }
-
-  /* Neon text effect */
-  .neon-text {
-    color: #02b36d;
-    text-shadow: 0 0 5px rgba(2, 179, 109, 0.7);
-  }
-
-  /* Notification animation */
-  @keyframes notification-slide {
-    0% { transform: translateX(50px); opacity: 0; }
-    10% { transform: translateX(0); opacity: 1; }
-    90% { transform: translateX(0); opacity: 1; }
-    100% { transform: translateX(50px); opacity: 0; }
-  }
-
-  .notification-anim {
-    animation: notification-slide 4s forwards;
-  }
-
-  /* Loading animation */
-  @keyframes loading-pulse {
-    0% { transform: scale(0.85); opacity: 0.7; }
-    50% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(0.85); opacity: 0.7; }
-  }
-
-  .loading-anim {
-    animation: loading-pulse 1.5s infinite;
-  }
-
-  /* Button click effect */
-  .cyberpunk-btn:active {
-    transform: scale(0.95);
-    box-shadow: 0 0 15px rgba(2, 179, 109, 0.7);
-  }
-
-  /* Menu active state */
-  .menu-item-active {
-    border-left: 3px solid #02b36d;
-    background-color: rgba(2, 179, 109, 0.1);
-  }
-
-  /* Angle brackets for headings */
-  .heading-brackets {
-    position: relative;
-    display: inline-block;
-  }
-
-  .heading-brackets::before,
-  .heading-brackets::after {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #02b36d;
-    font-weight: bold;
-  }
-
-  .heading-brackets::before {
-    content: ">";
-    left: -15px;
-  }
-
-  .heading-brackets::after {
-    content: "<";
-    right: -15px;
-  }
-  `;
-
-  // Tooltip Component with cyberpunk styling
-  const Tooltip = ({ 
-    children, 
-    content,
-    position = 'top'
-  }: { 
-    children: React.ReactNode;
-    content: string;
-    position?: 'top' | 'bottom' | 'left' | 'right';
-  }) => {
-    const [isVisible, setIsVisible] = useState(false);
-
-    const positionClasses = {
-      top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-      bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-      left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-      right: 'left-full top-1/2 -translate-y-1/2 ml-2'
-    };
-
-    return (
-      <div className="relative inline-block">
-        <div
-          onMouseEnter={() => setIsVisible(true)}
-          onMouseLeave={() => setIsVisible(false)}
-        >
-          {children}
-        </div>
-        {isVisible && (
-          <div className={`absolute z-50 ${positionClasses[position]}`}>
-            <div className="bg-[#051014] cyberpunk-border text-[#02b36d] text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
-              {content}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const styleElement = document.createElement('style');
-  styleElement.textContent = styles;
-  document.head.appendChild(styleElement);
-
-  // Function to fetch SOL balances for all wallets
-  const fetchSolBalances = async () => {
-    if (!connection) return new Map<string, number>();
-    
-    const newBalances = new Map<string, number>();
-    
-    const promises = wallets.map(async (wallet) => {
-      try {
-        const balance = await fetchSolBalance(connection, wallet.address);
-        newBalances.set(wallet.address, balance);
-      } catch (error) {
-        console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
-        newBalances.set(wallet.address, 0);
-      }
-    });
-    
-    await Promise.all(promises);
-    setSolBalances(newBalances);
-    return newBalances;
-  };
-
-  // Function to fetch token balances for all wallets
-  const fetchTokenBalances = async () => {
-    if (!connection || !tokenAddress) return new Map<string, number>();
-    
-    const newBalances = new Map<string, number>();
-    
-    const promises = wallets.map(async (wallet) => {
-      try {
-        const balance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
-        newBalances.set(wallet.address, balance);
-      } catch (error) {
-        console.error(`Error fetching token balance for ${wallet.address}:`, error);
-        newBalances.set(wallet.address, 0);
-      }
-    });
-    
-    await Promise.all(promises);
-    setTokenBalances(newBalances);
-    return newBalances;
-  };
-
-  const fetchAmmKey = async (tokenAddress: string) => {
-    if (!tokenAddress) return null;
-    setIsLoadingChart(true);
-    try {
-      const response = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${tokenAddress}&amount=100000000&slippageBps=1`
-      );
-      const data = await response.json();
-      if (data.routePlan?.[0]?.swapInfo?.ammKey) {
-        setAmmKey(data.routePlan[0].swapInfo.ammKey);
-      }
-    } catch (error) {
-      console.error('Error fetching AMM key:', error);
-    }
-    setIsLoadingChart(false);
-  };
-
+  // Extract API key from URL
   useEffect(() => {
-    // Function to extract API key from URL and clean the URL
-    const handleApiKeyFromUrl = () => {
-      const url = new URL(window.location.href);
-      const apiKey = url.searchParams.get('apikey');
-      
-      // If API key is in the URL
-      if (apiKey) {
-        console.log('API key found in URL, saving to config');
-        
-        // Update config state with the new API key
-        setConfig(prev => {
-          const newConfig = { ...prev, apiKey };
-          // Save to cookies
-          saveConfigToCookies(newConfig);
-          return newConfig;
-        });
-        
-        // Remove the apikey parameter from URL without reloading the page
-        url.searchParams.delete('apikey');
-        
-        // Replace current URL without reloading the page
-        window.history.replaceState({}, document.title, url.toString());
-        
-        // Optional: Show a toast notification that API key was set
-        if (showToast) {
-          showToast("API key has been set from URL", "success");
-        }
-      }
-    };
-    
-    // Call the function when component mounts
-    handleApiKeyFromUrl();
-  }, []); // Empty dependency array means this runs once on mount
+    handleApiKeyFromUrl(setConfig, saveConfigToCookies, showToast);
+  }, []);
+
   // Fetch AMM key when token address changes
   useEffect(() => {
     if (tokenAddress) {
-      fetchAmmKey(tokenAddress);
+      fetchAmmKey(tokenAddress, setAmmKey, setIsLoadingChart);
     }
   }, [tokenAddress]);
   
+  // Initialize app on mount
   useEffect(() => {
     const initializeApp = () => {
       // Load saved config
@@ -515,7 +133,7 @@ const WalletManager: React.FC = () => {
     initializeApp();
   }, []);
 
-  // Also add this useEffect to handle wallet changes:
+  // Save wallets when they change
   useEffect(() => {
     if (wallets.length > 0) {
       saveWalletsToCookies(wallets);
@@ -525,83 +143,16 @@ const WalletManager: React.FC = () => {
   // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
     if (connection && wallets.length > 0) {
-      fetchSolBalances();
+      fetchSolBalances(connection, wallets, setSolBalances);
     }
   }, [connection, wallets.length]);
 
   // Fetch token balances when token address changes or wallets change
   useEffect(() => {
     if (connection && wallets.length > 0 && tokenAddress) {
-      fetchTokenBalances();
+      fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
     }
   }, [connection, wallets.length, tokenAddress]);
-
-  // Updated sort function to use solBalances
-  const handleSortWallets = () => {
-    setWallets(prev => {
-      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-      setSortDirection(newDirection);
-      
-      return [...prev].sort((a, b) => {
-        const balanceA = solBalances.get(a.address) || 0;
-        const balanceB = solBalances.get(b.address) || 0;
-        
-        if (newDirection === 'asc') {
-          return balanceA - balanceB;
-        } else {
-          return balanceB - balanceA;
-        }
-      });
-    });
-  };
-  
-  // Updated cleanup function to use solBalances and tokenBalances
-  const handleCleanupWallets = () => {
-    setWallets(prev => {
-      // Keep track of seen addresses
-      const seenAddresses = new Set<string>();
-      // Keep track of removal counts
-      let emptyCount = 0;
-      let duplicateCount = 0;
-      
-      // Filter out empty wallets and duplicates
-      const cleanedWallets = prev.filter(wallet => {
-        // Check for empty balance (no SOL and no tokens)
-        const solBalance = solBalances.get(wallet.address) || 0;
-        const tokenBalance = tokenBalances.get(wallet.address) || 0;
-        
-        if (solBalance <= 0 && tokenBalance <= 0) {
-          emptyCount++;
-          return false;
-        }
-        
-        // Check for duplicates
-        if (seenAddresses.has(wallet.address)) {
-          duplicateCount++;
-          return false;
-        }
-        
-        seenAddresses.add(wallet.address);
-        return true;
-      });
-
-      // Show appropriate toast message
-      if (emptyCount > 0 || duplicateCount > 0) {
-        const messages: string[] = [];
-        if (emptyCount > 0) {
-          messages.push(`${emptyCount} empty wallet${emptyCount === 1 ? '' : 's'}`);
-        }
-        if (duplicateCount > 0) {
-          messages.push(`${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`);
-        }
-        showToast(`Removed ${messages.join(' and ')}`, "success");
-      } else {
-        showToast("No empty wallets or duplicates found", "success");
-      }
-      
-      return cleanedWallets;
-    });
-  };
 
   // Update connection when RPC endpoint changes
   useEffect(() => {
@@ -613,7 +164,7 @@ const WalletManager: React.FC = () => {
     }
   }, [config.rpcEndpoint]);
 
-  // Add effect to refresh balances on load
+  // Refresh balances on load
   useEffect(() => {
     if (connection && wallets.length > 0) {
       handleRefresh();
@@ -627,6 +178,14 @@ const WalletManager: React.FC = () => {
     }
   }, [tokenAddress]);
 
+  // Trigger tick animation when wallet count changes
+  useEffect(() => {
+    setTickEffect(true);
+    const timer = setTimeout(() => setTickEffect(false), 500);
+    return () => clearTimeout(timer);
+  }, [wallets.length]);
+
+  // Helper functions
   const handleRefresh = async () => {
     if (!connection) return;
     
@@ -634,11 +193,11 @@ const WalletManager: React.FC = () => {
     
     try {
       // Fetch SOL balances
-      await fetchSolBalances();
+      await fetchSolBalances(connection, wallets, setSolBalances);
       
       // Fetch token balances if token address is provided
       if (tokenAddress) {
-        await fetchTokenBalances();
+        await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);
@@ -773,7 +332,6 @@ const WalletManager: React.FC = () => {
     setWallets(prev => deleteWallet(prev, id));
   };
 
-  // Updated file upload function to handle SOL and token balances separately
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     console.log('File selected:', file?.name);
@@ -887,18 +445,8 @@ const WalletManager: React.FC = () => {
       }
     }
   };
-  
-  // Animation for digital counter
-  const [tickEffect, setTickEffect] = useState(false);
-  
-  useEffect(() => {
-    // Trigger tick animation when wallet count changes
-    setTickEffect(true);
-    const timer = setTimeout(() => setTickEffect(false), 500);
-    return () => clearTimeout(timer);
-  }, [wallets.length]);
 
-  // Add handlers for the modals
+  // Modal action handlers
   const handleBurn = async (amount: string) => {
     try {
       console.log('burn', amount, 'SOL to');
@@ -912,14 +460,13 @@ const WalletManager: React.FC = () => {
     try {
       console.log('Deploy executed:', data);
       showToast('Token deployment initiated successfully', 'success');
-      // Additional logic here
     } catch (error) {
       console.error('Error:', error);
       showToast('Token deployment failed', 'error');
     }
   };
 
-  const handleCleaner = async (data) => {
+  const handleCleaner = async (data: any) => {
     try {
       console.log('Cleaning', data);
       showToast('Cleaning successfully', 'success');
@@ -928,7 +475,7 @@ const WalletManager: React.FC = () => {
     }
   };
 
-  const handleCustomBuy = async (data) => {
+  const handleCustomBuy = async (data: any) => {
     try {
       console.log('Custom buy executed:', data);
       showToast('Custom buy completed successfully', 'success');
@@ -959,7 +506,7 @@ const WalletManager: React.FC = () => {
             <div className="absolute right-3 top-3 text-[#02b36d40] text-xs font-mono">SOL</div>
           </div>
           
-          <Tooltip content="Paste from clipboard" position="bottom">
+          <WalletTooltip content="Paste from clipboard" position="bottom">
             <button
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
               onClick={async () => {
@@ -979,16 +526,16 @@ const WalletManager: React.FC = () => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-          </Tooltip>          
+          </WalletTooltip>          
           
-          <Tooltip content="Open Settings" position="bottom">
+          <WalletTooltip content="Open Settings" position="bottom">
             <button 
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
               onClick={() => setIsSettingsOpen(true)}
             >
               <Settings size={20} className="text-[#02b36d]" />
             </button>
-          </Tooltip>
+          </WalletTooltip>
 
           <div className="flex items-center ml-4">
             <div className="flex flex-col items-start">
@@ -1030,7 +577,7 @@ const WalletManager: React.FC = () => {
                   setIsModalOpen={setIsModalOpen}
                   tokenAddress={tokenAddress}
                   sortDirection={sortDirection}
-                  handleSortWallets={handleSortWallets}
+                  handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
                   connection={connection}
                   solBalances={solBalances}
                   tokenBalances={tokenBalances}
@@ -1058,7 +605,7 @@ const WalletManager: React.FC = () => {
                 ammKey={ammKey}
                 solBalances={solBalances}
                 tokenBalances={tokenBalances}
-                // Pass modal control functions
+                currentMarketCap={currentMarketCap}
                 setBurnModalOpen={setBurnModalOpen}
                 setCalculatePNLModalOpen={setCalculatePNLModalOpen}
                 setDeployModalOpen={setDeployModalOpen}
@@ -1084,7 +631,7 @@ const WalletManager: React.FC = () => {
                   setIsModalOpen={setIsModalOpen}
                   tokenAddress={tokenAddress}
                   sortDirection={sortDirection}
-                  handleSortWallets={handleSortWallets}
+                  handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
                   connection={connection}
                   solBalances={solBalances}
                   tokenBalances={tokenBalances}
@@ -1115,7 +662,7 @@ const WalletManager: React.FC = () => {
                 ammKey={ammKey}
                 solBalances={solBalances}
                 tokenBalances={tokenBalances}
-                // Pass modal control functions
+                currentMarketCap={currentMarketCap}
                 setBurnModalOpen={setBurnModalOpen}
                 setCalculatePNLModalOpen={setCalculatePNLModalOpen}
                 setDeployModalOpen={setDeployModalOpen}
@@ -1143,23 +690,23 @@ const WalletManager: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <div className="flex gap-2">
                 
-                <Tooltip content="Create New Wallet" position="bottom">
+                <WalletTooltip content="Create New Wallet" position="bottom">
                   <button 
                     className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
                     onClick={handleCreateWallet}
                   >
                     <Plus size={20} className="text-[#02b36d]" />
                   </button>
-                </Tooltip>
+                </WalletTooltip>
                 
-                <Tooltip content="Import Wallet" position="bottom">
+                <WalletTooltip content="Import Wallet" position="bottom">
                   <button 
                     className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
                     onClick={() => setIsImporting(true)}
                   >
                     <Upload size={20} className="text-[#02b36d]" />
                   </button>
-                </Tooltip>
+                </WalletTooltip>
                 
                 <input
                   ref={fileInputRef}
@@ -1170,7 +717,7 @@ const WalletManager: React.FC = () => {
                   disabled={isProcessingFile}
                 />
                 
-                <Tooltip content="Upload Wallets file" position="bottom">
+                <WalletTooltip content="Upload Wallets file" position="bottom">
                   <button 
                     className={`p-2 ${isProcessingFile ? 'bg-[#02b36d10]' : 'hover:bg-[#02b36d20]'} border border-[#02b36d40] ${!isProcessingFile && 'hover:border-[#02b36d]'} rounded transition-all duration-300 ${!isProcessingFile && 'cyberpunk-btn'}`}
                     onClick={() => fileInputRef.current?.click()}
@@ -1178,34 +725,34 @@ const WalletManager: React.FC = () => {
                   >
                     <FileUp size={20} className={`${isProcessingFile ? 'text-[#02b36d50]' : 'text-[#02b36d]'} ${isProcessingFile && 'loading-anim'}`} />
                   </button>
-                </Tooltip>
+                </WalletTooltip>
                 
-                <Tooltip content="Download all Wallets" position="bottom">
+                <WalletTooltip content="Download all Wallets" position="bottom">
                   <button 
                     className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
                     onClick={() => downloadAllWallets(wallets)}
                   >
                     <Download size={20} className="text-[#02b36d]" />
                   </button>
-                </Tooltip>
+                </WalletTooltip>
                 
-                <Tooltip content="Remove Empty Wallets" position="bottom">
+                <WalletTooltip content="Remove Empty Wallets" position="bottom">
                   <button 
                     className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
-                    onClick={handleCleanupWallets}
+                    onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
                   >
                     <Trash2 size={20} className="text-[#02b36d]" />
                   </button>
-                </Tooltip>
+                </WalletTooltip>
                 
-                <Tooltip content="Close" position="bottom">
+                <WalletTooltip content="Close" position="bottom">
                   <button 
                     onClick={() => setIsModalOpen(false)}
                     className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
                   >
                     <X size={20} className="text-[#ff2244]" />
                   </button>
-                </Tooltip>
+                </WalletTooltip>
               </div>
             </div>
 
@@ -1262,7 +809,7 @@ const WalletManager: React.FC = () => {
                     key={wallet.id} 
                     className="flex items-center justify-between p-3 bg-[#091217] border border-[#02b36d20] hover:border-[#02b36d60] rounded-lg cyberpunk-card transition-all duration-300"
                   >
-                    <Tooltip content="Click to copy address" position="top">
+                    <WalletTooltip content="Click to copy address" position="top">
                       <span 
                         className="text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-300 cyberpunk-glitch"
                         onClick={async () => {
@@ -1280,7 +827,7 @@ const WalletManager: React.FC = () => {
                           </span>
                         )}
                       </span>
-                    </Tooltip>
+                    </WalletTooltip>
                     <div className="flex flex-col items-end">
                       <span className="text-sm font-mono text-[#e4fbf2]">
                         <span className="text-[#7ddfbd]">{(solBalances.get(wallet.address) || 0).toFixed(4)}</span> SOL
@@ -1292,23 +839,23 @@ const WalletManager: React.FC = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Tooltip content="Remove Wallet" position="top">
+                      <WalletTooltip content="Remove Wallet" position="top">
                         <button 
                           className="p-1 hover:bg-[#ff224420] rounded-full transition-all duration-300"
                           onClick={() => handleDeleteWallet(wallet.id)}
                         >
                           <Trash2 size={16} className="text-[#ff2244]" />
                         </button>
-                      </Tooltip>
-                      <Tooltip content="Download PrivateKey" position="top">
+                      </WalletTooltip>
+                      <WalletTooltip content="Download PrivateKey" position="top">
                         <button 
                           className="p-1 hover:bg-[#02b36d20] rounded-full transition-all duration-300"
                           onClick={() => downloadPrivateKey(wallet)}
                         >
                           <Download size={16} className="text-[#02b36d]" />
                         </button>
-                      </Tooltip>
-                      <Tooltip content="Copy PrivateKey" position="top">
+                      </WalletTooltip>
+                      <WalletTooltip content="Copy PrivateKey" position="top">
                         <button
                           className="p-1 hover:bg-[#02b36d20] rounded-full transition-all duration-300"
                           onClick={async () => {
@@ -1317,7 +864,7 @@ const WalletManager: React.FC = () => {
                         >
                           <Copy size={16} className="text-[#02b36d]" />
                         </button>
-                      </Tooltip>
+                      </WalletTooltip>
                     </div>
                   </div>
                 ))}
@@ -1327,7 +874,7 @@ const WalletManager: React.FC = () => {
         </div>
       )}
 
-      {/* Moved modals to the root level for full page overlay */}
+      {/* Modals */}
       <BurnModal
         isOpen={burnModalOpen}
         onBurn={handleBurn}

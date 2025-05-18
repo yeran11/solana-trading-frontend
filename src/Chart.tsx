@@ -167,7 +167,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       ? `&wallets=${formatWalletAddresses(walletAddresses)}` 
       : '';
     
-    if (showGMGN) {
+    if (1==1) {
       // GMGN graph with transactions iframe below
       const transactionsSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
       
@@ -198,26 +198,6 @@ export const ChartPage: React.FC<ChartPageProps> = ({
                 loading="lazy"
               />
             </div>
-          </div>
-        </div>
-      );
-    } else {
-      // Fury.bot frame (unchanged)
-      const iframeSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}`;
-      
-      return (
-        <div className="relative flex-1 overflow-hidden">
-          {renderLoader(frameLoading || isLoadingChart)}
-          
-          <div className="absolute inset-0 overflow-hidden">
-            <iframe 
-              key={iframeKey}
-              src={iframeSrc}
-              className="absolute inset-0 w-full h-full"
-              title="Token Frame"
-              loading="lazy"
-              onLoad={handleFrameLoad}
-            />
           </div>
         </div>
       );

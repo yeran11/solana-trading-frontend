@@ -10,7 +10,8 @@ import {
   Trash2,
   ChartSpline,
   Send,
-  Workflow
+  Workflow,
+  Sparkles
 } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { WalletType } from "./Utils";
@@ -83,7 +84,7 @@ interface ActionsPageProps {
   wallets: WalletType[];
   solBalances: Map<string, number>;
   tokenBalances: Map<string, number>;
-  // Add modal state control props
+  currentMarketCap: number | null; // Add this line
   setBurnModalOpen: (open: boolean) => void;
   setCalculatePNLModalOpen: (open: boolean) => void;
   setDeployModalOpen: (open: boolean) => void;
@@ -143,7 +144,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   ammKey,
   solBalances,
   tokenBalances,
-  // Destructure modal state control props
+  currentMarketCap,
   setBurnModalOpen,
   setCalculatePNLModalOpen,
   setDeployModalOpen,
@@ -153,7 +154,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   // State management (no changes)
   const [buyAmount, setBuyAmount] = useState('');
   const [sellAmount, setSellAmount] = useState('');
-  const [selectedDex, setSelectedDex] = useState('jupiter');
+  const [selectedDex, setSelectedDex] = useState('auto'); // Default to auto
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tokenPrice, setTokenPrice] = useState<string | null>(null);
@@ -186,6 +187,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   }, [tokenAddress, showToast]);
 
   const dexOptions = [
+    { value: 'auto', label: 'Auto (Best Rate)' },
     { value: 'pumpfun', label: 'PumpFun' },
     { value: 'moonshot', label: 'Moonshot' },
     { value: 'pumpswap', label: 'PumpSwap' },
@@ -203,8 +205,108 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
       setIsLoading(false);
       return;
     }
+    
+    // If selected DEX is "auto", determine best route first
+    if (selectedDex === 'auto') {
+      try {
+        // Determine action and prepare payload
+        const action = isBuyMode ? "buy" : "sell";
+        let amount;
+        
+        if (isBuyMode) {
+          amount = buyAmount; // In SOL
+        } else {
+          // For selling, we need to calculate token amount based on percentage
+          const activeWallets = wallets.filter(wallet => wallet.isActive);
+          if (activeWallets.length === 0) {
+            showToast("Please activate at least one wallet", "error");
+            setIsLoading(false);
+            return;
+          }
+          
+          // Calculate total token balance across all active wallets
+          const totalTokenBalance = activeWallets.reduce((sum, wallet) => {
+            const balance = tokenBalances.get(wallet.address) || 0;
+            return sum + balance;
+          }, 0);
+          
+          // Calculate amount to sell based on percentage
+          const sellPercentage = parseFloat(sellAmount);
+          const tokenAmount = totalTokenBalance * (sellPercentage / 100);
+          
+          if (tokenAmount <= 0) {
+            showToast("No tokens to sell", "error");
+            setIsLoading(false);
+            return;
+          }
+          
+          amount = Math.floor(tokenAmount * 1e9).toString(); // Convert to raw token amount
+        }
+        
+        // Call the routing API to determine best DEX
+        const response = await fetch('https://solana.fury.bot/api/tokens/route', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: action,
+            tokenMintAddress: tokenAddress,
+            amount: amount,
+            rpcUrl: "https://api.mainnet-beta.solana.com"
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          showToast(`Failed to determine best route: ${data.error || "Unknown error"}`, "error");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Map protocol to DEX
+        const protocolToDex = {
+          'pumpfun': 'pumpfun',
+          'moonshot': 'moonshot',
+          'pumpswap': 'pumpswap',
+          'raydium': 'raydium',
+          'jupiter': 'jupiter',
+          'launchpad': 'launchpad',
+          'boopfun': 'boopfun'
+        };
+        
+        const bestDex = protocolToDex[data.protocol.toLowerCase()];
+        
+        if (!bestDex) {
+          showToast(`Unknown protocol: ${data.protocol}. Using Jupiter as fallback.`, "error");
+          // Use Jupiter as fallback
+          const tempDex = 'jupiter';
+          const tempHandleTradeSubmit = originalHandleTradeSubmit.bind(null, tempDex);
+          await tempHandleTradeSubmit(wallets, isBuyMode);
+        } else {
+          // Use determined best DEX
+          showToast(`Using ${dexOptions.find(d => d.value === bestDex)?.label} for best rate`, "success");
+          const tempHandleTradeSubmit = originalHandleTradeSubmit.bind(null, bestDex);
+          await tempHandleTradeSubmit(wallets, isBuyMode);
+        }
+      } catch (error) {
+        console.error("Error determining best route:", error);
+        showToast(`Error determining best route: ${error.message}`, "error");
+        setIsLoading(false);
+      }
+      return;
+    }
+    
+    // If not auto, use the selected DEX
+    await originalHandleTradeSubmit(selectedDex, wallets, isBuyMode);
+  };
+
+  // Original trade submit function that accepts selectedDex as a parameter
+  const originalHandleTradeSubmit = async (dex: string, wallets: WalletType[], isBuyMode: boolean) => {
     // Replace the moonshot branch in handleTradeSubmit with this implementation
-    if (selectedDex === 'moonshot') {
+    if (dex === 'moonshot') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -302,7 +404,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     }
     
     // Special handling for boopFun operations with client-side transaction signing
-    if (selectedDex === 'boopfun') {
+    if (dex === 'boopfun') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -396,7 +498,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     }
     
     // Special handling for PumpFun operations with client-side transaction signing
-    if (selectedDex === 'pumpfun') {
+    if (dex === 'pumpfun') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -490,7 +592,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     }
     
     // Special handling for Jupiter operations with client-side transaction signing
-    if (selectedDex === 'jupiter') {
+    if (dex === 'jupiter') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -564,7 +666,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import the dedicated sell functions from selljup
           const { validateJupSellInputs, executeJupSell } = await import('./utils/jupsell');
           
-          
           console.log(`Executing Jupiter Sell for ${tokenAddress} with ${activeWallets.length} wallets (${sellConfig.sellPercent}%)`);
           
           // Execute JupSell operation with RPC URL
@@ -587,7 +688,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     }
   
     // Replace the raydium branch in handleTradeSubmit with this implementation
-    if (selectedDex === 'raydium') {
+    if (dex === 'raydium') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -684,7 +785,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
       return;
     }
     // Replace the raydium branch in handleTradeSubmit with this implementation
-    if (selectedDex === 'launchpad') {
+    if (dex === 'launchpad') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -782,7 +883,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     }
     
     // Replace the pumpswap branch in handleTradeSubmit with this implementation
-    if (selectedDex === 'pumpswap') {
+    if (dex === 'pumpswap') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -878,6 +979,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
       }
       return;
     }
+    
+    setIsLoading(false);
   };
 
   // Animation variants
@@ -997,6 +1100,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           getScriptName={getScriptName}
           countActiveWallets={countActiveWallets}
           maxWalletsConfig={maxWalletsConfig}
+          currentMarketCap={currentMarketCap}
+          tokenBalances={tokenBalances}
         />
         
         {/* Token Operations */}
@@ -1328,95 +1433,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Footer Credits Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.4 }}
-        className="mt-12 mb-2 mx-auto max-w-4xl"
-      >
-        <div className="bg-gradient-to-br from-[#0a141970] to-[#05080a70] backdrop-blur-sm 
-                    rounded-xl p-4 relative overflow-hidden border border-[#02b36d20]">
-          {/* Background circuit effect */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute top-0 right-0 w-32 h-32">
-              <div className="absolute top-4 right-8 w-16 h-px bg-[#02b36d]"></div>
-              <div className="absolute top-4 right-8 w-px h-8 bg-[#02b36d]"></div>
-              <div className="absolute top-12 right-8 w-8 h-px bg-[#02b36d]"></div>
-            </div>
-            <div className="absolute bottom-0 left-0 w-32 h-32">
-              <div className="absolute bottom-4 left-8 w-16 h-px bg-[#02b36d]"></div>
-              <div className="absolute bottom-4 left-8 w-px h-8 bg-[#02b36d]"></div>
-              <div className="absolute bottom-12 left-8 w-8 h-px bg-[#02b36d]"></div>
-            </div>
-          </div>
-          
-          {/* Credits content */}
-          <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
-            <div className="mb-2 md:mb-0">
-              <p className="text-xs text-center md:text-left font-mono tracking-wider text-[#7ddfbd80]">
-                POWERED BY CUTTING-EDGE TECHNOLOGY
-              </p>
-            </div>
-            
-          </div>
-          <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
-            <div className="flex items-center space-x-4">
-              {/* API Provider Links */}
-              <motion.a 
-                href="https://gmgn.ai" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm font-mono tracking-wider text-[#02b36d] hover:text-[#7ddfbd] transition-colors duration-300"
-                whileHover={{ y: -2, scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                gmgn.ai
-              </motion.a>
-              
-              <div className="w-px h-4 bg-[#02b36d30]"></div>
-              
-              <motion.a 
-                href="https://defined.fi" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm font-mono tracking-wider text-[#02b36d] hover:text-[#7ddfbd] transition-colors duration-300"
-                whileHover={{ y: -2, scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                defined.fi
-              </motion.a>
-              
-              <div className="w-px h-4 bg-[#02b36d30]"></div>
-              
-              <motion.a 
-                href="https://fury.bot" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm font-mono tracking-wider text-[#02b36d] hover:text-[#7ddfbd] transition-colors duration-300"
-                whileHover={{ y: -2, scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                fury.bot
-              </motion.a>
-            </div>
-          </div>
-          
-          {/* Animated glow effect */}
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-r from-[#02b36d05] via-transparent to-[#02b36d05]"
-            animate={{ 
-              x: ['-100%', '100%'] 
-            }}
-            transition={{ 
-              duration: 8,
-              repeat: Infinity,
-              repeatType: "mirror"
-            }}
-          />
-        </div>
-      </motion.div>
+
+      <br></br>
       
       {/* GitHub Download Box */}
       <motion.div

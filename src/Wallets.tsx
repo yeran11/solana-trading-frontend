@@ -56,7 +56,9 @@ export const maxWalletsConfig = {
   'moonbuy': 160,
   'launchsell': 160,
   'launchbuy': 160,
-  'moonsell': 160
+  'moonsell': 160,
+  'boopbuy': 160,
+  'boopsell': 160
 } as const;
 
 // Updated toggle function for wallets based on token and SOL conditions
@@ -165,6 +167,8 @@ export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptTy
       return isBuyMode ? 'moonbuy' : 'moonsell';
     case 'launchpad':
       return isBuyMode ? 'launchbuy' : 'launchsell';
+    case 'boopfun':
+      return isBuyMode ? 'boopbuy' : 'boopsell';
     default:
       return isBuyMode ? 'pumpbuy' : 'pumpsell';
   }
@@ -227,6 +231,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
   const [internalTokenBalances, setInternalTokenBalances] = useState<Map<string, number>>(new Map());
+  const [refreshingWalletId, setRefreshingWalletId] = useState<number | null>(null);
   
   const solBalances = externalSolBalances || internalSolBalances;
   const setSolBalances = setExternalSolBalances || setInternalSolBalances;
@@ -235,22 +240,28 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   
   const { showToast } = useToast();
 
-  // Fetch SOL balances for all wallets
+  // Fetch SOL balances for all wallets one by one
   const fetchSolBalances = async () => {
-    const newBalances = new Map<string, number>();
+    const newBalances = new Map<string, number>(solBalances);
     
-    const promises = wallets.map(async (wallet) => {
+    // Process wallets sequentially
+    for (const wallet of wallets) {
+      setRefreshingWalletId(wallet.id);
       try {
         const balance = await fetchSolBalance(connection, wallet.address);
         newBalances.set(wallet.address, balance);
+        // Update balances after each wallet to show progress
+        setSolBalances(new Map(newBalances));
       } catch (error) {
         console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
         newBalances.set(wallet.address, 0);
       }
-    });
+      
+      // Add a small delay to make the sequential update visible
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
     
-    await Promise.all(promises);
-    setSolBalances(newBalances);
+    setRefreshingWalletId(null);
     return newBalances;
   };
 
@@ -301,35 +312,32 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
     });
   };
 
-  // Animation for digital counter
-  const [tickEffect, setTickEffect] = useState(false);
-  
-  useEffect(() => {
-    // Trigger tick animation when active wallet count changes
-    setTickEffect(true);
-    const timer = setTimeout(() => setTickEffect(false), 500);
-    return () => clearTimeout(timer);
-  }, [activeWallets.length]);
+  const handleRefreshAll = async () => {
+    if (isRefreshing || refreshingWalletId !== null) return;
+    
+    // Call the parent's refresh handler to indicate the refresh has started
+    handleRefresh();
+    
+    // Perform the wallet-by-wallet refresh
+    await fetchSolBalances();
+  };
 
   return (
     <div className="flex-1 bg-[#050a0e] relative cyberpunk-bg">
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
       <div className="absolute top-0 left-0 w-full h-full cyberpunk-scanline pointer-events-none z-1 opacity-30"></div>
       
-      <div className="top-0 sticky backdrop-blur-sm bg-[#050a0e99] border-b border-[#02b36d40] relative z-20">
-        {/* First row - Buttons */}
-        <div className="p-1 border-b border-[#02b36d20]">
-          {/* Now using the WalletOperationsButtons component for all buttons */}
+      {/* Enhanced header */}
+      <div className="top-0 sticky bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
+        {/* Compact buttons row */}
+        <div className="px-2 py-1 border-b border-[#02b36d20]">
           <WalletOperationsButtons
             wallets={wallets}
             solBalances={solBalances}
             connection={connection}
             tokenBalances={tokenBalances}
-            handleRefresh={() => {
-              handleRefresh();
-              fetchSolBalances();
-            }}
-            isRefreshing={isRefreshing}
+            handleRefresh={handleRefreshAll}
+            isRefreshing={isRefreshing || refreshingWalletId !== null}
             showingTokenWallets={showingTokenWallets}
             handleBalanceToggle={handleBalanceToggle}
             setWallets={setWallets}
@@ -339,52 +347,42 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
           />
         </div>
         
-        {/* Second row - Balance information */}
-        <div className="p-3 bg-[#0a141980] backdrop-blur-sm">
+        {/* Improved balance info */}
+        <div className="py-2 px-3 bg-[#0a141980]">
           <div className="flex justify-between text-sm">
-            <div className="space-y-1">
-              <Tooltip content="Total SOL balance (active wallets)" position="bottom">
-                <div className="text-[#7ddfbd] font-mono flex items-center gap-2">
-                  <div className="p-1 rounded bg-[#02b36d20] border border-[#02b36d40]">
-                    <DollarSign size={14} className="text-[#02b36d]" />
-                  </div>
-                  <span className="tracking-wider">
-                    <span className="text-[#e4fbf2]">{totalSol.toFixed(2)}</span> (
-                    <span className="text-[#02b36d]">{activeSol.toFixed(2)}</span>) SOL
-                  </span>
-                </div>
-              </Tooltip>
+            <div>
+              <div className="text-[#7ddfbd] font-mono flex items-center gap-2">
+                <DollarSign size={14} className="text-[#02b36d]" />
+                <span>
+                  <span className="text-[#e4fbf2]">{totalSol.toFixed(2)}</span> (
+                  <span className="text-[#02b36d]">{activeSol.toFixed(2)}</span>) SOL
+                </span>
+              </div>
             </div>
             {tokenAddress && (
-              <div className="space-y-1 text-right">
-                <Tooltip content="Total token balance (active wallets)" position="bottom">
-                  <div className="text-[#7ddfbd] font-mono flex items-center justify-end gap-2">
-                    <span className="tracking-wider">
-                      <span className="text-[#e4fbf2]">{formatTokenBalance(totalTokens)}</span> (
-                      <span className="text-[#02b36d]">{formatTokenBalance(activeTokens)}</span>) Tokens
-                    </span>
-                    <div className="p-1 rounded bg-[#02b36d20] border border-[#02b36d40]">
-                      <Activity size={14} className="text-[#02b36d]" />
-                    </div>
-                  </div>
-                </Tooltip>
+              <div className="text-right">
+                <div className="text-[#7ddfbd] font-mono flex items-center justify-end gap-2">
+                  <span>
+                    <span className="text-[#e4fbf2]">{formatTokenBalance(totalTokens)}</span> (
+                    <span className="text-[#02b36d]">{formatTokenBalance(activeTokens)}</span>) Tokens
+                  </span>
+                  <Activity size={14} className="text-[#02b36d]" />
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
       
-      <div className="p-2 relative z-20">
+      {/* Wallets table with improved row sizing */}
+      <div className="pt-2 relative">
         <div className="min-w-full overflow-auto relative">
-          <table className="w-full border-separate border-spacing-0 relative z-20">
+          <table className="w-full border-separate border-spacing-0">
             <tbody className="text-sm">
-              {wallets.map((wallet, index) => (
+              {wallets.map((wallet) => (
                 <tr 
                   key={wallet.id}
-                  onClick={(e) => {
-                    // Ensure the click propagates properly
-                    e.stopPropagation();
-                    e.preventDefault();
+                  onClick={() => {
                     setWallets(prev => {
                       const newWallets = toggleWallet(prev, wallet.id);
                       saveWalletsToCookies(newWallets);
@@ -394,70 +392,76 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   onMouseEnter={() => setHoverRow(wallet.id)}
                   onMouseLeave={() => setHoverRow(null)}
                   className={`
-                    border-b border-[#02b36d20] cursor-pointer
-                    transition-all duration-300
+                    border-b border-[#02b36d15] cursor-pointer transition-colors duration-200
                     ${hoverRow === wallet.id ? 'bg-[#02b36d15]' : ''}
                     ${wallet.isActive ? 'bg-[#02b36d10]' : ''}
+                    ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
                   `}
                 >
-                  <td className="py-3 pl-3 pr-1 w-8">
+                  {/* Indicator dot */}
+                  <td className="py-2.5 pl-3 pr-1 w-6">
                     <div 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setWallets(prev => {
-                          const newWallets = toggleWallet(prev, wallet.id);
-                          saveWalletsToCookies(newWallets);
-                          return newWallets;
-                        });
-                      }}
                       className={`
-                        w-3 h-3 rounded-full transition-all duration-300 cursor-pointer
+                        w-3 h-3 rounded-full transition-all duration-200
                         ${wallet.isActive 
-                          ? 'bg-[#02b36d] shadow-[0_0_8px_rgba(2,179,109,0.7)]' 
+                          ? 'bg-[#02b36d] shadow-sm shadow-[#02b36d40]' 
                           : 'bg-[#091217] border border-[#02b36d40]'
                         }
                       `} 
                     />
                   </td>
-                  <td className="py-3 px-2 font-mono">
-                    <span 
-                      className="text-sm font-mono cursor-pointer hover:text-[#02b36d] cyberpunk-glitch transition-colors duration-300 tracking-wider"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const success = await copyToClipboard(wallet.address, showToast);
-                        if (success) {
-                          setCopiedAddress(wallet.address);
-                          setTimeout(() => setCopiedAddress(null), 2000);
-                        }
-                      }}
-                    >
-                      {formatAddress(wallet.address)}
-                      {copiedAddress === wallet.address && (
-                        <span className="ml-2 text-xs text-[#02b36d] opacity-0 animate-[fadeIn_0.3s_forwards]">
-                          Copied
-                        </span>
+                  
+                  {/* Address with proper sizing */}
+                  <td className="py-2.5 px-2 font-mono">
+                    <div className="flex items-center">
+                      {refreshingWalletId === wallet.id && (
+                        <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
                       )}
-                    </span>
+                      <span 
+                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const success = await copyToClipboard(wallet.address, showToast);
+                          if (success) {
+                            setCopiedAddress(wallet.address);
+                            setTimeout(() => setCopiedAddress(null), 2000);
+                          }
+                        }}
+                      >
+                        {formatAddress(wallet.address)}
+                        {copiedAddress === wallet.address && (
+                          <span className="ml-1 text-xs text-[#02b36d] animate-pulse">
+                            ✓
+                          </span>
+                        )}
+                      </span>
+                    </div>
                   </td>
-                  <td className="py-3 px-2 text-right font-mono text-[#e4fbf2]">
+                  
+                  {/* SOL balance */}
+                  <td className="py-2.5 px-2 text-right font-mono text-[#e4fbf2]">
                     <span className={`${(solBalances.get(wallet.address) || 0) > 0 ? 'text-[#7ddfbd]' : 'text-[#7ddfbd60]'}`}>
-                      {(solBalances.get(wallet.address) || 0).toFixed(4)}
+                      {(solBalances.get(wallet.address) || 0).toFixed(3)}
                     </span>
                   </td>
+                  
+                  {/* Token balance if needed */}
                   {tokenAddress && (
-                    <td className="py-3 px-2 text-right font-mono">
+                    <td className="py-2.5 px-2 text-right font-mono">
                       <span className={`${(tokenBalances.get(wallet.address) || 0) > 0 ? 'text-[#02b36d]' : 'text-[#02b36d40]'}`}>
                         {formatTokenBalance(tokenBalances.get(wallet.address) || 0)}
                       </span>
                     </td>
                   )}
-                  <td className="py-3 pl-2 pr-3 text-right">
+                  
+                  {/* Explorer link */}
+                  <td className="py-2.5 pl-2 pr-3 text-right">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         window.open(`https://solscan.io/account/${wallet.address}`, '_blank');
                       }}
-                      className="text-[#7ddfbd60] hover:text-[#02b36d] transition-colors duration-300 p-1 rounded-full hover:bg-[#02b36d15]"
+                      className="text-[#7ddfbd60] hover:text-[#02b36d] transition-colors duration-200"
                     >
                       <ExternalLink size={14} />
                     </button>
