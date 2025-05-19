@@ -13,7 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
-import { WalletType } from "./Utils";
+import { WalletType, loadConfigFromCookies } from "./Utils";
 import { useToast } from "./Notifications";
 import { countActiveWallets, validateActiveWallets, getScriptName, maxWalletsConfig } from './Wallets';
 import TradingCard from './TradingForm';
@@ -232,6 +232,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           amount = Math.floor(tokenAmount * 1e9).toString(); // Convert to raw token amount
         }
         
+        const savedConfig = loadConfigFromCookies();
         // Call the routing API to determine best DEX
         const response = await fetch('https://solana.fury.bot/api/tokens/route', {
           method: 'POST',
@@ -242,7 +243,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           body: JSON.stringify({
             action: action,
             tokenMintAddress: tokenAddress,
-            amount: amount
+            amount: amount,
+            rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
           })
         });
         
