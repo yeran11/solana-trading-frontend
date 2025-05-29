@@ -164,8 +164,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         const data = await response.json();
         setTokenPrice(data.data[tokenAddress]?.price || null);
       } catch (error) {
-        console.error('Error fetching token price:', error);
-        showToast('Failed to fetch token price', 'error');
         setTokenPrice("0");
       } finally {
         setPriceLoading(false);
