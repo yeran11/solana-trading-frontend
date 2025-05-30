@@ -42,7 +42,7 @@ interface EnhancedWalletOverviewProps {
   showToast: (message: string, type: 'success' | 'error') => void;
 }
 
-type SortField = 'address' | 'solBalance' | 'tokenBalance' | 'id';
+type SortField = 'address' | 'solBalance' | 'tokenBalance';
 type SortDirection = 'asc' | 'desc';
 
 const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
@@ -59,7 +59,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   showToast
 }) => {
   // All hooks must be called before any conditional returns
-  const [sortField, setSortField] = useState<SortField>('id');
+  const [sortField, setSortField] = useState<SortField>('address');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWallets, setSelectedWallets] = useState<Set<number>>(new Set());
@@ -70,8 +70,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const filteredAndSortedWallets = useMemo(() => {
     let filtered = wallets.filter(wallet => {
       // Search filter
-      const matchesSearch = wallet.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           wallet.id.toString().includes(searchTerm);
+      const matchesSearch = wallet.address.toLowerCase().includes(searchTerm.toLowerCase());
       
       if (!matchesSearch) return false;
 
@@ -110,8 +109,8 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
           bValue = tokenBalances.get(b.address) || 0;
           break;
         default:
-          aValue = a.id;
-          bValue = b.id;
+          aValue = a.address;
+          bValue = b.address;
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -249,7 +248,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             <Search size={18} className="absolute left-3 top-3 text-[#02b36d40]" />
             <input
               type="text"
-              placeholder="Search by address or ID..."
+              placeholder="Search by address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-[#0a1419] border border-[#02b36d40] rounded pl-10 pr-4 py-2 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none font-mono"
@@ -338,15 +337,6 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                   </th>
                   <th className="p-3 text-left">
                     <button
-                      onClick={() => handleSort('id')}
-                      className="flex items-center gap-2 text-[#7ddfbd] hover:text-[#e4fbf2] transition-colors"
-                    >
-                      ID
-                      <SortIcon field="id" />
-                    </button>
-                  </th>
-                  <th className="p-3 text-left">
-                    <button
                       onClick={() => handleSort('address')}
                       className="flex items-center gap-2 text-[#7ddfbd] hover:text-[#e4fbf2] transition-colors"
                     >
@@ -403,7 +393,6 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                           {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                         </button>
                       </td>
-                      <td className="p-3 text-[#7ddfbd]">#{wallet.id}</td>
                       <td className="p-3">
                         <WalletTooltip content="Click to copy address" position="top">
                           <button
