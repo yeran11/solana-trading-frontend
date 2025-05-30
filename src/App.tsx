@@ -34,7 +34,7 @@ import {
 } from './Manager';
 
 // Lazy loaded components
-const Config = lazy(() => import('./Config'));
+const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
 const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
 const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
 const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: module.ActionsPage })));
@@ -64,8 +64,6 @@ const WalletManager: React.FC = () => {
   const [tokenAddress, setTokenAddress] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importKey, setImportKey] = useState('');
   const [config, setConfig] = useState<ConfigType>({
     rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
     transactionFee: '0.000005',
@@ -77,11 +75,8 @@ const WalletManager: React.FC = () => {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [solBalances, setSolBalances] = useState<Map<string, number>>(new Map());
   const [tokenBalances, setTokenBalances] = useState<Map<string, number>>(new Map());
-  const [importError, setImportError] = useState<string | null>(null);
   const [ammKey, setAmmKey] = useState<string | null>(null);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
-  const [isProcessingFile, setIsProcessingFile] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentMarketCap, setCurrentMarketCap] = useState<number | null>(null);
   const { showToast } = useToast();
   
@@ -207,98 +202,6 @@ const WalletManager: React.FC = () => {
     }
   };
 
-  const handleCreateWallet = async () => {
-    if (!connection) return;
-    
-    try {
-      const newWallet = await createNewWallet();
-      setWallets(prev => {
-        const newWallets = [...prev, newWallet];
-        saveWalletsToCookies(newWallets);
-        return newWallets;
-      });
-      
-      // Fetch SOL balance for the new wallet
-      const solBalance = await fetchSolBalance(connection, newWallet.address);
-      setSolBalances(prev => {
-        const newBalances = new Map(prev);
-        newBalances.set(newWallet.address, solBalance);
-        return newBalances;
-      });
-      
-      // Initialize token balance to 0 for the new wallet
-      setTokenBalances(prev => {
-        const newBalances = new Map(prev);
-        newBalances.set(newWallet.address, 0);
-        return newBalances;
-      });
-      
-      showToast("Wallet created successfully", "success");
-    } catch (error) {
-      console.error('Error creating wallet:', error);
-    }
-  };
-
-  const handleImportWallet = async () => {
-    if (!connection || !importKey.trim()) {
-      setImportError('Please enter a private key');
-      return;
-    }
-    
-    try {
-      const { wallet, error } = await importWallet(importKey.trim());
-      
-      if (error) {
-        setImportError(error);
-        return;
-      }
-      
-      if (wallet) {
-        // Check if wallet already exists
-        const exists = wallets.some(w => w.address === wallet.address);
-        if (exists) {
-          setImportError('Wallet already exists');
-          return;
-        }
-        
-        setWallets(prev => [...prev, wallet]);
-        
-        // Fetch SOL balance for the imported wallet
-        const solBalance = await fetchSolBalance(connection, wallet.address);
-        setSolBalances(prev => {
-          const newBalances = new Map(prev);
-          newBalances.set(wallet.address, solBalance);
-          return newBalances;
-        });
-        
-        // Fetch token balance if token address is provided
-        if (tokenAddress) {
-          const tokenBalance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
-          setTokenBalances(prev => {
-            const newBalances = new Map(prev);
-            newBalances.set(wallet.address, tokenBalance);
-            return newBalances;
-          });
-        } else {
-          setTokenBalances(prev => {
-            const newBalances = new Map(prev);
-            newBalances.set(wallet.address, 0);
-            return newBalances;
-          });
-        }
-        
-        setImportKey('');
-        setImportError(null);
-        setIsImporting(false);
-      } else {
-        setImportError('Failed to import wallet');
-      }
-    } catch (error) {
-      console.error('Error in handleImportWallet:', error);
-      setImportError('Failed to import wallet');
-    }
-  };
-
   const handleConfigChange = (key: keyof ConfigType, value: string) => {
     setConfig(prev => {
       const newConfig = { ...prev, [key]: value };
@@ -330,120 +233,6 @@ const WalletManager: React.FC = () => {
     }
     
     setWallets(prev => deleteWallet(prev, id));
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    console.log('File selected:', file?.name);
-    if (!file || !connection) {
-      console.log('No file or connection:', { file: !!file, connection: !!connection });
-      return;
-    }
-
-    setIsProcessingFile(true);
-    setImportError(null);
-
-    try {
-      const text = await file.text();
-      console.log('File content length:', text.length);
-      const lines = text.split(/\r?\n/);
-      console.log('Number of lines:', lines.length);
-      
-      // Base58 pattern for Solana private keys (64+ characters)
-      const base58Pattern = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
-      const foundKeys = lines
-        .map(line => line.trim())
-        .filter(line => base58Pattern.test(line));
-      
-      console.log('Found potential private keys:', foundKeys.length);
-
-      if (foundKeys.length === 0) {
-        console.log('No valid private keys found');
-        setImportError('No valid private keys found in file');
-        setIsProcessingFile(false);
-        return;
-      }
-
-      // Import each key with delay to ensure unique IDs
-      const importWalletsSequentially = async () => {
-        const importedWallets: WalletType[] = [];
-        const newSolBalances = new Map(solBalances);
-        const newTokenBalances = new Map(tokenBalances);
-        
-        for (const key of foundKeys) {
-          try {
-            console.log('Attempting to import key:', key.substring(0, 4) + '...');
-            const { wallet, error } = await importWallet(key);
-            
-            if (error) {
-              console.log('Import error for key:', error);
-              continue;
-            }
-            if (!wallet) {
-              console.log('No wallet returned for key');
-              continue;
-            }
-            
-            // Check if wallet already exists
-            const exists = wallets.some(w => w.address === wallet.address);
-            if (exists) {
-              console.log('Wallet already exists:', wallet.address);
-              continue;
-            }
-            
-            console.log('Successfully imported wallet:', wallet.address);
-            importedWallets.push(wallet);
-            
-            // Fetch and store SOL balance
-            const solBalance = await fetchSolBalance(connection, wallet.address);
-            newSolBalances.set(wallet.address, solBalance);
-            
-            // Fetch and store token balance if token address is provided
-            if (tokenAddress) {
-              const tokenBalance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
-              newTokenBalances.set(wallet.address, tokenBalance);
-            } else {
-              newTokenBalances.set(wallet.address, 0);
-            }
-            
-            // Add delay between imports to ensure unique IDs
-            await new Promise(resolve => setTimeout(resolve, 10));
-          } catch (error) {
-            console.error('Error importing wallet:', error);
-          }
-        }
-        
-        // Update balances maps
-        setSolBalances(newSolBalances);
-        setTokenBalances(newTokenBalances);
-        
-        return importedWallets;
-      };
-
-      const importedWallets = await importWalletsSequentially();
-      console.log('Successfully imported wallets:', importedWallets.length);
-      
-      if (importedWallets.length === 0) {
-        console.log('No new wallets could be imported');
-        setImportError('No new wallets could be imported');
-      } else {
-        console.log('Adding wallets to state:', importedWallets);
-        setWallets(prev => {
-          const newWallets = [...prev, ...importedWallets];
-          console.log('New wallet state:', newWallets.length);
-          return newWallets;
-        });
-        showToast(`Successfully imported ${importedWallets.length} wallets`, "success");
-      }
-    } catch (error) {
-      console.error('Error processing file:', error);
-      setImportError('Error processing file');
-    } finally {
-      setIsProcessingFile(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
   };
 
   // Modal action handlers
@@ -674,133 +463,46 @@ const WalletManager: React.FC = () => {
         />
       </div>
   
-      {/* Settings Modal */}
-      <Config
+      {/* Enhanced Settings Modal */}
+      <EnhancedSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         config={config}
         onConfigChange={handleConfigChange}
         onSave={handleSaveSettings}
+        wallets={wallets}
+        setWallets={setWallets}
+        connection={connection}
+        solBalances={solBalances}
+        setSolBalances={setSolBalances}
+        tokenBalances={tokenBalances}
+        setTokenBalances={setTokenBalances}
+        tokenAddress={tokenAddress}
+        showToast={showToast}
       />
   
-      {/* Wallet Modal */}
+      {/* Simplified Wallet Modal - Now mainly for viewing */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#091217] border border-[#02b36d40] cyberpunk-border rounded-lg w-96 p-6 mx-4 min-h-[50vh] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <div className="flex gap-2">
-                
-                <WalletTooltip content="Create New Wallet" position="bottom">
-                  <button 
-                    className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
-                    onClick={handleCreateWallet}
-                  >
-                    <Plus size={20} className="text-[#02b36d]" />
-                  </button>
-                </WalletTooltip>
-                
-                <WalletTooltip content="Import Wallet" position="bottom">
-                  <button 
-                    className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
-                    onClick={() => setIsImporting(true)}
-                  >
-                    <Upload size={20} className="text-[#02b36d]" />
-                  </button>
-                </WalletTooltip>
-                
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".txt"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={isProcessingFile}
-                />
-                
-                <WalletTooltip content="Upload Wallets file" position="bottom">
-                  <button 
-                    className={`p-2 ${isProcessingFile ? 'bg-[#02b36d10]' : 'hover:bg-[#02b36d20]'} border border-[#02b36d40] ${!isProcessingFile && 'hover:border-[#02b36d]'} rounded transition-all duration-300 ${!isProcessingFile && 'cyberpunk-btn'}`}
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isProcessingFile}
-                  >
-                    <FileUp size={20} className={`${isProcessingFile ? 'text-[#02b36d50]' : 'text-[#02b36d]'} ${isProcessingFile && 'loading-anim'}`} />
-                  </button>
-                </WalletTooltip>
-                
-                <WalletTooltip content="Download all Wallets" position="bottom">
-                  <button 
-                    className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
-                    onClick={() => downloadAllWallets(wallets)}
-                  >
-                    <Download size={20} className="text-[#02b36d]" />
-                  </button>
-                </WalletTooltip>
-                
-                <WalletTooltip content="Remove Empty Wallets" position="bottom">
-                  <button 
-                    className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 cyberpunk-btn"
-                    onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
-                  >
-                    <Trash2 size={20} className="text-[#02b36d]" />
-                  </button>
-                </WalletTooltip>
-                
-                <WalletTooltip content="Close" position="bottom">
-                  <button 
-                    onClick={() => setIsModalOpen(false)}
-                    className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
-                  >
-                    <X size={20} className="text-[#ff2244]" />
-                  </button>
-                </WalletTooltip>
-              </div>
+              <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">WALLET OVERVIEW</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+              >
+                <X size={20} className="text-[#ff2244]" />
+              </button>
             </div>
 
+            <div className="mb-4 p-4 bg-[#0a1419] border border-[#02b36d30] rounded-lg">
+              <div className="text-sm text-[#7ddfbd] font-mono mb-2">
+                💡 Use the Settings panel (gear icon) to create, import, and manage wallets
+              </div>
+            </div>
             
             <div className="space-y-4">
               <div className="w-full h-px bg-[#02b36d40]"></div>
-  
-              {/* Import Wallet Form */}
-              {isImporting && (
-                <div className="space-y-3 mb-4 p-4 bg-[#0a1419] border border-[#02b36d30] rounded-lg">
-                  <div className="text-sm text-[#7ddfbd] font-mono mb-2">IMPORT PRIVATE KEY</div>
-                  <input
-                    type="text"
-                    placeholder="Enter private key (base58)"
-                    value={importKey}
-                    onChange={(e) => {
-                      setImportKey(e.target.value);
-                      setImportError(null); // Clear error when input changes
-                    }}
-                    className={`w-full bg-[#091217] border ${
-                      importError ? 'border-[#ff2244]' : 'border-[#02b36d40]'
-                    } rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono tracking-wider`}
-                  />
-                  {importError && (
-                    <div className="text-[#ff2244] text-sm font-mono mt-1 flex items-center">
-                      <span className="mr-1">!</span> {importError}
-                    </div>
-                  )}
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={handleImportWallet}
-                      className="flex-1 bg-[#02b36d] hover:bg-[#01a35f] text-black font-medium p-2 rounded cyberpunk-btn flex items-center justify-center"
-                    >
-                      <span className="font-mono tracking-wider">IMPORT</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsImporting(false);
-                        setImportKey('');
-                        setImportError(null);
-                      }}
-                      className="flex-1 bg-[#0a1419] hover:bg-[#091217] border border-[#02b36d40] p-2 rounded"
-                    >
-                      <span className="font-mono tracking-wider">CANCEL</span>
-                    </button>
-                  </div>
-                </div>
-              )}
   
               {/* Wallet List */}
               <div className="space-y-3">
