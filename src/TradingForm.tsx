@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, Users, ArrowDownCircle, ArrowUpCircle, Loader2, Sparkles } from 'lucide-react';
 
 // Cyberpunk Tooltip component (simplified)
@@ -30,7 +30,7 @@ const Input = ({ className = '', ...props }) => (
               text-[#e4fbf2] placeholder-[#7ddfbd60] font-mono tracking-wide text-sm
               border border-[#02b36d40] 
               focus:outline-none focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d40]
-              transition-all duration-300 shadow-inner shadow-[#00000080]
+              shadow-inner shadow-[#00000080]
               disabled:opacity-50 disabled:cursor-not-allowed cyberpunk-input ${className}`}
     {...props}
   />
@@ -62,14 +62,38 @@ const TradingCard = ({
   const [estimatedSellSol, setEstimatedSellSol] = useState("0");
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   
-  const handleAmountChange = (e, type) => {
+  // Debounce timer ref
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  const handleAmountChange = useCallback((e, type) => {
     const value = e.target.value.replace(/[^0-9.]/g, '');
     if (type === 'buy') setBuyAmount(value);
     else setSellAmount(value);
-  };
+    
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new timer for debounced API call
+    debounceTimerRef.current = setTimeout(() => {
+      if (value && type === 'buy') {
+        fetchEstimatedTokens(value);
+      }
+    }, 500); // 500ms debounce
+  }, []);
   
-  // Fetch real estimated tokens from API
-  const fetchEstimatedTokens = async (amount) => {
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch real estimated tokens from API - Memoized to prevent recreation
+  const fetchEstimatedTokens = useCallback(async (amount) => {
     if (!amount || isNaN(parseFloat(amount)) || !tokenAddress) return "0";
     
     // Count active wallets
@@ -129,11 +153,11 @@ const TradingCard = ({
     } finally {
       setIsLoadingEstimate(false);
     }
-  };
+  }, [tokenAddress, wallets, selectedDex]);
   
-  // Fetch real estimated SOL from API
-  const fetchEstimatedSell = async (percentage) => {
-    if (!percentage || isNaN(parseFloat(percentage)) || !tokenAddress) return "0";
+  // Fetch real estimated SOL from API - Memoized to prevent recreation
+  const fetchEstimatedSol = useCallback(async (amount) => {
+    if (!amount || isNaN(parseFloat(amount)) || !tokenAddress) return "0";
     
     // We need to calculate token amount based on percentage
     const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -148,7 +172,7 @@ const TradingCard = ({
     }, 0);
     
     // Calculate amount to sell based on percentage
-    const sellPercentage = parseFloat(percentage);
+    const sellPercentage = parseFloat(amount);
     const tokenAmount = totalTokenBalance * (sellPercentage / 100);
     
     if (tokenAmount <= 0) return "0";
@@ -203,7 +227,7 @@ const TradingCard = ({
     } finally {
       setIsLoadingEstimate(false);
     }
-  };
+  }, [tokenAddress, wallets, selectedDex, tokenBalances]);
   
   // Update estimates when amounts change
   useEffect(() => {
@@ -212,15 +236,15 @@ const TradingCard = ({
     } else {
       setEstimatedBuyTokens("0");
     }
-  }, [buyAmount, tokenAddress, selectedDex]);
+  }, [buyAmount, tokenAddress, selectedDex, fetchEstimatedTokens]);
   
   useEffect(() => {
     if (sellAmount && parseFloat(sellAmount) > 0) {
-      fetchEstimatedSell(sellAmount);
+      fetchEstimatedSol(sellAmount);
     } else {
       setEstimatedSellSol("0");
     }
-  }, [sellAmount, tokenAddress, selectedDex]);
+  }, [sellAmount, tokenAddress, selectedDex, fetchEstimatedSol]);
   
   // Handle trade submission with the best DEX when auto is selected
   const handleTradeWithBestDex = (wallets, isBuy) => {
@@ -270,7 +294,7 @@ const TradingCard = ({
         className={`w-full flex items-center justify-between px-3 py-2 rounded-md
                  bg-[#091217] text-[#b3f0d7] border border-[#02b36d40]
                  hover:bg-[#0a1c23] hover:border-[#02b36d80]
-                 transition-all duration-300 focus:outline-none text-sm font-mono
+                 focus:outline-none text-sm font-mono
                  ${isDropdownOpen ? 'shadow-[0_0_10px_rgba(2,179,109,0.3)]' : ''}`}
       >
         <span className="truncate flex items-center">
@@ -281,7 +305,7 @@ const TradingCard = ({
             </>
           ) || dexOptions.find(d => d.value === selectedDex)?.label || 'Select DEX'}
         </span>
-        <div className={`transform transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}>
+        <div className={`transform ${isDropdownOpen ? 'rotate-180' : ''}`}>
           <ChevronDown size={14} className="text-[#02b36d]" />
         </div>
       </button>
@@ -296,7 +320,7 @@ const TradingCard = ({
           <button
             key="auto"
             className={`w-full px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono
-                   hover:bg-[#02b36d20] transition-colors duration-200 flex items-center
+                   hover:bg-[#02b36d20] flex items-center
                    ${selectedDex === 'auto' ? 'bg-[#02b36d15] border-l-2 border-[#02b36d]' : ''}`}
             onClick={(e) => handleDexSelect('auto', e)}
           >
@@ -313,7 +337,7 @@ const TradingCard = ({
               <button
                 key={dex.value}
                 className={`px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono truncate
-                       hover:bg-[#02b36d20] transition-colors duration-200
+                       hover:bg-[#02b36d20]
                        ${selectedDex === dex.value ? 'bg-[#02b36d15] border-l border-[#02b36d]' : ''}`}
                 onClick={(e) => handleDexSelect(dex.value, e)}
               >
@@ -361,7 +385,6 @@ const TradingCard = ({
         onClick={() => handleTradeWithBestDex(wallets, isBuy)}
         disabled={!selectedDex || !amount || isLoading || !tokenAddress}
         className={`p-2 rounded-lg border
-                  transition-all duration-300
                   disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#091217]
                   disabled:border-[#02b36d20]
                   ${isBuy 
@@ -369,7 +392,7 @@ const TradingCard = ({
                     : 'bg-[#091217] hover:bg-[#ff323220] border-[#ff3232] text-[#ff3232]'}`}
       >
         {isLoading ? (
-          <Loader2 size={16} className="animate-spin text-[#7ddfbd]" />
+          <Loader2 size={16} className="text-[#7ddfbd]" />
         ) : isBuy ? (
           <ArrowUpCircle size={16} />
         ) : (
@@ -402,7 +425,7 @@ const TradingCard = ({
 
   return (
     <div 
-      className="relative overflow-hidden p-5 rounded-xl cyberpunk-border"
+      className="relative overflow-hidden p-5 rounded-xl"
       style={{
         background: "linear-gradient(135deg, rgba(9,18,23,0.8) 0%, rgba(5,10,14,0.9) 100%)",
         backdropFilter: "blur(12px)",

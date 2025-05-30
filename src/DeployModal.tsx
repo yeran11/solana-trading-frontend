@@ -57,11 +57,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
           {/* Pump Deploy Option */}
           <div 
             onClick={() => setSelectedDeployType('pump')}
-            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 transition-all duration-300 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
+            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
-                <Zap size={24} className="text-[#02b36d] group-hover:animate-pulse" />
+                <Zap size={24} className="text-[#02b36d]" />
               </div>
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">PUMP.FUN</h3>
               <p className="text-[#7ddfbd] text-xs leading-relaxed">
@@ -74,11 +74,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
           {/* Bonk Deploy Option */}
           <div 
             onClick={() => setSelectedDeployType('bonk')}
-            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 transition-all duration-300 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
+            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
-                <Rocket size={24} className="text-[#02b36d] group-hover:animate-pulse" />
+                <Rocket size={24} className="text-[#02b36d]" />
               </div>
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">LETSBONK.FUN</h3>
               <p className="text-[#7ddfbd] text-xs leading-relaxed">
@@ -91,11 +91,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
           {/* Cook.Meme Deploy Option */}
           <div 
             onClick={() => setSelectedDeployType('cook')}
-            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 transition-all duration-300 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
+            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
-                <Utensils size={24} className="text-[#02b36d] group-hover:animate-pulse" />
+                <Utensils size={24} className="text-[#02b36d]" />
               </div>
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">COOK.MEME</h3>
               <p className="text-[#7ddfbd] text-xs leading-relaxed">
@@ -108,11 +108,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
           {/* moon.it Deploy Option */}
           <div 
             onClick={() => setSelectedDeployType('moon')}
-            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 transition-all duration-300 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
+            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
-                <Utensils size={24} className="text-[#02b36d] group-hover:animate-pulse" />
+                <Utensils size={24} className="text-[#02b36d]" />
               </div>
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">MOON.IT</h3>
               <p className="text-[#7ddfbd] text-xs leading-relaxed">
@@ -125,11 +125,11 @@ export const DeployModal: React.FC<DeployModalProps> = ({
           {/* boop.fun Deploy Option */}
           <div 
             onClick={() => setSelectedDeployType('boop')}
-            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 transition-all duration-300 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
+            className="group relative cursor-pointer bg-[#091217] border-2 border-[#02b36d30] rounded-xl p-4 hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d20]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-lg bg-[#02b36d20] flex items-center justify-center">
-                <Utensils size={24} className="text-[#02b36d] group-hover:animate-pulse" />
+                <Utensils size={24} className="text-[#02b36d]" />
               </div>
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">BOOP.FUN</h3>
               <p className="text-[#7ddfbd] text-xs leading-relaxed">

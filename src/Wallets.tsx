@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { RefreshCw, ExternalLink, DollarSign, Activity } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
 import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
 
-// Tooltip Component with cyberpunk styling
-export const Tooltip = ({ 
+// Tooltip Component with cyberpunk styling - Optimized with React.memo
+export const Tooltip = React.memo(({ 
   children, 
   content,
   position = 'top'
@@ -17,18 +17,21 @@ export const Tooltip = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
-  const positionClasses = {
+  const positionClasses = useMemo(() => ({
     top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
     bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
     left: 'right-full top-1/2 -translate-y-1/2 mr-2',
     right: 'left-full top-1/2 -translate-y-1/2 ml-2'
-  };
+  }), []);
+
+  const handleMouseEnter = useCallback(() => setIsVisible(true), []);
+  const handleMouseLeave = useCallback(() => setIsVisible(false), []);
 
   return (
     <div className="relative inline-block">
       <div
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {children}
       </div>
@@ -41,7 +44,7 @@ export const Tooltip = ({
       )}
     </div>
   );
-};
+});
 
 // Max wallets configuration
 export const maxWalletsConfig = {
@@ -392,7 +395,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   onMouseEnter={() => setHoverRow(wallet.id)}
                   onMouseLeave={() => setHoverRow(null)}
                   className={`
-                    border-b border-[#02b36d15] cursor-pointer transition-colors duration-200
+                    border-b border-[#02b36d15] cursor-pointer
                     ${hoverRow === wallet.id ? 'bg-[#02b36d15]' : ''}
                     ${wallet.isActive ? 'bg-[#02b36d10]' : ''}
                     ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
@@ -402,7 +405,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   <td className="py-2.5 pl-3 pr-1 w-6">
                     <div 
                       className={`
-                        w-3 h-3 rounded-full transition-all duration-200
+                        w-3 h-3 rounded-full
                         ${wallet.isActive 
                           ? 'bg-[#02b36d] shadow-sm shadow-[#02b36d40]' 
                           : 'bg-[#091217] border border-[#02b36d40]'
@@ -415,10 +418,10 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   <td className="py-2.5 px-2 font-mono">
                     <div className="flex items-center">
                       {refreshingWalletId === wallet.id && (
-                        <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
+                        <RefreshCw size={12} className="text-[#02b36d] mr-2" />
                       )}
                       <span 
-                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide"
+                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] tracking-wide"
                         onClick={async (e) => {
                           e.stopPropagation();
                           const success = await copyToClipboard(wallet.address, showToast);
@@ -461,7 +464,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         e.stopPropagation();
                         window.open(`https://solscan.io/account/${wallet.address}`, '_blank');
                       }}
-                      className="text-[#7ddfbd60] hover:text-[#02b36d] transition-colors duration-200"
+                      className="text-[#7ddfbd60] hover:text-[#02b36d]"
                     >
                       <ExternalLink size={14} />
                     </button>

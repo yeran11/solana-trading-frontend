@@ -7,7 +7,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "analyze": "npx vite-bundle-analyzer"
   },
   "dependencies": {
     "@jup-ag/api": "^6.0.30",
@@ -29,6 +30,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-split": "^2.0.14",
+    "react-window": "^1.8.11",
     "tailwind-merge": "^1.14.0",
     "zustand": "^5.0.2"
   },
@@ -46,6 +48,7 @@
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.0.2",
-    "vite": "^4.4.5"
+    "vite": "^4.4.5",
+    "vite-bundle-analyzer": "^0.7.0"
   }
 }

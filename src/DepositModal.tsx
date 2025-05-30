@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { DollarSign, X, CheckCircle, Wallet, Info, Search, ChevronRight } from 'lucide-react';
+import { DollarSign, X, CheckCircle, Info, Search, ChevronRight } from 'lucide-react';
 import { Connection, PublicKey, LAMPORTS_PER_SOL, SystemProgram, Transaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { useToast } from "./Notifications";
@@ -356,7 +356,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
+            className="text-[#7ddfbd] hover:text-[#02b36d] p-1 hover:bg-[#02b36d20] rounded"
           >
             <X size={18} />
           </button>
@@ -365,7 +365,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         {/* Progress Indicator */}
         <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
           <div 
-            className="h-full bg-[#02b36d] transition-all duration-300"
+            className="h-full bg-[#02b36d]"
             style={{ width: currentStep === 0 ? '50%' : '100%' }}
           ></div>
         </div>
@@ -373,11 +373,11 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         {/* Content */}
         <div className="relative z-10 p-5 space-y-5">
           {currentStep === 0 && (
-            <div className="animate-[fadeIn_0.3s_ease]">
+            <div>
               <div>
                 <button
                   onClick={connectPhantomWallet}
-                  className="w-full px-4 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] text-[#e4fbf2] rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-[#02b36d40] transform hover:-translate-y-0.5 modal-btn-cyberpunk"
+                  className="w-full px-4 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] text-[#e4fbf2] rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-[#02b36d40] modal-btn-cyberpunk"
                 >
                   <svg width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect width="128" height="128" rx="64" fill="#050a0e"/>
@@ -393,7 +393,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   <span className="font-mono tracking-wider">CONNECT PHANTOM</span>
                 </button>
                 {publicKey && (
-                  <div className="mt-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30] text-sm font-mono text-[#e4fbf2] break-all shadow-inner animate-[fadeIn_0.3s_ease]">
+                  <div className="mt-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30] text-sm font-mono text-[#e4fbf2] break-all shadow-inner">
                     <div className="text-xs text-[#7ddfbd] mb-1 font-mono uppercase">Connected:</div>
                     {publicKey}
                   </div>
@@ -402,7 +402,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               
               <div className="group mt-5">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] font-mono uppercase tracking-wider">
                     <span className="text-[#02b36d]">&#62;</span> Select Recipient <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   {selectedWallet && (
@@ -423,7 +423,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                      className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
                       placeholder="SEARCH WALLETS..."
                     />
                   </div>
@@ -438,28 +438,28 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   </select>
                   
                   <button
-                    className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] transition-all modal-btn-cyberpunk"
+                    className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] modal-btn-cyberpunk"
                     onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                   >
                     {sortDirection === 'asc' ? '↑' : '↓'}
                   </button>
                 </div>
 
-                <div className="max-h-40 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 group-hover:border-[#02b36d40] scrollbar-thin">
+                <div className="max-h-40 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] group-hover:border-[#02b36d40] scrollbar-thin">
                   {filterWallets(wallets, searchTerm).length > 0 ? (
                     filterWallets(wallets, searchTerm).map((wallet) => (
                       <div 
                         key={wallet.id}
-                        className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer transition-all duration-200 border-b border-[#02b36d20] last:border-b-0
+                        className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer border-b border-[#02b36d20] last:border-b-0
                                   ${selectedWallet === wallet.address ? 'bg-[#02b36d10] border-[#02b36d30]' : ''}`}
                         onClick={() => setSelectedWallet(wallet.address)}
                       >
-                        <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center transition-all duration-300
+                        <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center
                                         ${selectedWallet === wallet.address
                                           ? 'bg-[#02b36d] shadow-md shadow-[#02b36d40]' 
                                           : 'border border-[#02b36d30] bg-[#091217]'}`}>
                           {selectedWallet === wallet.address && (
-                            <CheckCircle size={14} className="text-[#050a0e] animate-[fadeIn_0.2s_ease]" />
+                            <CheckCircle size={14} className="text-[#050a0e]" />
                           )}
                         </div>
                         <div className="flex-1 flex flex-col">
@@ -487,7 +487,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               
               <div className="group mt-5">
                 <div className="flex items-center gap-1 mb-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] font-mono uppercase tracking-wider">
                     <span className="text-[#02b36d]">&#62;</span> Amount (SOL) <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
@@ -509,10 +509,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                         setAmount(value);
                       }
                     }}
-                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none modal-input-cyberpunk font-mono tracking-wider"
                     placeholder="ENTER AMOUNT TO DEPOSIT"
                   />
-                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30]"></div>
                 </div>
                 {selectedWallet && amount && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium pl-1">
@@ -527,17 +527,17 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={onClose}
-                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                 >
                   CANCEL
                 </button>
                 <button
                   onClick={() => setCurrentStep(1)}
                   disabled={!publicKey || !selectedWallet || !amount}
-                  className={`px-5 py-2.5 text-[#050a0e] rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider 
+                  className={`px-5 py-2.5 text-[#050a0e] rounded-lg shadow-lg flex items-center font-mono tracking-wider 
                             ${!publicKey || !selectedWallet || !amount
                               ? 'bg-[#02b36d50] cursor-not-allowed opacity-50' 
-                              : 'bg-[#02b36d] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                              : 'bg-[#02b36d] hover:bg-[#01a35f] modal-btn-cyberpunk'}`}
                 >
                   <span>REVIEW</span>
                   <ChevronRight size={16} className="ml-1" />
@@ -547,7 +547,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           )}
 
           {currentStep === 1 && (
-            <div className="animate-[fadeIn_0.3s_ease]">
+            <div>
               {/* Review Summary */}
               <div className="bg-[#091217] border border-[#02b36d30] rounded-lg p-4 mb-5">
                 <h3 className="text-base font-semibold text-[#e4fbf2] mb-3 font-mono tracking-wider">TRANSACTION SUMMARY</h3>
@@ -596,8 +596,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                     onChange={(e) => setIsConfirmed(e.target.checked)}
                     className="peer sr-only"
                   />
-                  <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
-                  <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                  <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0"></div>
+                  <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
                 <label htmlFor="confirmDeposit" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
                   I CONFIRM THIS DEPOSIT TRANSACTION
@@ -608,21 +608,21 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setCurrentStep(0)}
-                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                 >
                   BACK
                 </button>
                 <button
                   onClick={handleDeposit}
                   disabled={!isConfirmed || isSubmitting}
-                  className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider
+                  className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center font-mono tracking-wider
                             ${!isConfirmed || isSubmitting
                               ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                              : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                              : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] modal-btn-cyberpunk'}`}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent mr-2"></div>
                       PROCESSING...
                     </>
                   ) : (

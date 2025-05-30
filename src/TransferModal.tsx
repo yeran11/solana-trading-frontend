@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpDown, X, CheckCircle, DollarSign, Info, Search, ChevronRight } from 'lucide-react';
 import { 
-  Connection, 
-  PublicKey, 
+  Connection,  
   Keypair, 
   VersionedTransaction, 
-  TransactionMessage,
   MessageV0
 } from '@solana/web3.js';
 import bs58 from 'bs58';
@@ -398,7 +396,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
+            className="text-[#7ddfbd] hover:text-[#02b36d] p-1 hover:bg-[#02b36d20] rounded"
           >
             <X size={18} />
           </button>
@@ -407,7 +405,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         {/* Progress Indicator */}
         <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
           <div 
-            className="h-full bg-[#02b36d] transition-all duration-300"
+            className="h-full bg-[#02b36d]"
             style={{ width: currentStep === 0 ? '50%' : '100%' }}
           ></div>
         </div>
@@ -415,11 +413,11 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         {/* Content */}
         <div className="relative z-10 p-5 space-y-5">
           {currentStep === 0 && (
-            <div className="animate-[fadeIn_0.3s_ease]">
+            <div>
               {/* Source Wallet Selection */}
               <div className="group">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] font-mono uppercase tracking-wider">
                     <span className="text-[#02b36d]">&#62;</span> Source Wallet <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   {sourceWallet && (
@@ -440,7 +438,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                       type="text"
                       value={sourceSearchTerm}
                       onChange={(e) => setSourceSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                      className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
                       placeholder="SEARCH WALLETS..."
                     />
                   </div>
@@ -455,28 +453,28 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                   </select>
                   
                   <button
-                    className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] transition-all modal-btn-cyberpunk"
+                    className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] modal-btn-cyberpunk"
                     onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                   >
                     {sortDirection === 'asc' ? '↑' : '↓'}
                   </button>
                 </div>
 
-                <div className="max-h-40 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 group-hover:border-[#02b36d40] scrollbar-thin">
+                <div className="max-h-40 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] group-hover:border-[#02b36d40] scrollbar-thin">
                   {filterWallets(wallets, sourceSearchTerm).length > 0 ? (
                     filterWallets(wallets, sourceSearchTerm).map((wallet) => (
                       <div 
                         key={wallet.id}
-                        className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer transition-all duration-200 border-b border-[#02b36d20] last:border-b-0
+                        className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer border-b border-[#02b36d20] last:border-b-0
                                   ${sourceWallet === wallet.privateKey ? 'bg-[#02b36d10] border-[#02b36d30]' : ''}`}
                         onClick={() => setSourceWallet(wallet.privateKey)}
                       >
-                        <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center transition-all duration-300
+                        <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center
                                         ${sourceWallet === wallet.privateKey
                                           ? 'bg-[#02b36d] shadow-md shadow-[#02b36d40]' 
                                           : 'border border-[#02b36d30] bg-[#091217]'}`}>
                           {sourceWallet === wallet.privateKey && (
-                            <CheckCircle size={14} className="text-[#050a0e] animate-[fadeIn_0.2s_ease]" />
+                            <CheckCircle size={14} className="text-[#050a0e]" />
                           )}
                         </div>
                         <div className="flex-1 flex flex-col">
@@ -512,10 +510,10 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                     type="text"
                     value={receiverAddress}
                     onChange={(e) => setReceiverAddress(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none modal-input-cyberpunk font-mono tracking-wider"
                     placeholder="ENTER RECIPIENT ADDRESS"
                   />
-                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30]"></div>
                 </div>
                 {solBalances.has(receiverAddress) && (
                   <div className="mt-1.5 flex items-center text-xs font-medium pl-1">
@@ -528,7 +526,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               {/* Token Address */}
               <div className="group mt-5">
                 <div className="flex items-center gap-1 mb-1.5">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] font-mono uppercase tracking-wider">
                     <span className="text-[#02b36d]">&#62;</span> Token Address <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
@@ -545,17 +543,17 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                     type="text"
                     value={selectedToken}
                     onChange={(e) => setSelectedToken(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none modal-input-cyberpunk font-mono tracking-wider"
                     placeholder="ENTER TOKEN ADDRESS (LEAVE EMPTY FOR SOL)"
                   />
-                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30]"></div>
                 </div>
               </div>
               
               {/* Amount */}
               <div className="group mt-5">
                 <div className="flex items-center gap-1 mb-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] font-mono uppercase tracking-wider">
                     <span className="text-[#02b36d]">&#62;</span> Amount <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
@@ -577,10 +575,10 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                         setAmount(value);
                       }
                     }}
-                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none modal-input-cyberpunk font-mono tracking-wider"
                     placeholder="ENTER AMOUNT TO TRANSFER"
                   />
-                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30]"></div>
                 </div>
               </div>
               
@@ -607,7 +605,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={onClose}
-                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                 >
                   CANCEL
                 </button>
@@ -627,7 +625,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           )}
           
           {currentStep === 1 && (
-            <div className="animate-[fadeIn_0.3s_ease]">
+            <div>
               {/* Review Summary */}
               <div className="bg-[#091217] border border-[#02b36d30] rounded-lg p-4 mb-5">
                 <h3 className="text-base font-semibold text-[#e4fbf2] mb-3 font-mono tracking-wider">TRANSACTION SUMMARY</h3>
@@ -720,7 +718,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                     onChange={(e) => setIsConfirmed(e.target.checked)}
                     className="peer sr-only"
                   />
-                  <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                  <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0"></div>
                   <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
                 <label htmlFor="confirmTransfer" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
@@ -732,7 +730,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setCurrentStep(0)}
-                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                 >
                   BACK
                 </button>

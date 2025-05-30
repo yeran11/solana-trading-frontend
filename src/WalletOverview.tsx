@@ -7,11 +7,9 @@ import {
   Download, 
   Trash2, 
   Search, 
-  Filter,
   RefreshCw,
   CheckSquare,
   Square,
-  MoreVertical,
   Eye,
   EyeOff,
   Wallet,
@@ -28,7 +26,7 @@ import {
   deleteWallet,
   saveWalletsToCookies
 } from './Utils';
-import { handleCleanupWallets, handleSortWallets } from './Manager';
+import { handleCleanupWallets } from './Manager';
 
 interface EnhancedWalletOverviewProps {
   isOpen: boolean;
@@ -241,7 +239,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             <WalletTooltip content="Open System Settings" position="bottom">
               <button 
                 onClick={onOpenSettings}
-                className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
+                className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded"
               >
                 <Settings size={20} className="text-[#02b36d]" />
               </button>
@@ -249,7 +247,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+              className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded"
             >
               <X size={20} className="text-[#ff2244]" />
             </button>
@@ -288,7 +286,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
               <WalletTooltip content="Download Selected" position="bottom">
                 <button
                   onClick={downloadSelectedWallets}
-                  className="p-2 bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
+                  className="p-2 bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded"
                 >
                   <Download size={16} className="text-[#02b36d]" />
                 </button>
@@ -297,7 +295,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
               <WalletTooltip content="Delete Selected" position="bottom">
                 <button
                   onClick={deleteSelectedWallets}
-                  className="p-2 bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+                  className="p-2 bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded"
                 >
                   <Trash2 size={16} className="text-[#ff2244]" />
                 </button>
@@ -314,7 +312,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className={`p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 ${
+              className={`p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded ${
                 isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -326,7 +324,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
           <WalletTooltip content={showPrivateKeys ? "Hide Private Keys" : "Show Private Keys"} position="bottom">
             <button
               onClick={() => setShowPrivateKeys(!showPrivateKeys)}
-              className="p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
+              className="p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded"
             >
               {showPrivateKeys ? <EyeOff size={16} className="text-[#02b36d]" /> : <Eye size={16} className="text-[#02b36d]" />}
             </button>
@@ -505,7 +503,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
           <div className="flex gap-2">
             <button
               onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
-              className="px-4 py-2 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 text-[#ff2244]"
+              className="px-4 py-2 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm text-[#ff2244]"
             >
               CLEANUP EMPTY
             </button>

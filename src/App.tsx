@@ -1,25 +1,16 @@
-import React, { useState, useEffect, useRef, lazy, useCallback } from 'react';
-import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy } from 'lucide-react';
+import React, { useState, useEffect, lazy } from 'react';
+import { Settings, } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import ServiceSelector from './Menu.tsx';
 import { WalletTooltip, initStyles } from './Styles';
 import { 
-  createNewWallet,
-  importWallet,
-  refreshWalletBalance,
   saveWalletsToCookies,
   loadWalletsFromCookies,
   saveConfigToCookies,
   loadConfigFromCookies,
-  downloadPrivateKey,
-  downloadAllWallets, 
   deleteWallet, 
   WalletType, 
-  formatAddress,
-  copyToClipboard,
   ConfigType,
-  fetchSolBalance,
-  fetchTokenBalance,
 } from './Utils';
 import Split from 'react-split';
 import { useToast } from "./Notifications";
@@ -27,8 +18,6 @@ import {
   fetchSolBalances,
   fetchTokenBalances,
   fetchAmmKey,
-  handleMarketCapUpdate,
-  handleCleanupWallets,
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
@@ -49,19 +38,28 @@ const CleanerTokensModal = lazy(() => import('./CleanerModal').then(module => ({
 const CustomBuyModal = lazy(() => import('./CustomBuyModal').then(module => ({ default: module.CustomBuyModal })));
 
 const WalletManager: React.FC = () => {
-  // Apply styles
+  // Apply styles - Optimized to prevent memory leaks
   useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.textContent = initStyles();
-    document.head.appendChild(styleElement);
+    const styleId = 'cyberpunk-styles';
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.textContent = initStyles();
+      document.head.appendChild(styleElement);
+    }
     
     return () => {
-      document.head.removeChild(styleElement);
+      // Only remove if it exists and we're the last component using it
+      const existingElement = document.getElementById(styleId);
+      if (existingElement) {
+        document.head.removeChild(existingElement);
+      }
     };
   }, []);
 
   // State declarations
-  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [tokenAddress, setTokenAddress] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -137,17 +135,44 @@ const WalletManager: React.FC = () => {
     }
   }, [wallets]);
 
+  // Memory cleanup for balance Maps when wallets are removed
+  useEffect(() => {
+    const currentAddresses = new Set(wallets.map(w => w.address));
+    
+    // Clean up SOL balances for removed wallets
+    setSolBalances(prev => {
+      const cleaned = new Map();
+      for (const [address, balance] of prev) {
+        if (currentAddresses.has(address)) {
+          cleaned.set(address, balance);
+        }
+      }
+      return cleaned;
+    });
+    
+    // Clean up token balances for removed wallets
+    setTokenBalances(prev => {
+      const cleaned = new Map();
+      for (const [address, balance] of prev) {
+        if (currentAddresses.has(address)) {
+          cleaned.set(address, balance);
+        }
+      }
+      return cleaned;
+    });
+  }, [wallets]);
+
   // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
     if (connection && wallets.length > 0) {
-      fetchSolBalances(connection, wallets, setSolBalances);
+      fetchSolBalances(connection, wallets, setSolBalances, 20);
     }
   }, [connection, wallets.length]);
 
   // Fetch token balances when token address changes or wallets change
   useEffect(() => {
     if (connection && wallets.length > 0 && tokenAddress) {
-      fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
+      fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances, 20);
     }
   }, [connection, wallets.length, tokenAddress]);
 
@@ -189,12 +214,12 @@ const WalletManager: React.FC = () => {
     setIsRefreshing(true);
     
     try {
-      // Fetch SOL balances
-      await fetchSolBalances(connection, wallets, setSolBalances);
+      // Fetch SOL balances with batching
+      await fetchSolBalances(connection, wallets, setSolBalances, 20);
       
       // Fetch token balances if token address is provided
       if (tokenAddress) {
-        await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
+        await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances, 20);
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext, useContext } from "react"
-import { AlertCircle, CheckCircle2, X, ZapIcon } from "lucide-react"
+import { AlertCircle, X, ZapIcon } from "lucide-react"
 
 interface Toast {
   id: number
@@ -103,8 +103,8 @@ const cyberpunkClasses = {
   icon: "h-5 w-5 text-[#02b36d]",
   errorIcon: "h-5 w-5 text-[#ff305c]",
   message: "font-mono tracking-wider animate-[cyberpunk-text-glitch_3s_infinite]",
-  closeButton: "ml-2 rounded-full p-1 hover:bg-[#02b36d40] text-[#7ddfbd] transition-colors duration-300",
-  errorCloseButton: "ml-2 rounded-full p-1 hover:bg-[#ff305c40] text-[#ff8fa7] transition-colors duration-300"
+  closeButton: "ml-2 rounded-full p-1 hover:bg-[#02b36d40] text-[#7ddfbd]",
+  errorCloseButton: "ml-2 rounded-full p-1 hover:bg-[#ff305c40] text-[#ff8fa7]"
 }
 
 export const ToastContext = createContext<{

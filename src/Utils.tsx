@@ -277,17 +277,68 @@ export const loadConfigFromCookies = (): ConfigType | null => {
   }
   return null;
 };
-export const formatTokenBalance = (balance: number | undefined): string => {
-  if (balance === undefined) return '0.00';
-  if (balance < 1000) return balance.toFixed(2);
+export const formatTokenBalance = (balance: number): string => {
+  if (balance === 0) return '0';
+  if (balance < 0.001) return balance.toExponential(2);
+  if (balance < 1) return balance.toFixed(6);
+  if (balance < 1000) return balance.toFixed(3);
+  if (balance < 1000000) return (balance / 1000).toFixed(2) + 'K';
+  return (balance / 1000000).toFixed(2) + 'M';
+};
+
+// Performance monitoring utilities
+export const measurePerformance = (name: string, fn: () => void | Promise<void>) => {
+  const start = performance.now();
+  const result = fn();
   
-  if (balance < 1_000_000) {
-    return `${(balance / 1000).toFixed(1)}K`;
+  if (result instanceof Promise) {
+    return result.finally(() => {
+      const end = performance.now();
+      console.log(`Performance [${name}]: ${(end - start).toFixed(2)}ms`);
+    });
+  } else {
+    const end = performance.now();
+    console.log(`Performance [${name}]: ${(end - start).toFixed(2)}ms`);
+    return result;
   }
-  if (balance < 1_000_000_000) {
-    return `${(balance / 1_000_000).toFixed(1)}M`;
+};
+
+export const logMemoryUsage = (label: string = 'Memory Usage') => {
+  if ('memory' in performance) {
+    const memory = (performance as any).memory;
+    console.log(`${label}:`, {
+      used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+      total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+      limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`
+    });
   }
-  return `${(balance / 1_000_000_000).toFixed(1)}B`;
+};
+
+// Debounce utility for performance optimization
+export const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+// Throttle utility for performance optimization
+export const throttle = <T extends (...args: any[]) => any>(
+  func: T,
+  limit: number
+): ((...args: Parameters<T>) => void) => {
+  let inThrottle: boolean;
+  return (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
 };
 export const downloadPrivateKey = (wallet: WalletType) => {
   const blob = new Blob([wallet.privateKey], { type: 'text/plain' });

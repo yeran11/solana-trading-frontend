@@ -405,7 +405,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     switch (currentStep) {
       case 0:
         return (
-          <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
+          <div className="space-y-6">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
                 <PlusCircle size={16} className="text-[#02b36d]" />
@@ -603,7 +603,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         
       case 1:
         return (
-          <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
+          <div className="space-y-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
@@ -814,11 +814,11 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                         return (
                           <div
                             key={wallet.id}
-                            className="flex items-center justify-between p-3 rounded-lg border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#091217] transition-all duration-200 mb-2 cursor-pointer"
+                            className="flex items-center justify-between p-3 rounded-lg border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#091217] mb-2 cursor-pointer"
                             onClick={() => handleWalletSelection(wallet.privateKey)}
                           >
                             <div className="flex items-center gap-4">
-                              <div className="w-5 h-5 rounded-full border border-[#02b36d40] flex items-center justify-center cursor-pointer hover:border-[#02b36d] transition-all">
+                              <div className="w-5 h-5 rounded-full border border-[#02b36d40] flex items-center justify-center cursor-pointer hover:border-[#02b36d]">
                                 <PlusCircle size={14} className="text-[#7ddfbd]" />
                               </div>
                               <div className="space-y-1">
@@ -861,7 +861,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   
       case 2:
         return (
-          <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
+          <div className="space-y-6">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
                 <CheckCircle size={16} className="text-[#02b36d]" />
@@ -988,7 +988,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       const solBalance = wallet ? solBalances.get(wallet.address) || 0 : 0;
                       
                       return (
-                        <div key={index} className="flex justify-between items-center p-3 bg-[#091217] rounded-lg mb-2 border border-[#02b36d30] hover:border-[#02b36d] transition-all">
+                        <div key={index} className="flex justify-between items-center p-3 bg-[#091217] rounded-lg mb-2 border border-[#02b36d30] hover:border-[#02b36d]">
                           <div className="flex items-center gap-2">
                             <span className="text-[#02b36d] text-xs font-medium w-6 font-mono">{index === 0 ? 'DEV' : `#${index + 1}`}</span>
                             <span className="font-mono text-sm text-[#e4fbf2] glitch-text">
@@ -1029,7 +1029,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     onClick={() => setIsConfirmed(!isConfirmed)}
                     className="relative w-5 h-5 cursor-pointer"
                   >
-                    <div className={`w-5 h-5 border rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-[#02b36d]' : 'border-[#02b36d40]'}`}></div>
+                    <div className={`w-5 h-5 border rounded ${isConfirmed ? 'bg-[#02b36d] border-[#02b36d]' : 'border-[#02b36d40]'}`}></div>
                     {isConfirmed && (
                       <CheckCircle size={14} className="absolute top-0.5 left-0.5 text-[#050a0e]" />
                     )}
@@ -1050,7 +1050,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       // New Success Step
       case 3:
         return (
-          <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
+          <div className="space-y-6">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
                 <CheckCircle size={16} className="text-[#02b36d]" />
@@ -1094,14 +1094,14 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => deploymentSuccessData && copyToClipboard(deploymentSuccessData.mintAddress)}
-                            className="p-1.5 rounded-lg bg-[#02b36d20] hover:bg-[#02b36d30] text-[#02b36d] transition-all"
+                            className="p-1.5 rounded-lg bg-[#02b36d20] hover:bg-[#02b36d30] text-[#02b36d]"
                             title="Copy to clipboard"
                           >
                             {copySuccess ? <Check size={16} /> : <Copy size={16} />}
                           </button>
                           <button
                             onClick={() => deploymentSuccessData && openInExplorer(deploymentSuccessData.mintAddress)}
-                            className="p-1.5 rounded-lg bg-[#02b36d20] hover:bg-[#02b36d30] text-[#02b36d] transition-all"
+                            className="p-1.5 rounded-lg bg-[#02b36d20] hover:bg-[#02b36d30] text-[#02b36d]"
                             title="View in Explorer"
                           >
                             <ExternalLink size={16} />
@@ -1334,7 +1334,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
+            className="text-[#7ddfbd] hover:text-[#02b36d] p-1 hover:bg-[#02b36d20] rounded"
           >
             <X size={18} />
           </button>
@@ -1344,7 +1344,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
         {currentStep < 3 && (
           <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
             <div 
-              className="h-full bg-[#02b36d] transition-all duration-300"
+              className="h-full bg-[#02b36d]"
               style={{ width: `${(currentStep + 1) / STEPS_DEPLOY.length * 100}%` }}
             ></div>
           </div>
@@ -1363,14 +1363,14 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                   <button
                     type="button"
                     onClick={handleNewDeployment}
-                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                   >
                     NEW DEPLOYMENT
                   </button>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-5 py-2.5 rounded-lg bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 transition-all shadow-lg font-mono tracking-wider modal-btn-cyberpunk"
+                    className="px-5 py-2.5 rounded-lg bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] shadow-lg font-mono tracking-wider modal-btn-cyberpunk"
                   >
                     CLOSE
                   </button>
@@ -1381,7 +1381,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     type="button"
                     onClick={currentStep === 0 ? onClose : handleBack}
                     disabled={isSubmitting}
-                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                   >
                     {currentStep === 0 ? 'CANCEL' : 'BACK'}
                   </button>
@@ -1390,16 +1390,16 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     type={currentStep === 2 ? 'submit' : 'button'}
                     onClick={currentStep === 2 ? undefined : handleNext}
                     disabled={currentStep === 2 ? (isSubmitting || !isConfirmed) : isSubmitting}
-                    className={`px-5 py-2.5 rounded-lg flex items-center transition-all shadow-lg font-mono tracking-wider ${
+                    className={`px-5 py-2.5 rounded-lg flex items-center shadow-lg font-mono tracking-wider ${
                       currentStep === 2 && (isSubmitting || !isConfirmed)
                         ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50'
-                        : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'
+                        : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] modal-btn-cyberpunk'
                     }`}
                   >
                     {currentStep === 2 ? (
                       isSubmitting ? (
                         <>
-                          <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                          <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent mr-2"></div>
                           <span>DEPLOYING...</span>
                         </>
                       ) : 'CONFIRM DEPLOY'

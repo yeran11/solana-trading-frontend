@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, ChevronRight, X, DollarSign, Info, Search, Settings, ArrowDown, Trash2, Plus, PlusCircle } from 'lucide-react';
+import { CheckCircle, ChevronRight, X, Info, Search, ArrowDown, Trash2, Plus } from 'lucide-react';
 import { getWallets } from './Utils';
 import { useToast } from "./Notifications";
 // Import the cleaner operation functions at the top of the file
@@ -1230,8 +1230,8 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                           onChange={(e) => setIsConfirmed(e.target.checked)}
                           className="peer sr-only"
                         />
-                        <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
-                        <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                        <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0"></div>
+                        <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                       </div>
                       <label htmlFor="confirmBuySell" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
                         I CONFIRM THAT I WANT TO EXECUTE {getTotalOperationsCount()} OPERATIONS AS DETAILED ABOVE. THIS ACTION CANNOT BE UNDONE.
@@ -1247,7 +1247,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
               <button
                 type="button"
                 onClick={currentStep === 0 ? onClose : handleBack}
-                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
               >
                 {currentStep === 0 ? 'CANCEL' : 'BACK'}
               </button>
@@ -1261,19 +1261,19 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                   (currentStep === STEPS_BUYSELL.length - 1 && !isConfirmed) ||
                   sellers.some(seller => hasInsufficientSOL(getWalletByPrivateKey(seller.privateKey)?.address || ''))
                 }
-                className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider 
+                className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center font-mono tracking-wider 
                           ${(currentStep === 0 && sellers.length === 0) || 
                             (currentStep === 1 && sellers.some(seller => seller.buyers.length === 0)) ||
                             (currentStep === STEPS_BUYSELL.length - 1 && !isConfirmed) || 
                             sellers.some(seller => hasInsufficientSOL(getWalletByPrivateKey(seller.privateKey)?.address || '')) ||
                             isSubmitting
                             ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] modal-btn-cyberpunk'}`}
               >
                 {currentStep === STEPS_BUYSELL.length - 1 ? (
                   isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent mr-2"></div>
                       PROCESSING...
                     </>
                   ) : (
