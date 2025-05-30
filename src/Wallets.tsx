@@ -260,8 +260,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         newBalances.set(wallet.address, 0);
       }
       
-      // Add a small delay to make the sequential update visible
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Dynamic delay: max 1 second per wallet, decreases with more wallets
+      const dynamicDelay = Math.max(50, Math.min(1000, 1000 / wallets.length));
+      await new Promise(resolve => setTimeout(resolve, dynamicDelay));
     }
     
     setRefreshingWalletId(null);

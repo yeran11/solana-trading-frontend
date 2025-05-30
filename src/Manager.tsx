@@ -67,9 +67,10 @@ export const fetchSolBalances = async (
     // Progressive UI update after each batch
     setSolBalances(new Map(newBalances));
     
-    // Small delay to prevent overwhelming the RPC
+    // Dynamic delay to prevent overwhelming the RPC: max 1 second per wallet, decreases with more wallets
     if (i + batchSize < wallets.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const dynamicDelay = Math.max(50, Math.min(1000, 1000 / wallets.length));
+      await new Promise(resolve => setTimeout(resolve, dynamicDelay));
     }
   }
   
@@ -109,9 +110,10 @@ export const fetchTokenBalances = async (
     // Progressive UI update after each batch
     setTokenBalances(new Map(newBalances));
     
-    // Small delay to prevent overwhelming the RPC
+    // Dynamic delay to prevent overwhelming the RPC: max 1 second per wallet, decreases with more wallets
     if (i + batchSize < wallets.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const dynamicDelay = Math.max(50, Math.min(1000, 1000 / wallets.length));
+      await new Promise(resolve => setTimeout(resolve, dynamicDelay));
     }
   }
   
