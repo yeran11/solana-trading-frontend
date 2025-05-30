@@ -56,10 +56,6 @@ const ServerConfig: React.FC<ServerConfigProps> = ({ onSubmit }) => {
           <p className="text-neutral-300">
             Please enter your trading server URL:
           </p>
-          <ul className="text-sm text-neutral-400 list-disc list-inside space-y-1">
-            <li>For local servers, use: localhost:8888 or your IP address</li>
-            <li>For remote servers, use HTTPS URL</li>
-          </ul>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
