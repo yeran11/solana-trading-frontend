@@ -261,7 +261,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       }
       
       // Add a small delay to make the sequential update visible
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 1));
     }
     
     setRefreshingWalletId(null);

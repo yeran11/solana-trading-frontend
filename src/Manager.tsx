@@ -69,7 +69,7 @@ export const fetchSolBalances = async (
     
     // Small delay to prevent overwhelming the RPC
     if (i + batchSize < wallets.length) {
-      await new Promise(resolve => setTimeout(resolve, 25));
+      await new Promise(resolve => setTimeout(resolve, 5));
     }
   }
   
@@ -111,7 +111,7 @@ export const fetchTokenBalances = async (
     
     // Small delay to prevent overwhelming the RPC
     if (i + batchSize < wallets.length) {
-      await new Promise(resolve => setTimeout(resolve, 25));
+      await new Promise(resolve => setTimeout(resolve, 5));
     }
   }
   
