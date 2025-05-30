@@ -21,6 +21,7 @@ import {
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
+import { WalletOperationsButtons } from './OperationsWallets';
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
@@ -88,6 +89,7 @@ const WalletManager: React.FC = () => {
   const [customBuyModalOpen, setCustomBuyModalOpen] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [tickEffect, setTickEffect] = useState(false);
+  const [showingTokenWallets, setShowingTokenWallets] = useState(true);
 
   // Extract API key from URL
   useEffect(() => {
@@ -383,22 +385,60 @@ const WalletManager: React.FC = () => {
             }}
           >
             {/* Left Column */}
-            <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] overflow-y-auto">
+            <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] flex flex-col">
+              {/* Operations buttons - sticky at top */}
               {connection && (
-                <WalletsPage
-                  wallets={wallets}
-                  setWallets={setWallets}
-                  handleRefresh={handleRefresh}
-                  isRefreshing={isRefreshing}
-                  setIsModalOpen={setIsModalOpen}
-                  tokenAddress={tokenAddress}
-                  sortDirection={sortDirection}
-                  handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
-                  connection={connection}
-                  solBalances={solBalances}
-                  tokenBalances={tokenBalances}
-                />
+                <div className="sticky top-0 bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-20 shadow-sm">
+                  <div className="px-2 py-1">
+                    <WalletOperationsButtons
+                      wallets={wallets}
+                      solBalances={solBalances}
+                      connection={connection}
+                      tokenBalances={tokenBalances}
+                      handleRefresh={handleRefresh}
+                      isRefreshing={isRefreshing}
+                      showingTokenWallets={showingTokenWallets}
+                       handleBalanceToggle={() => {
+                         setShowingTokenWallets(!showingTokenWallets);
+                         // Toggle wallets based on balance type
+                         setWallets(prev => {
+                           const newWallets = prev.map(wallet => ({
+                             ...wallet,
+                             isActive: !showingTokenWallets 
+                               ? (tokenBalances.get(wallet.address) || 0) > 0
+                               : (solBalances.get(wallet.address) || 0) > 0 && (tokenBalances.get(wallet.address) || 0) === 0
+                           }));
+                           saveWalletsToCookies(newWallets);
+                           return newWallets;
+                         });
+                       }}
+                      setWallets={setWallets}
+                      sortDirection={sortDirection}
+                      handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
+                      setIsModalOpen={setIsModalOpen}
+                    />
+                  </div>
+                </div>
               )}
+              
+              {/* Wallets content - scrollable */}
+              <div className="flex-1 overflow-y-auto">
+                {connection && (
+                  <WalletsPage
+                    wallets={wallets}
+                    setWallets={setWallets}
+                    handleRefresh={handleRefresh}
+                    isRefreshing={isRefreshing}
+                    setIsModalOpen={setIsModalOpen}
+                    tokenAddress={tokenAddress}
+                    sortDirection={sortDirection}
+                    handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
+                    connection={connection}
+                    solBalances={solBalances}
+                    tokenBalances={tokenBalances}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Middle Column */}

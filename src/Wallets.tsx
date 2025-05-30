@@ -3,7 +3,7 @@ import { RefreshCw, ExternalLink, DollarSign, Activity } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
-import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
+// WalletOperationsButtons moved to App.tsx
 
 // Tooltip Component with cyberpunk styling - Optimized with React.memo
 export const Tooltip = React.memo(({ 
@@ -330,27 +330,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
       <div className="absolute top-0 left-0 w-full h-full cyberpunk-scanline pointer-events-none z-1 opacity-30"></div>
       
-      {/* Enhanced header */}
-      <div className="top-0 sticky bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
-        {/* Compact buttons row */}
-        <div className="px-2 py-1 border-b border-[#02b36d20]">
-          <WalletOperationsButtons
-            wallets={wallets}
-            solBalances={solBalances}
-            connection={connection}
-            tokenBalances={tokenBalances}
-            handleRefresh={handleRefreshAll}
-            isRefreshing={isRefreshing || refreshingWalletId !== null}
-            showingTokenWallets={showingTokenWallets}
-            handleBalanceToggle={handleBalanceToggle}
-            setWallets={setWallets}
-            sortDirection={sortDirection}
-            handleSortWallets={handleSortWallets}
-            setIsModalOpen={setIsModalOpen}
-          />
-        </div>
-        
-        {/* Improved balance info */}
+      {/* Balance info header - sticky at top */}
+      <div className="sticky top-0 bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
         <div className="py-2 px-3 bg-[#0a141980]">
           <div className="flex justify-between text-sm">
             <div>
@@ -377,7 +358,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         </div>
       </div>
       
-      {/* Wallets table with improved row sizing */}
+      {/* Wallets table */}
       <div className="pt-2 relative">
         <div className="min-w-full overflow-auto relative">
           <table className="w-full border-separate border-spacing-0">
