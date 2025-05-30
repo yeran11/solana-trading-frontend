@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart2, CheckCircle, ChevronLeft, ChevronRight, Info, Search, X } from 'lucide-react';
-import { getWallets, loadConfigFromCookies } from './Utils';
+import { getWallets } from './Utils';
 import PnlCard from './PnlCard.tsx';
 import { useToast } from "./Notifications";
 import { createPortal } from 'react-dom';

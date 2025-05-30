@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { Search, AlertCircle, BarChart } from 'lucide-react';
+import { Search, AlertCircle, BarChart, List } from 'lucide-react';
 
 interface ChartPageProps {
   isLoadingChart: boolean;
@@ -9,18 +9,18 @@ interface ChartPageProps {
   walletAddresses: string[];
 }
 
-
 // Button component with animation
 const IconButton: React.FC<{
   icon: React.ReactNode;
   onClick: () => void;
   title: string;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'solid';
   className?: string;
 }> = ({ icon, onClick, title, variant = 'primary', className = '' }) => {
   const variants = {
     primary: 'bg-[#87D693]/20 hover:bg-[#87D693]/30 text-[#87D693]',
-    secondary: 'bg-neutral-800/40 hover:bg-neutral-700/50 text-white'
+    secondary: 'bg-neutral-800/40 hover:bg-neutral-700/50 text-white',
+    solid: 'bg-[#87D693] hover:bg-[#87D693]/90 text-black shadow-lg shadow-[#87D693]/25'
   };
   
   return (
@@ -44,6 +44,25 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   const [frameLoading, setFrameLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
   const [showGMGN, setShowGMGN] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileView, setMobileView] = useState<'chart' | 'transactions'>('chart');
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Toggle between chart and transactions on mobile
+  const toggleMobileView = () => {
+    setMobileView(prev => prev === 'chart' ? 'transactions' : 'chart');
+  };
   
   // Reset loading state when token changes
   useEffect(() => {
@@ -131,12 +150,22 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       whileHover={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      <IconButton
-        icon={<BarChart className="h-4 w-4" />}
-        onClick={toggleGraphSource}
-        title={showGMGN ? "Switch to Fury graph" : "Switch to GMGN graph"}
-        variant="primary"
-      />
+      {isMobile && (
+          <IconButton
+            icon={mobileView === 'chart' ? <List className="h-4 w-4" /> : <BarChart className="h-4 w-4" />}
+            onClick={toggleMobileView}
+            title={mobileView === 'chart' ? "Switch to Transactions" : "Switch to Chart"}
+            variant="solid"
+          />
+        )}
+      {!isMobile && (
+        <IconButton
+          icon={<BarChart className="h-4 w-4" />}
+          onClick={toggleGraphSource}
+          title={showGMGN ? "Switch to Fury graph" : "Switch to GMGN graph"}
+          variant="primary"
+        />
+      )}
     </motion.div>
   );
   
@@ -176,28 +205,67 @@ export const ChartPage: React.FC<ChartPageProps> = ({
           {renderLoader(frameLoading || isLoadingChart)}
           
           <div className="absolute inset-0 overflow-hidden flex flex-col">
-            {/* GMGN Chart takes up 70% of the height */}
-            <div className="h-[70%] relative">
-              <iframe 
-                key={`gmgn-${iframeKey}`}
-                src={`https://www.gmgn.cc/kline/sol/${tokenAddress}`}
-                className="absolute inset-0 w-full h-[calc(100%+35px)]"
-                style={{ marginBottom: '-35px' }}
-                title="GMGN Chart"
-                loading="lazy"
-                onLoad={handleFrameLoad}
-              />
-            </div>
-            {/* Transactions list takes up 30% of the height */}
-            <div className="h-[30%] relative border-t border-[#222222]">
-              <iframe 
-                key={`transactions-${iframeKey}`}
-                src={transactionsSrc}
-                className="absolute inset-0 w-full h-full"
-                title="Transactions"
-                loading="lazy"
-              />
-            </div>
+            {isMobile ? (
+              // Mobile: Show only one view at a time
+              <div className="h-full relative">
+                {mobileView === 'chart' ? (
+                  <iframe 
+                    key={`gmgn-${iframeKey}`}
+                    src={`https://www.gmgn.cc/kline/sol/${tokenAddress}`}
+                    className="absolute inset-0 w-full h-full"
+                    style={{ 
+                      WebkitOverflowScrolling: 'touch'
+                    }}
+                    title="GMGN Chart"
+                    loading="lazy"
+                    onLoad={handleFrameLoad}
+                  />
+                ) : (
+                  <iframe 
+                    key={`transactions-${iframeKey}`}
+                    src={transactionsSrc}
+                    className="absolute inset-0 w-full h-full"
+                    style={{
+                      WebkitOverflowScrolling: 'touch'
+                    }}
+                    title="Transactions"
+                    loading="lazy"
+                  />
+                )}
+              </div>
+            ) : (
+              // Desktop: Show both views split
+              <>
+                {/* GMGN Chart - 70% height on desktop */}
+                <div className="h-[70%] relative">
+                  <iframe 
+                    key={`gmgn-${iframeKey}`}
+                    src={`https://www.gmgn.cc/kline/sol/${tokenAddress}`}
+                    className="absolute inset-0 w-full h-[calc(100%+35px)]"
+                    style={{ 
+                      marginBottom: '-35px',
+                      WebkitOverflowScrolling: 'touch'
+                    }}
+                    title="GMGN Chart"
+                    loading="lazy"
+                    onLoad={handleFrameLoad}
+                  />
+                </div>
+                {/* Transactions list - 30% height on desktop */}
+                <div className="h-[30%] relative border-t border-[#222222]">
+                  <iframe 
+                    key={`transactions-${iframeKey}`}
+                    src={transactionsSrc}
+                    className="absolute inset-0 w-full h-full"
+                    style={{
+                      WebkitOverflowScrolling: 'touch'
+                    }}
+                    title="Transactions"
+                    loading="lazy"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
       );
@@ -252,9 +320,13 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="relative h-full w-full rounded-lg overflow-hidden"
+      className={`relative w-full rounded-lg overflow-hidden ${
+        isMobile ? 'h-[100dvh]' : 'h-full'
+      }`}
       style={{
         background: "linear-gradient(145deg, #0f0f0f 0%, #141414 100%)",
+        touchAction: 'manipulation',
+        WebkitOverflowScrolling: 'touch'
       }}
     >
       {/* Subtle gradient overlay */}

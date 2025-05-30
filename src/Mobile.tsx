@@ -33,7 +33,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     if (viewportMeta) {
       viewportMeta.setAttribute(
         'content',
-        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
       );
     }
 
@@ -160,7 +160,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   ];
 
   return (
-    <div className="md:hidden flex flex-col h-full max-h-screen select-none bg-[#050a0e]">
+    <div className="md:hidden flex flex-col h-[100dvh] max-h-[100dvh] select-none bg-[#050a0e]" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Main content area */}
       <div className="flex-1 overflow-hidden relative">
         {/* Grid background */}
@@ -168,7 +168,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         
         {/* Content container */}
         <div className="absolute inset-0">
-          <div className="h-full overflow-y-auto overscroll-contain pb-16 touch-pan-y">
+          <div className="h-full overflow-y-auto overscroll-contain pb-16 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
             {navItems.map(({ id, component }) => (
               currentPage === id && (
                 <div 
@@ -184,7 +184,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
       </div>
 
       {/* Navigation bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#050a0e] border-t border-[#02b36d40] z-50 mobile-nav-scan">
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#050a0e] border-t border-[#02b36d40] z-50 mobile-nav-scan" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Ambient glow from below */}
         <div 
           className="absolute bottom-0 left-0 right-0 h-1 opacity-60"
@@ -194,7 +194,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
         ></div>
         
         {/* Nav items */}
-        <div className="flex justify-around items-center h-16 px-4 max-w-md mx-auto">
+        <div className="flex justify-around items-center h-16 px-4 max-w-md mx-auto" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           {navItems.map(({ id, label, Icon }) => (
             <button
               key={id}

@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Download, TrendingUp, TrendingDown } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Download } from 'lucide-react';
 
 // Define proper types
 interface PnlDataItem {
