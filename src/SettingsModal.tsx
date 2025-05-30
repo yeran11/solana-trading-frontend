@@ -29,6 +29,8 @@ interface EnhancedSettingsModalProps {
   setTokenBalances: React.Dispatch<React.SetStateAction<Map<string, number>>>;
   tokenAddress: string;
   showToast: (message: string, type: 'success' | 'error') => void;
+  activeTab: 'network' | 'wallets' | 'advanced';
+  setActiveTab: React.Dispatch<React.SetStateAction<'network' | 'wallets' | 'advanced'>>;
 }
 
 const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
@@ -45,9 +47,10 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
   tokenBalances,
   setTokenBalances,
   tokenAddress,
-  showToast
+  showToast,
+  activeTab,
+  setActiveTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'network' | 'wallets' | 'advanced'>('network');
   const [isCreatingWallets, setIsCreatingWallets] = useState(false);
   const [walletQuantity, setWalletQuantity] = useState('1');
   const [isImporting, setIsImporting] = useState(false);

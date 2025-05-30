@@ -65,6 +65,7 @@ const WalletManager: React.FC = () => {
   const [tokenAddress, setTokenAddress] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'network' | 'wallets' | 'advanced'>('network');
   const [config, setConfig] = useState<ConfigType>({
     rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
     transactionFee: '0.000005',
@@ -480,6 +481,8 @@ const WalletManager: React.FC = () => {
         setTokenBalances={setTokenBalances}
         tokenAddress={tokenAddress}
         showToast={showToast}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
   
       {/* Enhanced Wallet Overview */}
@@ -495,6 +498,11 @@ const WalletManager: React.FC = () => {
         handleRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         showToast={showToast}
+        onOpenSettings={() => {
+          setIsModalOpen(false); // Close wallet overview first
+          setActiveTab('wallets');
+          setIsSettingsOpen(true);
+        }}
       />
 
       {/* Modals */}

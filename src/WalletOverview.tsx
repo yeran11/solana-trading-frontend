@@ -14,7 +14,9 @@ import {
   MoreVertical,
   Eye,
   EyeOff,
-  Wallet
+  Wallet,
+  Settings,
+  X
 } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { WalletTooltip } from './Styles';
@@ -40,6 +42,7 @@ interface EnhancedWalletOverviewProps {
   handleRefresh: () => void;
   isRefreshing: boolean;
   showToast: (message: string, type: 'success' | 'error') => void;
+  onOpenSettings: () => void;
 }
 
 type SortField = 'address' | 'solBalance' | 'tokenBalance';
@@ -56,7 +59,8 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   connection,
   handleRefresh,
   isRefreshing,
-  showToast
+  showToast,
+  onOpenSettings
 }) => {
   // All hooks must be called before any conditional returns
   const [sortField, setSortField] = useState<SortField>('address');
@@ -233,12 +237,23 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             </div>
           </div>
 
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
-          >
-            <MoreVertical size={20} className="text-[#ff2244]" />
-          </button>
+          <div className="flex gap-2">
+            <WalletTooltip content="Open System Settings" position="bottom">
+              <button 
+                onClick={onOpenSettings}
+                className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
+              >
+                <Settings size={20} className="text-[#02b36d]" />
+              </button>
+            </WalletTooltip>
+            
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+            >
+              <X size={20} className="text-[#ff2244]" />
+            </button>
+          </div>
         </div>
 
         {/* Controls */}
