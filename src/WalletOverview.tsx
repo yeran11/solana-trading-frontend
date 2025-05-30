@@ -1,0 +1,524 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Copy, 
+  Download, 
+  Trash2, 
+  Search, 
+  Filter,
+  RefreshCw,
+  CheckSquare,
+  Square,
+  MoreVertical,
+  Eye,
+  EyeOff,
+  Wallet
+} from 'lucide-react';
+import { Connection } from '@solana/web3.js';
+import { WalletTooltip } from './Styles';
+import { 
+  WalletType, 
+  formatAddress, 
+  copyToClipboard, 
+  downloadPrivateKey,
+  deleteWallet,
+  saveWalletsToCookies
+} from './Utils';
+import { handleCleanupWallets, handleSortWallets } from './Manager';
+
+interface EnhancedWalletOverviewProps {
+  isOpen: boolean;
+  onClose: () => void;
+  wallets: WalletType[];
+  setWallets: React.Dispatch<React.SetStateAction<WalletType[]>>;
+  solBalances: Map<string, number>;
+  tokenBalances: Map<string, number>;
+  tokenAddress: string;
+  connection: Connection | null;
+  handleRefresh: () => void;
+  isRefreshing: boolean;
+  showToast: (message: string, type: 'success' | 'error') => void;
+}
+
+type SortField = 'address' | 'solBalance' | 'tokenBalance' | 'id';
+type SortDirection = 'asc' | 'desc';
+
+const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
+  isOpen,
+  onClose,
+  wallets,
+  setWallets,
+  solBalances,
+  tokenBalances,
+  tokenAddress,
+  connection,
+  handleRefresh,
+  isRefreshing,
+  showToast
+}) => {
+  const [sortField, setSortField] = useState<SortField>('id');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedWallets, setSelectedWallets] = useState<Set<number>>(new Set());
+  const [showPrivateKeys, setShowPrivateKeys] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'withSOL' | 'withTokens' | 'empty'>('all');
+
+  if (!isOpen) return null;
+
+  // Sorting function
+  const handleSort = (field: SortField) => {
+    const newDirection = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(newDirection);
+  };
+
+  // Filter and sort wallets
+  const filteredAndSortedWallets = useMemo(() => {
+    let filtered = wallets.filter(wallet => {
+      // Search filter
+      const matchesSearch = wallet.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           wallet.id.toString().includes(searchTerm);
+      
+      if (!matchesSearch) return false;
+
+      // Type filter
+      const solBalance = solBalances.get(wallet.address) || 0;
+      const tokenBalance = tokenBalances.get(wallet.address) || 0;
+
+      switch (filterType) {
+        case 'withSOL':
+          return solBalance > 0;
+        case 'withTokens':
+          return tokenBalance > 0;
+        case 'empty':
+          return solBalance === 0 && tokenBalance === 0;
+        default:
+          return true;
+      }
+    });
+
+    // Sort filtered results
+    return filtered.sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortField) {
+        case 'address':
+          aValue = a.address;
+          bValue = b.address;
+          break;
+        case 'solBalance':
+          aValue = solBalances.get(a.address) || 0;
+          bValue = solBalances.get(b.address) || 0;
+          break;
+        case 'tokenBalance':
+          aValue = tokenBalances.get(a.address) || 0;
+          bValue = tokenBalances.get(b.address) || 0;
+          break;
+        default:
+          aValue = a.id;
+          bValue = b.id;
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return sortDirection === 'asc' 
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
+    });
+  }, [wallets, sortField, sortDirection, searchTerm, filterType, solBalances, tokenBalances]);
+
+  // Selection functions
+  const toggleWalletSelection = (walletId: number) => {
+    const newSelected = new Set(selectedWallets);
+    if (newSelected.has(walletId)) {
+      newSelected.delete(walletId);
+    } else {
+      newSelected.add(walletId);
+    }
+    setSelectedWallets(newSelected);
+  };
+
+  const selectAllVisible = () => {
+    const newSelected = new Set(filteredAndSortedWallets.map(w => w.id));
+    setSelectedWallets(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedWallets(new Set());
+  };
+
+  // Bulk operations
+  const deleteSelectedWallets = () => {
+    if (selectedWallets.size === 0) return;
+    
+    setWallets(prev => {
+      const newWallets = prev.filter(w => !selectedWallets.has(w.id));
+      saveWalletsToCookies(newWallets);
+      return newWallets;
+    });
+    
+    showToast(`Deleted ${selectedWallets.size} wallet${selectedWallets.size > 1 ? 's' : ''}`, 'success');
+    setSelectedWallets(new Set());
+  };
+
+  const downloadSelectedWallets = () => {
+    if (selectedWallets.size === 0) return;
+    
+    const selectedWalletData = wallets
+      .filter(w => selectedWallets.has(w.id))
+      .map(w => w.privateKey)
+      .join('\n');
+    
+    const blob = new Blob([selectedWalletData], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected_wallets_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast(`Downloaded ${selectedWallets.size} wallet${selectedWallets.size > 1 ? 's' : ''}`, 'success');
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown size={14} className="text-[#02b36d40]" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp size={14} className="text-[#02b36d]" />
+      : <ArrowDown size={14} className="text-[#02b36d]" />;
+  };
+
+  const totalSOL = Array.from(solBalances.values()).reduce((sum, balance) => sum + balance, 0);
+  const totalTokens = Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0);
+  const activeWallets = wallets.filter(w => (solBalances.get(w.address) || 0) > 0).length;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#091217] border border-[#02b36d40] cyberpunk-border rounded-lg w-[95vw] max-w-7xl h-[90vh] p-6 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4 pb-4 border-b border-[#02b36d40]">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Wallet className="text-[#02b36d]" size={24} />
+              <h2 className="text-xl font-bold text-[#e4fbf2] font-mono tracking-wider">WALLET MANAGER</h2>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="flex gap-6 text-sm font-mono">
+              <div className="text-center">
+                <div className="text-[#02b36d] font-bold">{filteredAndSortedWallets.length}</div>
+                <div className="text-[#7ddfbd]">SHOWN</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[#02b36d] font-bold">{totalSOL.toFixed(4)}</div>
+                <div className="text-[#7ddfbd]">TOTAL SOL</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[#02b36d] font-bold">{totalTokens.toLocaleString()}</div>
+                <div className="text-[#7ddfbd]">TOTAL TOKENS</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[#02b36d] font-bold">{activeWallets}</div>
+                <div className="text-[#7ddfbd]">ACTIVE</div>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+          >
+            <MoreVertical size={20} className="text-[#ff2244]" />
+          </button>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-wrap gap-4 mb-4 items-center">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[300px]">
+            <Search size={18} className="absolute left-3 top-3 text-[#02b36d40]" />
+            <input
+              type="text"
+              placeholder="Search by address or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-[#0a1419] border border-[#02b36d40] rounded pl-10 pr-4 py-2 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none font-mono"
+            />
+          </div>
+
+          {/* Filter */}
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as any)}
+            className="bg-[#0a1419] border border-[#02b36d40] rounded px-3 py-2 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none font-mono"
+          >
+            <option value="all">All Wallets</option>
+            <option value="withSOL">With SOL</option>
+            <option value="withTokens">With Tokens</option>
+            <option value="empty">Empty</option>
+          </select>
+
+          {/* Bulk Actions */}
+          {selectedWallets.size > 0 && (
+            <div className="flex gap-2">
+              <WalletTooltip content="Download Selected" position="bottom">
+                <button
+                  onClick={downloadSelectedWallets}
+                  className="p-2 bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
+                >
+                  <Download size={16} className="text-[#02b36d]" />
+                </button>
+              </WalletTooltip>
+              
+              <WalletTooltip content="Delete Selected" position="bottom">
+                <button
+                  onClick={deleteSelectedWallets}
+                  className="p-2 bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+                >
+                  <Trash2 size={16} className="text-[#ff2244]" />
+                </button>
+              </WalletTooltip>
+              
+              <span className="px-3 py-2 bg-[#02b36d20] rounded text-sm font-mono text-[#02b36d]">
+                {selectedWallets.size} selected
+              </span>
+            </div>
+          )}
+
+          {/* Refresh */}
+          <WalletTooltip content="Refresh Balances" position="bottom">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 ${
+                isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <RefreshCw size={16} className={`text-[#02b36d] ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </WalletTooltip>
+
+          {/* Privacy Toggle */}
+          <WalletTooltip content={showPrivateKeys ? "Hide Private Keys" : "Show Private Keys"} position="bottom">
+            <button
+              onClick={() => setShowPrivateKeys(!showPrivateKeys)}
+              className="p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
+            >
+              {showPrivateKeys ? <EyeOff size={16} className="text-[#02b36d]" /> : <Eye size={16} className="text-[#02b36d]" />}
+            </button>
+          </WalletTooltip>
+        </div>
+
+        {/* Table Container */}
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-y-auto border border-[#02b36d40] rounded-lg">
+            <table className="w-full text-sm font-mono">
+              {/* Header */}
+              <thead className="sticky top-0 bg-[#0a1419] border-b border-[#02b36d40]">
+                <tr>
+                  <th className="p-3 text-left">
+                    <button
+                      onClick={selectedWallets.size === filteredAndSortedWallets.length ? clearSelection : selectAllVisible}
+                      className="text-[#02b36d] hover:text-[#e4fbf2] transition-colors"
+                    >
+                      {selectedWallets.size === filteredAndSortedWallets.length && filteredAndSortedWallets.length > 0 ? 
+                        <CheckSquare size={16} /> : <Square size={16} />
+                      }
+                    </button>
+                  </th>
+                  <th className="p-3 text-left">
+                    <button
+                      onClick={() => handleSort('id')}
+                      className="flex items-center gap-2 text-[#7ddfbd] hover:text-[#e4fbf2] transition-colors"
+                    >
+                      ID
+                      <SortIcon field="id" />
+                    </button>
+                  </th>
+                  <th className="p-3 text-left">
+                    <button
+                      onClick={() => handleSort('address')}
+                      className="flex items-center gap-2 text-[#7ddfbd] hover:text-[#e4fbf2] transition-colors"
+                    >
+                      ADDRESS
+                      <SortIcon field="address" />
+                    </button>
+                  </th>
+                  <th className="p-3 text-left">
+                    <button
+                      onClick={() => handleSort('solBalance')}
+                      className="flex items-center gap-2 text-[#7ddfbd] hover:text-[#e4fbf2] transition-colors"
+                    >
+                      SOL BALANCE
+                      <SortIcon field="solBalance" />
+                    </button>
+                  </th>
+                  {tokenAddress && (
+                    <th className="p-3 text-left">
+                      <button
+                        onClick={() => handleSort('tokenBalance')}
+                        className="flex items-center gap-2 text-[#7ddfbd] hover:text-[#e4fbf2] transition-colors"
+                      >
+                        TOKEN BALANCE
+                        <SortIcon field="tokenBalance" />
+                      </button>
+                    </th>
+                  )}
+                  {showPrivateKeys && (
+                    <th className="p-3 text-left text-[#7ddfbd]">PRIVATE KEY</th>
+                  )}
+                  <th className="p-3 text-left text-[#7ddfbd]">ACTIONS</th>
+                </tr>
+              </thead>
+
+              {/* Body */}
+              <tbody>
+                {filteredAndSortedWallets.map((wallet, index) => {
+                  const isSelected = selectedWallets.has(wallet.id);
+                  const solBalance = solBalances.get(wallet.address) || 0;
+                  const tokenBalance = tokenBalances.get(wallet.address) || 0;
+                  
+                  return (
+                    <tr 
+                      key={wallet.id}
+                      className={`border-b border-[#02b36d20] hover:bg-[#02b36d10] transition-colors ${
+                        isSelected ? 'bg-[#02b36d20]' : ''
+                      }`}
+                    >
+                      <td className="p-3">
+                        <button
+                          onClick={() => toggleWalletSelection(wallet.id)}
+                          className="text-[#02b36d] hover:text-[#e4fbf2] transition-colors"
+                        >
+                          {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                        </button>
+                      </td>
+                      <td className="p-3 text-[#7ddfbd]">#{wallet.id}</td>
+                      <td className="p-3">
+                        <WalletTooltip content="Click to copy address" position="top">
+                          <button
+                            onClick={() => copyToClipboard(wallet.address, showToast)}
+                            className="text-[#e4fbf2] hover:text-[#02b36d] transition-colors font-mono"
+                          >
+                            {formatAddress(wallet.address)}
+                          </button>
+                        </WalletTooltip>
+                      </td>
+                      <td className="p-3">
+                        <span className={`${solBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'} font-bold`}>
+                          {solBalance.toFixed(4)}
+                        </span>
+                      </td>
+                      {tokenAddress && (
+                        <td className="p-3">
+                          <span className={`${tokenBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'} font-bold`}>
+                            {tokenBalance.toLocaleString()}
+                          </span>
+                        </td>
+                      )}
+                      {showPrivateKeys && (
+                        <td className="p-3">
+                          <WalletTooltip content="Click to copy private key" position="top">
+                            <button
+                              onClick={() => copyToClipboard(wallet.privateKey, showToast)}
+                              className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors font-mono text-xs"
+                            >
+                              {wallet.privateKey.substring(0, 8)}...{wallet.privateKey.substring(-8)}
+                            </button>
+                          </WalletTooltip>
+                        </td>
+                      )}
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <WalletTooltip content="Copy Address" position="top">
+                            <button
+                              onClick={() => copyToClipboard(wallet.address, showToast)}
+                              className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300"
+                            >
+                              <Copy size={14} className="text-[#02b36d]" />
+                            </button>
+                          </WalletTooltip>
+                          
+                          <WalletTooltip content="Download Private Key" position="top">
+                            <button
+                              onClick={() => downloadPrivateKey(wallet)}
+                              className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300"
+                            >
+                              <Download size={14} className="text-[#02b36d]" />
+                            </button>
+                          </WalletTooltip>
+                          
+                          <WalletTooltip content="Delete Wallet" position="top">
+                            <button
+                              onClick={() => {
+                                setWallets(prev => {
+                                  const newWallets = deleteWallet(prev, wallet.id);
+                                  saveWalletsToCookies(newWallets);
+                                  return newWallets;
+                                });
+                                showToast('Wallet deleted', 'success');
+                              }}
+                              className="p-1 hover:bg-[#ff224420] rounded transition-all duration-300"
+                            >
+                              <Trash2 size={14} className="text-[#ff2244]" />
+                            </button>
+                          </WalletTooltip>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Empty State */}
+            {filteredAndSortedWallets.length === 0 && (
+              <div className="p-8 text-center text-[#7ddfbd]">
+                <Wallet size={48} className="mx-auto mb-4 opacity-50" />
+                <div className="font-mono">
+                  {searchTerm || filterType !== 'all' 
+                    ? 'No wallets match your filters' 
+                    : 'No wallets found'
+                  }
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-[#02b36d40]">
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
+              className="px-4 py-2 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 text-[#ff2244]"
+            >
+              CLEANUP EMPTY
+            </button>
+          </div>
+          
+          <div className="text-sm font-mono text-[#7ddfbd]">
+            Showing {filteredAndSortedWallets.length} of {wallets.length} wallets
+          </div>
+          
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-[#02b36d] hover:bg-[#01a35f] text-black font-bold rounded cyberpunk-btn font-mono tracking-wider transition-all duration-300"
+          >
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EnhancedWalletOverview;

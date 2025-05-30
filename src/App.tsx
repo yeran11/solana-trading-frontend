@@ -35,6 +35,7 @@ import {
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
+const EnhancedWalletOverview = lazy(() => import('./WalletOverview'));
 const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
 const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
 const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: module.ActionsPage })));
@@ -215,37 +216,6 @@ const WalletManager: React.FC = () => {
     setIsSettingsOpen(false);
   };
 
-  const handleCreateWallet = async () => {
-    if (!connection) return;
-    
-    try {
-      const newWallet = await createNewWallet();
-      setWallets(prev => {
-        const newWallets = [...prev, newWallet];
-        saveWalletsToCookies(newWallets);
-        return newWallets;
-      });
-      
-      // Fetch SOL balance for the new wallet
-      const solBalance = await fetchSolBalance(connection, newWallet.address);
-      setSolBalances(prev => {
-        const newBalances = new Map(prev);
-        newBalances.set(newWallet.address, solBalance);
-        return newBalances;
-      });
-      
-      // Initialize token balance to 0 for the new wallet
-      setTokenBalances(prev => {
-        const newBalances = new Map(prev);
-        newBalances.set(newWallet.address, 0);
-        return newBalances;
-      });
-      
-      showToast("Wallet created successfully", "success");
-    } catch (error) {
-      console.error('Error creating wallet:', error);
-    }
-  };
   const handleDeleteWallet = (id: number) => {
     const walletToDelete = wallets.find(w => w.id === id);
     if (walletToDelete) {
@@ -512,106 +482,20 @@ const WalletManager: React.FC = () => {
         showToast={showToast}
       />
   
-      {/* Simplified Wallet Modal - Now mainly for viewing */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#091217] border border-[#02b36d40] cyberpunk-border rounded-lg w-96 p-6 mx-4 min-h-[50vh] max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">WALLET OVERVIEW</h3>
-              <div className="flex gap-2">
-                <WalletTooltip content="Create New Wallet" position="bottom">
-                  <button 
-                    onClick={async () => {
-                      await handleCreateWallet();
-                    }}
-                    className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn transition-all duration-300"
-                  >
-                    <Plus size={20} className="text-[#02b36d]" />
-                  </button>
-                </WalletTooltip>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
-                >
-                  <X size={20} className="text-[#ff2244]" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="w-full h-px bg-[#02b36d40]"></div>
-  
-              {/* Wallet List */}
-              <div className="space-y-3">
-                {wallets.map(wallet => (
-                  <div 
-                    key={wallet.id} 
-                    className="flex items-center justify-between p-3 bg-[#091217] border border-[#02b36d20] hover:border-[#02b36d60] rounded-lg cyberpunk-card transition-all duration-300"
-                  >
-                    <WalletTooltip content="Click to copy address" position="top">
-                      <span 
-                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-300 cyberpunk-glitch"
-                        onClick={async () => {
-                          const success = await copyToClipboard(wallet.address, showToast);
-                          if (success) {
-                            setCopiedAddress(wallet.address);
-                            setTimeout(() => setCopiedAddress(null), 2000);
-                          }
-                        }}
-                      >
-                        {formatAddress(wallet.address)}
-                        {copiedAddress === wallet.address && (
-                          <span className="ml-2 text-xs text-[#02b36d] opacity-0 animate-[fadeIn_0.3s_forwards]">
-                            Copied
-                          </span>
-                        )}
-                      </span>
-                    </WalletTooltip>
-                    <div className="flex flex-col items-end">
-                      <span className="text-sm font-mono text-[#e4fbf2]">
-                        <span className="text-[#7ddfbd]">{(solBalances.get(wallet.address) || 0).toFixed(4)}</span> SOL
-                      </span>
-                      {tokenAddress && (
-                        <span className="text-sm font-mono text-[#02b36d]">
-                          {(tokenBalances.get(wallet.address) || 0).toLocaleString()} Tokens
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <WalletTooltip content="Remove Wallet" position="top">
-                        <button 
-                          className="p-1 hover:bg-[#ff224420] rounded-full transition-all duration-300"
-                          onClick={() => handleDeleteWallet(wallet.id)}
-                        >
-                          <Trash2 size={16} className="text-[#ff2244]" />
-                        </button>
-                      </WalletTooltip>
-                      <WalletTooltip content="Download PrivateKey" position="top">
-                        <button 
-                          className="p-1 hover:bg-[#02b36d20] rounded-full transition-all duration-300"
-                          onClick={() => downloadPrivateKey(wallet)}
-                        >
-                          <Download size={16} className="text-[#02b36d]" />
-                        </button>
-                      </WalletTooltip>
-                      <WalletTooltip content="Copy PrivateKey" position="top">
-                        <button
-                          className="p-1 hover:bg-[#02b36d20] rounded-full transition-all duration-300"
-                          onClick={async () => {
-                            await copyToClipboard(wallet.privateKey, showToast);
-                          }}
-                        >
-                          <Copy size={16} className="text-[#02b36d]" />
-                        </button>
-                      </WalletTooltip>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Enhanced Wallet Overview */}
+      <EnhancedWalletOverview
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        wallets={wallets}
+        setWallets={setWallets}
+        solBalances={solBalances}
+        tokenBalances={tokenBalances}
+        tokenAddress={tokenAddress}
+        connection={connection}
+        handleRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+        showToast={showToast}
+      />
 
       {/* Modals */}
       <BurnModal
