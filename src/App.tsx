@@ -215,6 +215,37 @@ const WalletManager: React.FC = () => {
     setIsSettingsOpen(false);
   };
 
+  const handleCreateWallet = async () => {
+    if (!connection) return;
+    
+    try {
+      const newWallet = await createNewWallet();
+      setWallets(prev => {
+        const newWallets = [...prev, newWallet];
+        saveWalletsToCookies(newWallets);
+        return newWallets;
+      });
+      
+      // Fetch SOL balance for the new wallet
+      const solBalance = await fetchSolBalance(connection, newWallet.address);
+      setSolBalances(prev => {
+        const newBalances = new Map(prev);
+        newBalances.set(newWallet.address, solBalance);
+        return newBalances;
+      });
+      
+      // Initialize token balance to 0 for the new wallet
+      setTokenBalances(prev => {
+        const newBalances = new Map(prev);
+        newBalances.set(newWallet.address, 0);
+        return newBalances;
+      });
+      
+      showToast("Wallet created successfully", "success");
+    } catch (error) {
+      console.error('Error creating wallet:', error);
+    }
+  };
   const handleDeleteWallet = (id: number) => {
     const walletToDelete = wallets.find(w => w.id === id);
     if (walletToDelete) {
@@ -487,17 +518,23 @@ const WalletManager: React.FC = () => {
           <div className="bg-[#091217] border border-[#02b36d40] cyberpunk-border rounded-lg w-96 p-6 mx-4 min-h-[50vh] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-[#e4fbf2] font-mono">WALLET OVERVIEW</h3>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
-              >
-                <X size={20} className="text-[#ff2244]" />
-              </button>
-            </div>
-
-            <div className="mb-4 p-4 bg-[#0a1419] border border-[#02b36d30] rounded-lg">
-              <div className="text-sm text-[#7ddfbd] font-mono mb-2">
-                💡 Use the Settings panel (gear icon) to create, import, and manage wallets
+              <div className="flex gap-2">
+                <WalletTooltip content="Create New Wallet" position="bottom">
+                  <button 
+                    onClick={async () => {
+                      await handleCreateWallet();
+                    }}
+                    className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn transition-all duration-300"
+                  >
+                    <Plus size={20} className="text-[#02b36d]" />
+                  </button>
+                </WalletTooltip>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+                >
+                  <X size={20} className="text-[#ff2244]" />
+                </button>
               </div>
             </div>
             
