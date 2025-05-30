@@ -167,14 +167,22 @@ export const fetchTokenBalance = async (
     const walletPublicKey = new PublicKey(walletAddress);
     const tokenMintPublicKey = new PublicKey(tokenMint);
 
-    // Find token account
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      walletPublicKey,
-      {
-        mint: tokenMintPublicKey
-      }, 
-      "processed"
+    // Add timeout to prevent hanging requests
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), 3000)
     );
+
+    // Find token account with timeout
+    const tokenAccounts = await Promise.race([
+      connection.getParsedTokenAccountsByOwner(
+        walletPublicKey,
+        {
+          mint: tokenMintPublicKey
+        }, 
+        "processed"
+      ),
+      timeoutPromise
+    ]);
 
     // If no token account found, return 0
     if (tokenAccounts.value.length === 0) return 0;
@@ -194,7 +202,18 @@ export const fetchSolBalance = async (
 ): Promise<number> => {
   try {
     const publicKey = new PublicKey(walletAddress);
-    const balance = await connection.getBalance(publicKey, "processed");
+    
+    // Add timeout to prevent hanging requests
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), 3000)
+    );
+
+    // Get balance with timeout
+    const balance = await Promise.race([
+      connection.getBalance(publicKey, "processed"),
+      timeoutPromise
+    ]);
+    
     return balance / 1e9;
   } catch (error) {
     console.error('Error fetching SOL balance:', error);
