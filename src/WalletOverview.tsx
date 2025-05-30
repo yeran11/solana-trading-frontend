@@ -58,6 +58,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   isRefreshing,
   showToast
 }) => {
+  // All hooks must be called before any conditional returns
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,16 +66,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const [showPrivateKeys, setShowPrivateKeys] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'withSOL' | 'withTokens' | 'empty'>('all');
 
-  if (!isOpen) return null;
-
-  // Sorting function
-  const handleSort = (field: SortField) => {
-    const newDirection = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc';
-    setSortField(field);
-    setSortDirection(newDirection);
-  };
-
-  // Filter and sort wallets
+  // Filter and sort wallets - useMemo must also be called before conditional return
   const filteredAndSortedWallets = useMemo(() => {
     let filtered = wallets.filter(wallet => {
       // Search filter
@@ -133,6 +125,16 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
         : (bValue as number) - (aValue as number);
     });
   }, [wallets, sortField, sortDirection, searchTerm, filterType, solBalances, tokenBalances]);
+
+  // Now we can have conditional returns after all hooks are called
+  if (!isOpen) return null;
+
+  // Sorting function
+  const handleSort = (field: SortField) => {
+    const newDirection = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(newDirection);
+  };
 
   // Selection functions
   const toggleWalletSelection = (walletId: number) => {
