@@ -106,7 +106,8 @@ const TradingCard = ({
     
     try {
       setIsLoadingEstimate(true);
-      const response = await fetch('https://solana.fury.bot/api/tokens/route', {
+      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
+      const response = await fetch(`${baseUrl}/api/tokens/route`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -180,7 +181,8 @@ const TradingCard = ({
     
     try {
       setIsLoadingEstimate(true);
-      const response = await fetch('https://solana.fury.bot/api/tokens/route', {
+      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
+      const response = await fetch(`${baseUrl}/api/tokens/route`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',

@@ -162,7 +162,7 @@ const ServiceSelector = () => {
           whileTap={{ scale: 0.95 }}
         >
           <img 
-            src="https://i.ibb.co/wZ7PmfPF/logo-2.png" 
+            src="https://raze.bot/logo.png" 
             alt="Fury Bundler" 
             className="h-8 filter drop-shadow-[0_0_8px_rgba(2,179,109,0.7)]" 
           />

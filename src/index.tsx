@@ -21,6 +21,7 @@ declare global {
 const SERVER_URL_COOKIE = 'trading_server_url';
 const INTRO_COMPLETED_COOKIE = 'intro_completed';
 const DEFAULT_LOCAL_URLS = [
+  'http://localhost:8888',
   'https://solana.fury.bot/'
 ];
 
