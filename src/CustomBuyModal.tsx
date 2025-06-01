@@ -364,7 +364,6 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
       showToast('Custom buy operation completed successfully', 'success');
       resetForm();
       onClose();
-      handleRefresh(); // Refresh balances
     } catch (error) {
       console.error('Custom buy execution error:', error);
       showToast(`Custom buy operation failed: ${error.message}`, 'error');

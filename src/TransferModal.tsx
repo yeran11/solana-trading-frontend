@@ -129,13 +129,17 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       // Step 3: Create and sign the versioned transaction
       const transaction = new VersionedTransaction(messageV0);
       
+      // Step 4: Get a fresh blockhash to avoid "Blockhash not found" errors
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.message.recentBlockhash = blockhash;
+      
       // Create keypair from private key
       const keypair = Keypair.fromSecretKey(bs58.decode(sourceWallet));
       
-      // Sign the transaction
+      // Sign the transaction with fresh blockhash
       transaction.sign([keypair]);
       
-      // Step 4: Send the signed transaction directly through the RPC connection
+      // Step 5: Send the signed transaction directly through the RPC connection
       const signature = await connection.sendTransaction(transaction);
       
       // Wait for confirmation

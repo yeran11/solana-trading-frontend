@@ -337,7 +337,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -372,7 +371,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
@@ -433,7 +431,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -466,7 +463,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
@@ -527,7 +523,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -560,7 +555,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
@@ -625,7 +619,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -656,7 +649,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
@@ -719,7 +711,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -754,7 +745,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
@@ -816,7 +806,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -851,7 +840,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
@@ -914,7 +902,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Swap transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Buy failed: ${result.error}`, "error");
           }
@@ -949,7 +936,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Sell failed: ${result.error}`, "error");
           }
