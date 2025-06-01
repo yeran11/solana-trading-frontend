@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ArrowUpDown, 
   ArrowUp, 
@@ -67,6 +67,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const [selectedWallets, setSelectedWallets] = useState<Set<number>>(new Set());
   const [showPrivateKeys, setShowPrivateKeys] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'withSOL' | 'withTokens' | 'empty'>('all');
+  const [refreshingWalletIndex, setRefreshingWalletIndex] = useState<number>(-1);
 
   // Filter and sort wallets - useMemo must also be called before conditional return
   const filteredAndSortedWallets = useMemo(() => {
@@ -126,6 +127,24 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
         : (bValue as number) - (aValue as number);
     });
   }, [wallets, sortField, sortDirection, searchTerm, filterType, solBalances, tokenBalances]);
+
+  // Add useEffect to handle cycling animation during refresh
+  useEffect(() => {
+    if (isRefreshing && filteredAndSortedWallets.length > 0) {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        setRefreshingWalletIndex(currentIndex);
+        currentIndex = (currentIndex + 1) % filteredAndSortedWallets.length;
+      }, 200); // Change wallet every 200ms
+
+      return () => {
+        clearInterval(interval);
+        setRefreshingWalletIndex(-1);
+      };
+    } else {
+      setRefreshingWalletIndex(-1);
+    }
+  }, [isRefreshing, filteredAndSortedWallets.length]);
 
   // Now we can have conditional returns after all hooks are called
   if (!isOpen) return null;
@@ -390,12 +409,15 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                   const isSelected = selectedWallets.has(wallet.id);
                   const solBalance = solBalances.get(wallet.address) || 0;
                   const tokenBalance = tokenBalances.get(wallet.address) || 0;
+                  const isCurrentlyRefreshing = isRefreshing && refreshingWalletIndex === index;
                   
                   return (
                     <tr 
                       key={wallet.id}
-                      className={`border-b border-[#02b36d20] hover:bg-[#02b36d10] transition-colors ${
+                      className={`border-b border-[#02b36d20] hover:bg-[#02b36d10] transition-all duration-200 ${
                         isSelected ? 'bg-[#02b36d20]' : ''
+                      } ${
+                        isCurrentlyRefreshing ? 'bg-[#02b36d30] shadow-lg shadow-[#02b36d20] scale-[1.02]' : ''
                       }`}
                     >
                       <td className="p-3">
@@ -410,20 +432,31 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                         <WalletTooltip content="Click to copy address" position="top">
                           <button
                             onClick={() => copyToClipboard(wallet.address, showToast)}
-                            className="text-[#e4fbf2] hover:text-[#02b36d] transition-colors font-mono"
+                            className={`hover:text-[#02b36d] transition-colors font-mono ${
+                              isCurrentlyRefreshing ? 'text-[#02b36d] animate-pulse' : 'text-[#e4fbf2]'
+                            }`}
                           >
                             {formatAddress(wallet.address)}
+                            {isCurrentlyRefreshing && (
+                              <RefreshCw size={12} className="inline ml-2 animate-spin" />
+                            )}
                           </button>
                         </WalletTooltip>
                       </td>
                       <td className="p-3">
-                        <span className={`${solBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'} font-bold`}>
+                        <span className={`font-bold transition-colors ${
+                          isCurrentlyRefreshing ? 'text-[#02b36d] animate-pulse' : 
+                          solBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'
+                        }`}>
                           {solBalance.toFixed(4)}
                         </span>
                       </td>
                       {tokenAddress && (
                         <td className="p-3">
-                          <span className={`${tokenBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'} font-bold`}>
+                          <span className={`font-bold transition-colors ${
+                            isCurrentlyRefreshing ? 'text-[#02b36d] animate-pulse' : 
+                            tokenBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'
+                          }`}>
                             {tokenBalance.toLocaleString()}
                           </span>
                         </td>
@@ -442,16 +475,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                       )}
                       <td className="p-3">
                         <div className="flex gap-1">
-                          <WalletTooltip content="Copy Address" position="top">
-                            <button
-                              onClick={() => copyToClipboard(wallet.address, showToast)}
-                              className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300"
-                            >
-                              <Copy size={14} className="text-[#02b36d]" />
-                            </button>
-                          </WalletTooltip>
-                          
-                          <WalletTooltip content="Download Private Key" position="top">
+                          <WalletTooltip content="Download Wallet" position="top">
                             <button
                               onClick={() => downloadPrivateKey(wallet)}
                               className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300"

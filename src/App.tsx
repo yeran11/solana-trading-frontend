@@ -216,12 +216,22 @@ const WalletManager: React.FC = () => {
     setIsRefreshing(true);
     
     try {
+      // Start timing to ensure minimum animation duration
+      const startTime = Date.now();
+      const minDuration = Math.max(2000, wallets.length * 200); // At least 2 seconds or 200ms per wallet
+      
       // Fetch SOL balances with batching
       await fetchSolBalances(connection, wallets, setSolBalances, 20);
       
       // Fetch token balances if token address is provided
       if (tokenAddress) {
         await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances, 20);
+      }
+      
+      // Ensure minimum duration for animation visibility
+      const elapsed = Date.now() - startTime;
+      if (elapsed < minDuration) {
+        await new Promise(resolve => setTimeout(resolve, minDuration - elapsed));
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);
