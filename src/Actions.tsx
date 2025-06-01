@@ -1149,7 +1149,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             </div>
             
             <a 
-              href="https://github.com/furydotbot/solana-ui" 
+              href="https://github.com/furydotbot/raze.bot" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center py-1 px-3 rounded-md bg-gradient-to-r 
@@ -1169,7 +1169,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 />
               </svg>
               <span className="text-xs font-mono tracking-wider text-[#02b36d]">
-                SOLANA-UI
+                FURYDOTBOT
               </span>
             </a>
           </div>
