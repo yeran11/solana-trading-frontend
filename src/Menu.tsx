@@ -163,7 +163,7 @@ const ServiceSelector = () => {
         >
           <img 
             src="https://raze.bot/logo.png" 
-            alt="Fury Bundler" 
+            alt="raze Bundler" 
             className="h-8 filter drop-shadow-[0_0_8px_rgba(2,179,109,0.7)]" 
           />
         </motion.div>
@@ -225,7 +225,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="Launchpad" 
-                      url="https://app.fury.bot"
+                      url="https://app.raze.bot"
                       description="Launchpad"
                     />
                   </motion.div>
@@ -248,7 +248,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="Docs" 
-                      url="https://docs.fury.bot"
+                      url="https://docs.raze.bot"
                       description="Documentation"
                     />
                   </motion.div>
@@ -267,7 +267,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="GitHub" 
-                      url="https://github.com/furydotbot"
+                      url="https://github.com/razedotbot"
                       description="GitHub Repository"
                     />
                   </motion.div>
