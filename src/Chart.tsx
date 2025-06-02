@@ -46,6 +46,10 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   const [showGMGN, setShowGMGN] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileView, setMobileView] = useState<'chart' | 'transactions'>('chart');
+  const [chartHeight, setChartHeight] = useState(70); // Percentage height for chart section
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragStartHeight, setDragStartHeight] = useState(70);
 
   // Mobile detection
   useEffect(() => {
@@ -63,6 +67,56 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   const toggleMobileView = () => {
     setMobileView(prev => prev === 'chart' ? 'transactions' : 'chart');
   };
+
+  // Handle resizer drag start
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobile) return;
+    setIsDragging(true);
+    setDragStartY(e.clientY);
+    setDragStartHeight(chartHeight);
+    e.preventDefault();
+  };
+
+  // Handle resizer drag
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging || isMobile) return;
+    
+    const containerElement = document.querySelector('.chart-container');
+    if (!containerElement) return;
+    
+    const containerRect = containerElement.getBoundingClientRect();
+    const deltaY = e.clientY - dragStartY;
+    const deltaPercentage = (deltaY / containerRect.height) * 100;
+    
+    let newHeight = dragStartHeight + deltaPercentage;
+    
+    // Constrain between 20% and 80%
+    newHeight = Math.max(20, Math.min(80, newHeight));
+    
+    setChartHeight(newHeight);
+  };
+
+  // Handle resizer drag end
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isDragging, dragStartY, dragStartHeight, chartHeight, isMobile]);
   
   // Reset loading state when token changes
   useEffect(() => {
@@ -201,7 +255,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       const transactionsSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
       
       return (
-        <div className="relative flex-1 overflow-hidden flex flex-col">
+        <div className="relative flex-1 overflow-hidden flex flex-col chart-container">
           {renderLoader(frameLoading || isLoadingChart)}
           
           <div className="absolute inset-0 overflow-hidden flex flex-col">
@@ -234,10 +288,13 @@ export const ChartPage: React.FC<ChartPageProps> = ({
                 )}
               </div>
             ) : (
-              // Desktop: Show both views split
+              // Desktop: Show both views split with resizable divider
               <>
-                {/* GMGN Chart - 70% height on desktop */}
-                <div className="h-[70%] relative">
+                {/* GMGN Chart - Dynamic height on desktop */}
+                <div 
+                  className="relative"
+                  style={{ height: `${chartHeight}%` }}
+                >
                   <iframe 
                     key={`gmgn-${iframeKey}`}
                     src={`https://www.gmgn.cc/kline/sol/${tokenAddress}`}
@@ -251,8 +308,25 @@ export const ChartPage: React.FC<ChartPageProps> = ({
                     onLoad={handleFrameLoad}
                   />
                 </div>
-                {/* Transactions list - 30% height on desktop */}
-                <div className="h-[30%] relative border-t border-[#222222]">
+                
+                {/* Resizable divider */}
+                 <div 
+                   className={`relative h-2 bg-[#222222] hover:bg-[#87D693]/50 transition-colors cursor-ns-resize group ${
+                     isDragging ? 'bg-[#87D693]/70' : ''
+                   }`}
+                   onMouseDown={handleMouseDown}
+                 >
+                   {/* Expanded clickable area */}
+                   <div className="absolute inset-x-0 -top-3 -bottom-3 flex items-center justify-center">
+                     <div className="w-12 h-1 bg-[#87D693]/30 rounded-full group-hover:bg-[#87D693]/60 transition-colors" />
+                   </div>
+                 </div>
+                
+                {/* Transactions list - Dynamic height on desktop */}
+                <div 
+                  className="relative"
+                  style={{ height: `${100 - chartHeight}%` }}
+                >
                   <iframe 
                     key={`transactions-${iframeKey}`}
                     src={transactionsSrc}
