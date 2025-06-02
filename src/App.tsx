@@ -96,6 +96,26 @@ const WalletManager: React.FC = () => {
     handleApiKeyFromUrl(setConfig, saveConfigToCookies, showToast);
   }, []);
 
+  // Read tokenAddress from URL parameter on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('tokenAddress');
+    if (tokenFromUrl) {
+      setTokenAddress(tokenFromUrl);
+    }
+  }, []);
+
+  // Update URL when tokenAddress changes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (tokenAddress) {
+      url.searchParams.set('tokenAddress', tokenAddress);
+    } else {
+      url.searchParams.delete('tokenAddress');
+    }
+    window.history.replaceState({}, '', url.toString());
+  }, [tokenAddress]);
+
   // Fetch AMM key when token address changes
   useEffect(() => {
     if (tokenAddress) {
