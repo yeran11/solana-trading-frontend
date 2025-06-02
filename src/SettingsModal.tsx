@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { X, Plus, FileUp, Download, Trash2, Settings, Globe, Zap, Wallet, Key, Save } from 'lucide-react';
+import { X, Plus, Upload, FileUp, Download, Trash2, Settings, Globe, Zap, Wallet, Key, Save } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
+import { WalletTooltip } from './Styles';
 import { 
   createNewWallet,
   importWallet,
@@ -8,7 +9,8 @@ import {
   fetchTokenBalance,
   downloadAllWallets,
   WalletType,
-  ConfigType
+  ConfigType,
+  copyToClipboard
 } from './Utils';
 import { handleCleanupWallets } from './Manager';
 
@@ -265,7 +267,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded"
+            className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
           >
             <X size={20} className="text-[#ff2244]" />
           </button>
@@ -281,7 +283,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
             <button
               key={id}
               onClick={() => setActiveTab(id as any)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md font-mono text-sm ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-all duration-300 font-mono text-sm ${
                 activeTab === id
                   ? 'bg-[#02b36d] text-black font-bold'
                   : 'text-[#7ddfbd] hover:text-[#e4fbf2] hover:bg-[#02b36d20]'
@@ -365,7 +367,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       isCreatingWallets 
                         ? 'bg-[#02b36d50] cursor-not-allowed' 
                         : 'bg-[#02b36d] hover:bg-[#01a35f] cyberpunk-btn'
-                    } text-black font-bold rounded font-mono tracking-wider`}
+                    } text-black font-bold rounded font-mono tracking-wider transition-all duration-300`}
                   >
                     {isCreatingWallets ? 'CREATING...' : 'CREATE'}
                   </button>
@@ -384,7 +386,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                   <div>
                     <button
                       onClick={() => setIsImporting(!isImporting)}
-                      className="mb-3 px-4 py-2 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm"
+                      className="mb-3 px-4 py-2 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300"
                     >
                       {isImporting ? 'CANCEL' : 'IMPORT SINGLE WALLET'}
                     </button>
@@ -435,7 +437,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         isProcessingFile 
                           ? 'bg-[#02b36d20] cursor-not-allowed' 
                           : 'bg-[#091217] hover:bg-[#02b36d20] cyberpunk-btn'
-                      } border border-[#02b36d40] rounded font-mono text-sm flex items-center justify-center gap-2`}
+                      } border border-[#02b36d40] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2`}
                     >
                       <FileUp size={16} />
                       {isProcessingFile ? 'PROCESSING FILE...' : 'IMPORT FROM FILE (.txt)'}
@@ -454,7 +456,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
                     onClick={() => downloadAllWallets(wallets)}
-                    className="p-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm flex items-center justify-center gap-2"
+                    className="p-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <Download size={16} />
                     EXPORT ALL WALLETS
@@ -462,7 +464,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                   
                   <button
                     onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
-                    className="p-3 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm flex items-center justify-center gap-2 text-[#ff2244]"
+                    className="p-3 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2 text-[#ff2244]"
                   >
                     <Trash2 size={16} />
                     REMOVE EMPTY WALLETS
@@ -550,13 +552,13 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#02b36d40]">
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm"
+            className="px-6 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300"
           >
             CANCEL
           </button>
           <button
             onClick={handleSaveAndClose}
-            className="px-6 py-3 bg-[#02b36d] hover:bg-[#01a35f] text-black font-bold rounded cyberpunk-btn font-mono tracking-wider flex items-center gap-2"
+            className="px-6 py-3 bg-[#02b36d] hover:bg-[#01a35f] text-black font-bold rounded cyberpunk-btn font-mono tracking-wider transition-all duration-300 flex items-center gap-2"
           >
             <Save size={16} />
             SAVE SETTINGS

@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 // Separate import for createPortal
 import { createPortal } from 'react-dom';
+import { Buffer as NodeBuffer } from 'buffer';
 import Cookies from 'js-cookie';
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
@@ -14,14 +15,13 @@ const App = lazy(() => import('./App'));
 declare global {
   interface Window {
     tradingServerUrl: string;
-    Buffer: typeof Buffer;
+    Buffer: typeof NodeBuffer;
   }
 }
 
 const SERVER_URL_COOKIE = 'trading_server_url';
 const INTRO_COMPLETED_COOKIE = 'intro_completed';
 const DEFAULT_LOCAL_URLS = [
-  'http://localhost:8888',
   'https://solana.raze.bot/'
 ];
 

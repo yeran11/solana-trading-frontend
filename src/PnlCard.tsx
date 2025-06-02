@@ -164,7 +164,7 @@ const PnlCard: React.FC<PnlCardProps> = ({
                   <circle cx="16" cy="6" r="2" stroke="#10B981" strokeWidth="2"/>
                 </svg>
               </div>
-              <h2 className="text-white font-bold text-xl">FURY.BOT</h2>
+              <h2 className="text-white font-bold text-xl">Raze.BOT</h2>
             </div>
             
             {/* Profit Display moved to top right */}
@@ -199,7 +199,7 @@ const PnlCard: React.FC<PnlCardProps> = ({
           {/* Bottom CTA */}
           <div className="mt-6 flex justify-between items-center pt-4 border-t border-gray-800">
             <div className="text-green-500 font-bold">IT'S TIME TO CHANGE</div>
-            <div className="text-white font-bold">FURY.BOT</div>
+            <div className="text-white font-bold">Raze.BOT</div>
           </div>
         </div>
       </div>

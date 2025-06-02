@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ArrowUpDown, 
   ArrowUp, 
@@ -7,9 +7,11 @@ import {
   Download, 
   Trash2, 
   Search, 
+  Filter,
   RefreshCw,
   CheckSquare,
   Square,
+  MoreVertical,
   Eye,
   EyeOff,
   Wallet,
@@ -26,7 +28,7 @@ import {
   deleteWallet,
   saveWalletsToCookies
 } from './Utils';
-import { handleCleanupWallets } from './Manager';
+import { handleCleanupWallets, handleSortWallets } from './Manager';
 
 interface EnhancedWalletOverviewProps {
   isOpen: boolean;
@@ -67,7 +69,6 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const [selectedWallets, setSelectedWallets] = useState<Set<number>>(new Set());
   const [showPrivateKeys, setShowPrivateKeys] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'withSOL' | 'withTokens' | 'empty'>('all');
-  const [refreshingWalletIndex, setRefreshingWalletIndex] = useState<number>(-1);
 
   // Filter and sort wallets - useMemo must also be called before conditional return
   const filteredAndSortedWallets = useMemo(() => {
@@ -127,24 +128,6 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
         : (bValue as number) - (aValue as number);
     });
   }, [wallets, sortField, sortDirection, searchTerm, filterType, solBalances, tokenBalances]);
-
-  // Add useEffect to handle cycling animation during refresh
-  useEffect(() => {
-    if (isRefreshing && filteredAndSortedWallets.length > 0) {
-      let currentIndex = 0;
-      const interval = setInterval(() => {
-        setRefreshingWalletIndex(currentIndex);
-        currentIndex = (currentIndex + 1) % filteredAndSortedWallets.length;
-      }, 200); // Change wallet every 200ms
-
-      return () => {
-        clearInterval(interval);
-        setRefreshingWalletIndex(-1);
-      };
-    } else {
-      setRefreshingWalletIndex(-1);
-    }
-  }, [isRefreshing, filteredAndSortedWallets.length]);
 
   // Now we can have conditional returns after all hooks are called
   if (!isOpen) return null;
@@ -258,7 +241,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             <WalletTooltip content="Open System Settings" position="bottom">
               <button 
                 onClick={onOpenSettings}
-                className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded"
+                className="p-2 hover:bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
               >
                 <Settings size={20} className="text-[#02b36d]" />
               </button>
@@ -266,7 +249,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded"
+              className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
             >
               <X size={20} className="text-[#ff2244]" />
             </button>
@@ -305,7 +288,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
               <WalletTooltip content="Download Selected" position="bottom">
                 <button
                   onClick={downloadSelectedWallets}
-                  className="p-2 bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded"
+                  className="p-2 bg-[#02b36d20] border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
                 >
                   <Download size={16} className="text-[#02b36d]" />
                 </button>
@@ -314,7 +297,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
               <WalletTooltip content="Delete Selected" position="bottom">
                 <button
                   onClick={deleteSelectedWallets}
-                  className="p-2 bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded"
+                  className="p-2 bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
                 >
                   <Trash2 size={16} className="text-[#ff2244]" />
                 </button>
@@ -326,24 +309,13 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
             </div>
           )}
 
-          {/* Refresh */}
-          <WalletTooltip content="Refresh Balances" position="bottom">
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className={`p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded ${
-                isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <RefreshCw size={16} className={`text-[#02b36d] ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </WalletTooltip>
+
 
           {/* Privacy Toggle */}
           <WalletTooltip content={showPrivateKeys ? "Hide Private Keys" : "Show Private Keys"} position="bottom">
             <button
               onClick={() => setShowPrivateKeys(!showPrivateKeys)}
-              className="p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded"
+              className="p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
             >
               {showPrivateKeys ? <EyeOff size={16} className="text-[#02b36d]" /> : <Eye size={16} className="text-[#02b36d]" />}
             </button>
@@ -409,15 +381,12 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                   const isSelected = selectedWallets.has(wallet.id);
                   const solBalance = solBalances.get(wallet.address) || 0;
                   const tokenBalance = tokenBalances.get(wallet.address) || 0;
-                  const isCurrentlyRefreshing = isRefreshing && refreshingWalletIndex === index;
                   
                   return (
                     <tr 
                       key={wallet.id}
-                      className={`border-b border-[#02b36d20] hover:bg-[#02b36d10] transition-all duration-200 ${
+                      className={`border-b border-[#02b36d20] hover:bg-[#02b36d10] transition-colors ${
                         isSelected ? 'bg-[#02b36d20]' : ''
-                      } ${
-                        isCurrentlyRefreshing ? 'bg-[#02b36d30] shadow-lg shadow-[#02b36d20] scale-[1.02]' : ''
                       }`}
                     >
                       <td className="p-3">
@@ -432,31 +401,20 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                         <WalletTooltip content="Click to copy address" position="top">
                           <button
                             onClick={() => copyToClipboard(wallet.address, showToast)}
-                            className={`hover:text-[#02b36d] transition-colors font-mono ${
-                              isCurrentlyRefreshing ? 'text-[#02b36d] animate-pulse' : 'text-[#e4fbf2]'
-                            }`}
+                            className="text-[#e4fbf2] hover:text-[#02b36d] transition-colors font-mono"
                           >
                             {formatAddress(wallet.address)}
-                            {isCurrentlyRefreshing && (
-                              <RefreshCw size={12} className="inline ml-2 animate-spin" />
-                            )}
                           </button>
                         </WalletTooltip>
                       </td>
                       <td className="p-3">
-                        <span className={`font-bold transition-colors ${
-                          isCurrentlyRefreshing ? 'text-[#02b36d] animate-pulse' : 
-                          solBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'
-                        }`}>
+                        <span className={`${solBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'} font-bold`}>
                           {solBalance.toFixed(4)}
                         </span>
                       </td>
                       {tokenAddress && (
                         <td className="p-3">
-                          <span className={`font-bold transition-colors ${
-                            isCurrentlyRefreshing ? 'text-[#02b36d] animate-pulse' : 
-                            tokenBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'
-                          }`}>
+                          <span className={`${tokenBalance > 0 ? 'text-[#02b36d]' : 'text-[#7ddfbd]'} font-bold`}>
                             {tokenBalance.toLocaleString()}
                           </span>
                         </td>
@@ -475,7 +433,8 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                       )}
                       <td className="p-3">
                         <div className="flex gap-1">
-                          <WalletTooltip content="Download Wallet" position="top">
+
+                          <WalletTooltip content="Download Private Key" position="top">
                             <button
                               onClick={() => downloadPrivateKey(wallet)}
                               className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300"
@@ -527,7 +486,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
           <div className="flex gap-2">
             <button
               onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
-              className="px-4 py-2 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm text-[#ff2244]"
+              className="px-4 py-2 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 text-[#ff2244]"
             >
               CLEANUP EMPTY
             </button>

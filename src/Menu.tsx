@@ -162,8 +162,8 @@ const ServiceSelector = () => {
           whileTap={{ scale: 0.95 }}
         >
           <img 
-            src="https://raze.bot/logo.png" 
-            alt="raze Bundler" 
+            src="https://app.raze.bot/logo.png" 
+            alt="Raze Bundler" 
             className="h-8 filter drop-shadow-[0_0_8px_rgba(2,179,109,0.7)]" 
           />
         </motion.div>
@@ -225,7 +225,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="Launchpad" 
-                      url="https://app.raze.bot"
+                      url="https://app.Raze.bot"
                       description="Launchpad"
                     />
                   </motion.div>
@@ -248,7 +248,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="Docs" 
-                      url="https://docs.raze.bot"
+                      url="https://docs.Raze.bot"
                       description="Documentation"
                     />
                   </motion.div>
@@ -267,7 +267,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="GitHub" 
-                      url="https://github.com/razedotbot"
+                      url="https://github.com/Razedotbot"
                       description="GitHub Repository"
                     />
                   </motion.div>

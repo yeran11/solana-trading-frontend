@@ -738,7 +738,7 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                 <div className="flex justify-end gap-3 mt-4">
                   <button
                     onClick={onClose}
-                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                   >
                     CANCEL
                   </button>
@@ -814,8 +814,8 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                       onChange={(e) => setIsConfirmed(e.target.checked)}
                       className="peer sr-only"
                     />
-                    <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0"></div>
-                    <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                    <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                    <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                   </div>
                   <label htmlFor="confirmConsolidate" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
                     I CONFIRM THIS CONSOLIDATION OPERATION
@@ -866,21 +866,21 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setCurrentStep(0)}
-                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
               >
                 BACK
               </button>
               <button
                 onClick={handleConsolidate}
                 disabled={!isConfirmed || isSubmitting}
-                className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center font-mono tracking-wider
+                className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider
                           ${!isConfirmed || isSubmitting
                             ? 'bg-[#02b36d50] cursor-not-allowed opacity-50 text-[#050a0e80]' 
-                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] modal-btn-cyberpunk'}`}
+                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
               >
                 {isSubmitting ? (
                   <>
-                    <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent mr-2"></div>
+                    <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
                     PROCESSING...
                   </>
                 ) : (

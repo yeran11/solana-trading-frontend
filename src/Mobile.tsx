@@ -201,20 +201,20 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
               onClick={() => setCurrentPage(id)}
               className={`
                 flex flex-col items-center justify-center py-1 px-3
-                rounded-lg mobile-nav-button
+                rounded-lg transition-all duration-300 mobile-nav-button
                 ${currentPage === id ? 'mobile-nav-active' : 'hover:bg-[#091217] active:bg-[#0a1419]'}
               `}
             >
               <Icon 
                 size={20} 
-                className={`${
+                className={`transition-colors duration-300 ${
                   currentPage === id 
                     ? 'text-[#02b36d] mobile-nav-icon-active' 
                     : 'text-[#7ddfbd80]'
                 }`} 
               />
               <span 
-                className={`text-xs mt-1 font-mono tracking-wider ${
+                className={`text-xs mt-1 transition-colors duration-300 font-mono tracking-wider ${
                   currentPage === id 
                     ? 'text-[#02b36d] mobile-nav-label-active' 
                     : 'text-[#7ddfbd80]'

@@ -83,7 +83,7 @@ const ServerConfig: React.FC<ServerConfigProps> = ({ onSubmit }) => {
           <button
             type="submit"
             className="w-full bg-green-500 hover:bg-green-600 text-black font-medium 
-                     py-2 px-4 rounded"
+                     py-2 px-4 rounded transition-colors"
           >
             Connect to Server
           </button>

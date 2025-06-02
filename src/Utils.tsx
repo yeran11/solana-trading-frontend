@@ -167,22 +167,14 @@ export const fetchTokenBalance = async (
     const walletPublicKey = new PublicKey(walletAddress);
     const tokenMintPublicKey = new PublicKey(tokenMint);
 
-    // Add timeout to prevent hanging requests
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout')), 3000)
+    // Find token account
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      walletPublicKey,
+      {
+        mint: tokenMintPublicKey
+      }, 
+      "processed"
     );
-
-    // Find token account with timeout
-    const tokenAccounts = await Promise.race([
-      connection.getParsedTokenAccountsByOwner(
-        walletPublicKey,
-        {
-          mint: tokenMintPublicKey
-        }, 
-        "processed"
-      ),
-      timeoutPromise
-    ]);
 
     // If no token account found, return 0
     if (tokenAccounts.value.length === 0) return 0;
@@ -202,18 +194,7 @@ export const fetchSolBalance = async (
 ): Promise<number> => {
   try {
     const publicKey = new PublicKey(walletAddress);
-    
-    // Add timeout to prevent hanging requests
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout')), 3000)
-    );
-
-    // Get balance with timeout
-    const balance = await Promise.race([
-      connection.getBalance(publicKey, "processed"),
-      timeoutPromise
-    ]);
-    
+    const balance = await connection.getBalance(publicKey, "processed");
     return balance / 1e9;
   } catch (error) {
     console.error('Error fetching SOL balance:', error);
@@ -296,68 +277,17 @@ export const loadConfigFromCookies = (): ConfigType | null => {
   }
   return null;
 };
-export const formatTokenBalance = (balance: number): string => {
-  if (balance === 0) return '0';
-  if (balance < 0.001) return balance.toExponential(2);
-  if (balance < 1) return balance.toFixed(6);
-  if (balance < 1000) return balance.toFixed(3);
-  if (balance < 1000000) return (balance / 1000).toFixed(2) + 'K';
-  return (balance / 1000000).toFixed(2) + 'M';
-};
-
-// Performance monitoring utilities
-export const measurePerformance = (name: string, fn: () => void | Promise<void>) => {
-  const start = performance.now();
-  const result = fn();
+export const formatTokenBalance = (balance: number | undefined): string => {
+  if (balance === undefined) return '0.00';
+  if (balance < 1000) return balance.toFixed(2);
   
-  if (result instanceof Promise) {
-    return result.finally(() => {
-      const end = performance.now();
-      console.log(`Performance [${name}]: ${(end - start).toFixed(2)}ms`);
-    });
-  } else {
-    const end = performance.now();
-    console.log(`Performance [${name}]: ${(end - start).toFixed(2)}ms`);
-    return result;
+  if (balance < 1_000_000) {
+    return `${(balance / 1000).toFixed(1)}K`;
   }
-};
-
-export const logMemoryUsage = (label: string = 'Memory Usage') => {
-  if ('memory' in performance) {
-    const memory = (performance as any).memory;
-    console.log(`${label}:`, {
-      used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-      total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-      limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`
-    });
+  if (balance < 1_000_000_000) {
+    return `${(balance / 1_000_000).toFixed(1)}M`;
   }
-};
-
-// Debounce utility for performance optimization
-export const debounce = <T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
-
-// Throttle utility for performance optimization
-export const throttle = <T extends (...args: any[]) => any>(
-  func: T,
-  limit: number
-): ((...args: Parameters<T>) => void) => {
-  let inThrottle: boolean;
-  return (...args: Parameters<T>) => {
-    if (!inThrottle) {
-      func(...args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
-    }
-  };
+  return `${(balance / 1_000_000_000).toFixed(1)}B`;
 };
 export const downloadPrivateKey = (wallet: WalletType) => {
   const blob = new Blob([wallet.privateKey], { type: 'text/plain' });

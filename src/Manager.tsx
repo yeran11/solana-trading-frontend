@@ -38,83 +38,55 @@ export const handleApiKeyFromUrl = (
 };
 
 /**
- * Fetch SOL balances for all wallets with batching for better performance
+ * Fetch SOL balances for all wallets
  */
 export const fetchSolBalances = async (
   connection: Connection,
   wallets: WalletType[],
-  setSolBalances: Function,
-  batchSize: number = 20
+  setSolBalances: Function
 ) => {
   const newBalances = new Map<string, number>();
   
-  // Process wallets in batches to reduce memory pressure
-  for (let i = 0; i < wallets.length; i += batchSize) {
-    const batch = wallets.slice(i, i + batchSize);
-    
-    const promises = batch.map(async (wallet) => {
-      try {
-        const balance = await fetchSolBalance(connection, wallet.address);
-        newBalances.set(wallet.address, balance);
-      } catch (error) {
-        console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
-        newBalances.set(wallet.address, 0);
-      }
-    });
-    
-    await Promise.all(promises);
-    
-    // Progressive UI update after each batch
-    setSolBalances(new Map(newBalances));
-    
-    // Small delay to prevent overwhelming the RPC
-    if (i + batchSize < wallets.length) {
-      await new Promise(resolve => setTimeout(resolve, 5));
+  const promises = wallets.map(async (wallet) => {
+    try {
+      const balance = await fetchSolBalance(connection, wallet.address);
+      newBalances.set(wallet.address, balance);
+    } catch (error) {
+      console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
+      newBalances.set(wallet.address, 0);
     }
-  }
+  });
   
+  await Promise.all(promises);
+  setSolBalances(newBalances);
   return newBalances;
 };
 
 /**
- * Fetch token balances for all wallets with batching for better performance
+ * Fetch token balances for all wallets
  */
 export const fetchTokenBalances = async (
   connection: Connection,
   wallets: WalletType[],
   tokenAddress: string,
-  setTokenBalances: Function,
-  batchSize: number = 20
+  setTokenBalances: Function
 ) => {
   if (!tokenAddress) return new Map<string, number>();
   
   const newBalances = new Map<string, number>();
   
-  // Process wallets in batches to reduce memory pressure
-  for (let i = 0; i < wallets.length; i += batchSize) {
-    const batch = wallets.slice(i, i + batchSize);
-    
-    const promises = batch.map(async (wallet) => {
-      try {
-        const balance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
-        newBalances.set(wallet.address, balance);
-      } catch (error) {
-        console.error(`Error fetching token balance for ${wallet.address}:`, error);
-        newBalances.set(wallet.address, 0);
-      }
-    });
-    
-    await Promise.all(promises);
-    
-    // Progressive UI update after each batch
-    setTokenBalances(new Map(newBalances));
-    
-    // Small delay to prevent overwhelming the RPC
-    if (i + batchSize < wallets.length) {
-      await new Promise(resolve => setTimeout(resolve, 5));
+  const promises = wallets.map(async (wallet) => {
+    try {
+      const balance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
+      newBalances.set(wallet.address, balance);
+    } catch (error) {
+      console.error(`Error fetching token balance for ${wallet.address}:`, error);
+      newBalances.set(wallet.address, 0);
     }
-  }
+  });
   
+  await Promise.all(promises);
+  setTokenBalances(newBalances);
   return newBalances;
 };
 

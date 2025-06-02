@@ -1,4 +1,4 @@
-import { Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { loadConfigFromCookies, WalletType } from '../Utils';
 

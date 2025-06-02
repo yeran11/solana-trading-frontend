@@ -1,16 +1,25 @@
-import React, { useState, useEffect, lazy } from 'react';
-import { Settings, } from 'lucide-react';
+import React, { useState, useEffect, useRef, lazy, useCallback } from 'react';
+import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import ServiceSelector from './Menu.tsx';
 import { WalletTooltip, initStyles } from './Styles';
 import { 
+  createNewWallet,
+  importWallet,
+  refreshWalletBalance,
   saveWalletsToCookies,
   loadWalletsFromCookies,
   saveConfigToCookies,
   loadConfigFromCookies,
+  downloadPrivateKey,
+  downloadAllWallets, 
   deleteWallet, 
   WalletType, 
+  formatAddress,
+  copyToClipboard,
   ConfigType,
+  fetchSolBalance,
+  fetchTokenBalance,
 } from './Utils';
 import Split from 'react-split';
 import { useToast } from "./Notifications";
@@ -18,10 +27,11 @@ import {
   fetchSolBalances,
   fetchTokenBalances,
   fetchAmmKey,
+  handleMarketCapUpdate,
+  handleCleanupWallets,
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
-import { WalletOperationsButtons } from './OperationsWallets';
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
@@ -39,28 +49,19 @@ const CleanerTokensModal = lazy(() => import('./CleanerModal').then(module => ({
 const CustomBuyModal = lazy(() => import('./CustomBuyModal').then(module => ({ default: module.CustomBuyModal })));
 
 const WalletManager: React.FC = () => {
-  // Apply styles - Optimized to prevent memory leaks
+  // Apply styles
   useEffect(() => {
-    const styleId = 'cyberpunk-styles';
-    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
-    
-    if (!styleElement) {
-      styleElement = document.createElement('style');
-      styleElement.id = styleId;
-      styleElement.textContent = initStyles();
-      document.head.appendChild(styleElement);
-    }
+    const styleElement = document.createElement('style');
+    styleElement.textContent = initStyles();
+    document.head.appendChild(styleElement);
     
     return () => {
-      // Only remove if it exists and we're the last component using it
-      const existingElement = document.getElementById(styleId);
-      if (existingElement) {
-        document.head.removeChild(existingElement);
-      }
+      document.head.removeChild(styleElement);
     };
   }, []);
 
   // State declarations
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [tokenAddress, setTokenAddress] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -89,37 +90,11 @@ const WalletManager: React.FC = () => {
   const [customBuyModalOpen, setCustomBuyModalOpen] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [tickEffect, setTickEffect] = useState(false);
-  const [showingTokenWallets, setShowingTokenWallets] = useState(true);
 
   // Extract API key from URL
   useEffect(() => {
     handleApiKeyFromUrl(setConfig, saveConfigToCookies, showToast);
   }, []);
-
-  // Extract token address from URL parameter
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenAddressParam = urlParams.get('tokenAddress');
-    
-    if (tokenAddressParam) {
-      setTokenAddress(tokenAddressParam);
-      showToast(`Token address loaded from URL: ${tokenAddressParam}`, 'success');
-    }
-  }, []);
-
-  // Update URL when token address changes
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    
-    if (tokenAddress) {
-      url.searchParams.set('tokenAddress', tokenAddress);
-    } else {
-      url.searchParams.delete('tokenAddress');
-    }
-    
-    // Update URL without triggering a page reload
-    window.history.replaceState({}, '', url.toString());
-  }, [tokenAddress]);
 
   // Fetch AMM key when token address changes
   useEffect(() => {
@@ -162,44 +137,17 @@ const WalletManager: React.FC = () => {
     }
   }, [wallets]);
 
-  // Memory cleanup for balance Maps when wallets are removed
-  useEffect(() => {
-    const currentAddresses = new Set(wallets.map(w => w.address));
-    
-    // Clean up SOL balances for removed wallets
-    setSolBalances(prev => {
-      const cleaned = new Map();
-      for (const [address, balance] of prev) {
-        if (currentAddresses.has(address)) {
-          cleaned.set(address, balance);
-        }
-      }
-      return cleaned;
-    });
-    
-    // Clean up token balances for removed wallets
-    setTokenBalances(prev => {
-      const cleaned = new Map();
-      for (const [address, balance] of prev) {
-        if (currentAddresses.has(address)) {
-          cleaned.set(address, balance);
-        }
-      }
-      return cleaned;
-    });
-  }, [wallets]);
-
   // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
     if (connection && wallets.length > 0) {
-      fetchSolBalances(connection, wallets, setSolBalances, 20);
+      fetchSolBalances(connection, wallets, setSolBalances);
     }
   }, [connection, wallets.length]);
 
   // Fetch token balances when token address changes or wallets change
   useEffect(() => {
     if (connection && wallets.length > 0 && tokenAddress) {
-      fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances, 20);
+      fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
     }
   }, [connection, wallets.length, tokenAddress]);
 
@@ -241,22 +189,12 @@ const WalletManager: React.FC = () => {
     setIsRefreshing(true);
     
     try {
-      // Start timing to ensure minimum animation duration
-      const startTime = Date.now();
-      const minDuration = Math.max(2000, wallets.length * 200); // At least 2 seconds or 200ms per wallet
-      
-      // Fetch SOL balances with batching
-      await fetchSolBalances(connection, wallets, setSolBalances, 20);
+      // Fetch SOL balances
+      await fetchSolBalances(connection, wallets, setSolBalances);
       
       // Fetch token balances if token address is provided
       if (tokenAddress) {
-        await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances, 20);
-      }
-      
-      // Ensure minimum duration for animation visibility
-      const elapsed = Date.now() - startTime;
-      if (elapsed < minDuration) {
-        await new Promise(resolve => setTimeout(resolve, minDuration - elapsed));
+        await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);
@@ -420,60 +358,22 @@ const WalletManager: React.FC = () => {
             }}
           >
             {/* Left Column */}
-            <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] flex flex-col">
-              {/* Operations buttons - sticky at top */}
+            <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] overflow-y-auto">
               {connection && (
-                <div className="sticky top-0 bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-20 shadow-sm">
-                  <div className="px-2 py-1">
-                    <WalletOperationsButtons
-                      wallets={wallets}
-                      solBalances={solBalances}
-                      connection={connection}
-                      tokenBalances={tokenBalances}
-                      handleRefresh={handleRefresh}
-                      isRefreshing={isRefreshing}
-                      showingTokenWallets={showingTokenWallets}
-                       handleBalanceToggle={() => {
-                         setShowingTokenWallets(!showingTokenWallets);
-                         // Toggle wallets based on balance type
-                         setWallets(prev => {
-                           const newWallets = prev.map(wallet => ({
-                             ...wallet,
-                             isActive: !showingTokenWallets 
-                               ? (tokenBalances.get(wallet.address) || 0) > 0
-                               : (solBalances.get(wallet.address) || 0) > 0 && (tokenBalances.get(wallet.address) || 0) === 0
-                           }));
-                           saveWalletsToCookies(newWallets);
-                           return newWallets;
-                         });
-                       }}
-                      setWallets={setWallets}
-                      sortDirection={sortDirection}
-                      handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
-                      setIsModalOpen={setIsModalOpen}
-                    />
-                  </div>
-                </div>
+                <WalletsPage
+                  wallets={wallets}
+                  setWallets={setWallets}
+                  handleRefresh={handleRefresh}
+                  isRefreshing={isRefreshing}
+                  setIsModalOpen={setIsModalOpen}
+                  tokenAddress={tokenAddress}
+                  sortDirection={sortDirection}
+                  handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
+                  connection={connection}
+                  solBalances={solBalances}
+                  tokenBalances={tokenBalances}
+                />
               )}
-              
-              {/* Wallets content - scrollable */}
-              <div className="flex-1 overflow-y-auto">
-                {connection && (
-                  <WalletsPage
-                    wallets={wallets}
-                    setWallets={setWallets}
-                    handleRefresh={handleRefresh}
-                    isRefreshing={isRefreshing}
-                    setIsModalOpen={setIsModalOpen}
-                    tokenAddress={tokenAddress}
-                    sortDirection={sortDirection}
-                    handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
-                    connection={connection}
-                    solBalances={solBalances}
-                    tokenBalances={tokenBalances}
-                  />
-                )}
-              </div>
             </div>
 
             {/* Middle Column */}

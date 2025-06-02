@@ -1,6 +1,6 @@
-import { Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { loadConfigFromCookies } from '../Utils'; // Assuming this is the same import as in existing code
+import { loadConfigFromCookies, WalletType } from '../Utils'; // Assuming this is the same import as in existing code
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;

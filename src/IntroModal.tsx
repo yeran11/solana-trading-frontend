@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, Settings, Rocket, BarChart3, DollarSign } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Settings, Rocket, BarChart3, DollarSign } from 'lucide-react';
 import { StepVisualization, StylesAppender } from './StepVisualizations';
 
 // Updated Types for our component - removed action props
@@ -116,7 +116,7 @@ const IntroductionModal: React.FC<IntroductionModalProps> = ({
         {/* Close button */}
         <button 
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded z-10"
+          className="absolute top-4 right-4 p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300 z-10"
         >
           <X size={20} className="text-[#ff2244]" />
         </button>
@@ -165,7 +165,7 @@ const IntroductionModal: React.FC<IntroductionModalProps> = ({
           <div className="flex justify-between w-full mt-4">
             <button
               onClick={handlePrevStep}
-              className={`p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded ${
+              className={`p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300 ${
                 currentStep === 0 ? 'opacity-50 cursor-not-allowed' : 'cyberpunk-btn'
               }`}
               disabled={currentStep === 0}

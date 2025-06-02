@@ -3,6 +3,7 @@ import { BarChart2, CheckCircle, ChevronLeft, ChevronRight, Info, Search, X } fr
 import { getWallets } from './Utils';
 import PnlCard from './PnlCard.tsx';
 import { useToast } from "./Notifications";
+import { loadConfigFromCookies } from './Utils';
 import { createPortal } from 'react-dom';
 
 const STEPS_PNL = ['Select Wallets', 'View Results', 'Share Card'];
@@ -499,7 +500,7 @@ export const PnlModal: React.FC<PnlModalProps> = ({
 
             {/* Step 2: View Results */}
             {currentStep === 1 && (
-              <div className="space-y-5">
+              <div className="space-y-5 animate-[fadeIn_0.3s_ease]">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <svg className="w-5 h-5 text-[#02b36d]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -729,7 +730,7 @@ export const PnlModal: React.FC<PnlModalProps> = ({
 
             {/* Step 3: Share Card */}
             {currentStep === 2 && (
-              <div className="space-y-5">
+              <div className="space-y-5 animate-[fadeIn_0.3s_ease]">
                 <div className="flex items-center space-x-2 mb-3">
                   <svg className="w-5 h-5 text-[#02b36d]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -762,7 +763,7 @@ export const PnlModal: React.FC<PnlModalProps> = ({
                 type="button"
                 onClick={currentStep === 0 ? onClose : handleBack}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all shadow-md font-mono tracking-wider modal-btn-cyberpunk"
               >
                 {currentStep === 0 ? 'CANCEL' : (
                   <div className="flex items-center">
@@ -777,14 +778,14 @@ export const PnlModal: React.FC<PnlModalProps> = ({
                   type="button"
                   onClick={handleNext}
                   disabled={isSubmitting || selectedWallets.length === 0}
-                  className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center font-mono tracking-wider
+                  className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider
                             ${isSubmitting || selectedWallets.length === 0
                               ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                              : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] modal-btn-cyberpunk'}`}
+                              : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent mr-2"></div>
+                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
                       PROCESSING...
                     </>
                   ) : (
@@ -800,7 +801,7 @@ export const PnlModal: React.FC<PnlModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="px-5 py-2.5 bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] rounded-lg font-mono tracking-wider modal-btn-cyberpunk shadow-lg"
+                  className="px-5 py-2.5 bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] rounded-lg transition-all font-mono tracking-wider modal-btn-cyberpunk transform hover:-translate-y-0.5 shadow-lg"
                 >
                   <div className="flex items-center">
                     CREATE SHARE CARD
@@ -813,7 +814,7 @@ export const PnlModal: React.FC<PnlModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] rounded-lg font-mono tracking-wider modal-btn-cyberpunk shadow-lg"
+                  className="px-5 py-2.5 bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] rounded-lg transition-all font-mono tracking-wider modal-btn-cyberpunk transform hover:-translate-y-0.5 shadow-lg"
                 >
                   CLOSE
                 </button>

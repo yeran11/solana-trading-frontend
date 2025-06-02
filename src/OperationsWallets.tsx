@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   RefreshCw, Coins, CheckSquare, Square, ArrowDownAZ, ArrowUpAZ, 
   Wallet, Share2, Network, Send, HandCoins, DollarSign, 
@@ -89,7 +90,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   // Primary action buttons
   const primaryActions = [
     {
-      icon: <RefreshCw size={14} />,
+      icon: <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />,
       onClick: handleRefresh,
       disabled: isRefreshing
     },
@@ -139,7 +140,32 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
     }
   ];
 
-
+  // Animation variants
+  const drawerVariants = {
+    hidden: { 
+      y: 20, 
+      opacity: 0,
+      height: 0,
+      marginBottom: 0
+    },
+    visible: {
+      y: 0,
+      opacity: 1,
+      height: 'auto',
+      marginBottom: 12,
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 30
+      }
+    }
+  };
+  
+  const buttonVariants = {
+    rest: { scale: 1 },
+    hover: { scale: 1.05 },
+    tap: { scale: 0.95 }
+  };
 
   return (
     <>
@@ -183,54 +209,80 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
           {/* Primary action buttons - without tooltips */}
           <div className="flex items-center gap-0.5 flex-1">
             {wallets.length === 0 ? (
-              <button
+              <motion.button
+                variants={buttonVariants}
+                initial="rest"
+                whileHover="hover"
+                whileTap="tap"
                 onClick={openWalletsModal}
                 className="flex items-center text-xs font-mono tracking-wider text-[#02b36d] 
                            hover:text-[#7ddfbd] px-2 py-1 rounded bg-[#071015] border 
-                           border-[#02b36d30] hover:border-[#02b36d50]"
+                           border-[#02b36d30] hover:border-[#02b36d50] transition-colors duration-200"
               >
                 <span>Start Here &gt;</span>
-              </button>
+              </motion.button>
             ) : (
               primaryActions.map((action, index) => (
-                <button
+                <motion.button
                   key={index}
+                  variants={buttonVariants}
+                  initial="rest"
+                  whileHover="hover"
+                  whileTap="tap"
                   onClick={action.onClick}
                   disabled={action.disabled}
                   className="p-1.5 text-[#02b36d] hover:text-[#7ddfbd] disabled:opacity-50 
                            bg-[#071015] border border-[#02b36d20] hover:border-[#02b36d40] rounded 
-                           flex-shrink-0 flex items-center justify-center"
+                           transition-colors duration-200 flex-shrink-0 flex items-center justify-center"
                 >
                   <span>{action.icon}</span>
-                </button>
+                </motion.button>
               ))
             )}
           </div>
           
           {/* Menu toggle button */}
-          <button
+          <motion.button
+            variants={buttonVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap="tap"
             onClick={toggleDrawer}
             className="ml-0.5 p-1.5 flex items-center justify-center rounded
                      bg-gradient-to-r from-[#02b36d] to-[#018a54] 
-                     text-[#051014] hover:from-[#02c377] hover:to-[#01a35f]"
+                     text-[#051014] hover:from-[#02c377] hover:to-[#01a35f]
+                     transition-colors duration-200"
           >
             {isDrawerOpen ? <X size={14} /> : <Menu size={14} />}
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* Operations drawer - expandable */}
+      <AnimatePresence>
         {isDrawerOpen && (
-          <div 
+          <motion.div 
+            variants={drawerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
             className="bg-[#05080a95] backdrop-blur-sm rounded-lg overflow-hidden
-                     border border-[#02b36d30] shadow-lg shadow-[#02b36d10] mb-3"
+                     border border-[#02b36d30] shadow-lg shadow-[#02b36d10]"
           >
             <div className="p-3">
               {/* Drawer header */}
               <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#02b36d20]">
                 <div className="flex items-center gap-2">
-                  <div 
+                  <motion.div 
                     className="w-1 h-4 bg-[#02b36d]"
+                    animate={{ 
+                      height: [4, 16, 4],
+                    }}
+                    transition={{ 
+                      duration: 1.5, 
+                      repeat: Infinity,
+                      repeatType: "mirror" 
+                    }}
                   />
                   <span className="text-xs font-mono tracking-wider text-[#02b36d] uppercase">Wallet Operations</span>
                 </div>
@@ -239,28 +291,39 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
               {/* Operation buttons - Single column slim layout */}
               <div className="flex flex-col space-y-1">
                 {operations.map((op, index) => (
-                  <button
+                  <motion.button
                     key={index}
+                    variants={buttonVariants}
+                    initial="rest"
+                    whileHover="hover"
+                    whileTap="tap"
                     onClick={op.onClick}
                     className="flex justify-between items-center w-full py-2 px-3 rounded-md
                              bg-[#071015] border border-[#02b36d30] hover:border-[#02b36d50]
-                             text-[#02b36d] hover:text-[#7ddfbd]
+                             text-[#02b36d] hover:text-[#7ddfbd] transition-all duration-300
                              hover:shadow-md hover:shadow-[#02b36d15] relative overflow-hidden"
                   >
+                    {/* Subtle glow effect */}
+                    <motion.div 
+                      className="absolute inset-0 bg-[#02b36d]"
+                      initial={{ opacity: 0 }}
+                      whileHover={{ opacity: 0.05 }}
+                    />
                     <div className="flex items-center gap-3 relative z-10">
                       <span>{op.icon}</span>
                       <span className="text-xs font-mono tracking-wider">{op.label}</span>
                     </div>
                     <ChevronRight size={14} className="relative z-10 text-[#02b36d80]" />
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
             
             {/* Decorative bottom edge */}
             <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#02b36d40] to-transparent"/>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
     </>
   );
 };

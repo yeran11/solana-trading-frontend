@@ -76,7 +76,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     setFrameLoading(false);
   };
 
-  // Toggle between frame.fury.bot and GMGN graph
+  // Toggle between frame.Raze.bot and GMGN graph
   const toggleGraphSource = () => {
     setFrameLoading(true);
     setShowGMGN(prev => !prev);
@@ -162,7 +162,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         <IconButton
           icon={<BarChart className="h-4 w-4" />}
           onClick={toggleGraphSource}
-          title={showGMGN ? "Switch to Fury graph" : "Switch to GMGN graph"}
+          title={showGMGN ? "Switch to Raze graph" : "Switch to GMGN graph"}
           variant="primary"
         />
       )}
@@ -198,7 +198,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     
     if (1==1) {
       // GMGN graph with transactions iframe below
-      const transactionsSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
+      const transactionsSrc = `https://frame.Raze.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
       
       return (
         <div className="relative flex-1 overflow-hidden flex flex-col">

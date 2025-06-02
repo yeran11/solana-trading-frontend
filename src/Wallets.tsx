@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { RefreshCw, ExternalLink, DollarSign, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
-// WalletOperationsButtons moved to App.tsx
+import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
 
-// Tooltip Component with cyberpunk styling - Optimized with React.memo
-export const Tooltip = React.memo(({ 
+// Tooltip Component with cyberpunk styling
+export const Tooltip = ({ 
   children, 
   content,
   position = 'top'
@@ -17,21 +17,18 @@ export const Tooltip = React.memo(({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
-  const positionClasses = useMemo(() => ({
+  const positionClasses = {
     top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
     bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
     left: 'right-full top-1/2 -translate-y-1/2 mr-2',
     right: 'left-full top-1/2 -translate-y-1/2 ml-2'
-  }), []);
-
-  const handleMouseEnter = useCallback(() => setIsVisible(true), []);
-  const handleMouseLeave = useCallback(() => setIsVisible(false), []);
+  };
 
   return (
     <div className="relative inline-block">
       <div
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
       >
         {children}
       </div>
@@ -44,7 +41,7 @@ export const Tooltip = React.memo(({
       )}
     </div>
   );
-});
+};
 
 // Max wallets configuration
 export const maxWalletsConfig = {
@@ -261,7 +258,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       }
       
       // Add a small delay to make the sequential update visible
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     
     setRefreshingWalletId(null);
@@ -330,8 +327,27 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
       <div className="absolute top-0 left-0 w-full h-full cyberpunk-scanline pointer-events-none z-1 opacity-30"></div>
       
-      {/* Balance info header - sticky at top */}
-      <div className="sticky top-0 bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
+      {/* Enhanced header */}
+      <div className="top-0 sticky bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
+        {/* Compact buttons row */}
+        <div className="px-2 py-1 border-b border-[#02b36d20]">
+          <WalletOperationsButtons
+            wallets={wallets}
+            solBalances={solBalances}
+            connection={connection}
+            tokenBalances={tokenBalances}
+            handleRefresh={handleRefreshAll}
+            isRefreshing={isRefreshing || refreshingWalletId !== null}
+            showingTokenWallets={showingTokenWallets}
+            handleBalanceToggle={handleBalanceToggle}
+            setWallets={setWallets}
+            sortDirection={sortDirection}
+            handleSortWallets={handleSortWallets}
+            setIsModalOpen={setIsModalOpen}
+          />
+        </div>
+        
+        {/* Improved balance info */}
         <div className="py-2 px-3 bg-[#0a141980]">
           <div className="flex justify-between text-sm">
             <div>
@@ -358,7 +374,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         </div>
       </div>
       
-      {/* Wallets table */}
+      {/* Wallets table with improved row sizing */}
       <div className="pt-2 relative">
         <div className="min-w-full overflow-auto relative">
           <table className="w-full border-separate border-spacing-0">
@@ -376,7 +392,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   onMouseEnter={() => setHoverRow(wallet.id)}
                   onMouseLeave={() => setHoverRow(null)}
                   className={`
-                    border-b border-[#02b36d15] cursor-pointer
+                    border-b border-[#02b36d15] cursor-pointer transition-colors duration-200
                     ${hoverRow === wallet.id ? 'bg-[#02b36d15]' : ''}
                     ${wallet.isActive ? 'bg-[#02b36d10]' : ''}
                     ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
@@ -386,7 +402,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   <td className="py-2.5 pl-3 pr-1 w-6">
                     <div 
                       className={`
-                        w-3 h-3 rounded-full
+                        w-3 h-3 rounded-full transition-all duration-200
                         ${wallet.isActive 
                           ? 'bg-[#02b36d] shadow-sm shadow-[#02b36d40]' 
                           : 'bg-[#091217] border border-[#02b36d40]'
@@ -399,10 +415,10 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   <td className="py-2.5 px-2 font-mono">
                     <div className="flex items-center">
                       {refreshingWalletId === wallet.id && (
-                        <RefreshCw size={12} className="text-[#02b36d] mr-2" />
+                        <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
                       )}
                       <span 
-                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] tracking-wide"
+                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide"
                         onClick={async (e) => {
                           e.stopPropagation();
                           const success = await copyToClipboard(wallet.address, showToast);
@@ -445,7 +461,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         e.stopPropagation();
                         window.open(`https://solscan.io/account/${wallet.address}`, '_blank');
                       }}
-                      className="text-[#7ddfbd60] hover:text-[#02b36d]"
+                      className="text-[#7ddfbd60] hover:text-[#02b36d] transition-colors duration-200"
                     >
                       <ExternalLink size={14} />
                     </button>

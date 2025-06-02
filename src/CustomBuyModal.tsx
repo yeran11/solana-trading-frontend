@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle, ChevronRight, DollarSign, X, Info, Search } from 'lucide-react';
 import { getWallets } from './Utils';
 import { useToast } from "./Notifications";
+import { loadConfigFromCookies } from './Utils';
 import * as web3 from '@solana/web3.js';
 import bs58 from 'bs58';
 
@@ -364,6 +365,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
       showToast('Custom buy operation completed successfully', 'success');
       resetForm();
       onClose();
+      handleRefresh(); // Refresh balances
     } catch (error) {
       console.error('Custom buy execution error:', error);
       showToast(`Custom buy operation failed: ${error.message}`, 'error');
@@ -1002,8 +1004,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                         onChange={(e) => setIsConfirmed(e.target.checked)}
                         className="peer sr-only"
                       />
-                      <div className="w-5 h-5 border border-[#02b36d40] rounded-md peer-checked:bg-[#02b36d] peer-checked:border-0"></div>
-                      <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                      <div className="w-5 h-5 border border-[#02b36d40] rounded-md peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                      <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                     </div>
                     <label htmlFor="confirm" className="text-sm text-[#7ddfbd] leading-relaxed font-mono">
                       I CONFIRM THAT I WANT TO BUY {tokenInfo?.symbol || 'TOKEN'} USING THE SPECIFIED AMOUNTS
@@ -1089,7 +1091,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] p-1 hover:bg-[#02b36d20] rounded"
+            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
           >
             <X size={18} />
           </button>
@@ -1098,7 +1100,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
         {/* Progress Indicator */}
         <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
           <div 
-            className="h-full bg-[#02b36d]"
+            className="h-full bg-[#02b36d] transition-all duration-300"
             style={{ width: `${(currentStep + 1) / STEPS_CUSTOMBUY.length * 100}%` }}
           ></div>
         </div>
@@ -1120,7 +1122,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                 type="button"
                 onClick={currentStep === 0 ? onClose : handleBack}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
               >
                 {currentStep === 0 ? 'CANCEL' : 'BACK'}
               </button>
@@ -1131,14 +1133,14 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                   isSubmitting ||
                   (currentStep === STEPS_CUSTOMBUY.length - 1 && !isConfirmed)
                 }
-                className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center font-mono tracking-wider 
+                className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider 
                           ${isSubmitting || (currentStep === STEPS_CUSTOMBUY.length - 1 && !isConfirmed)
                             ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] modal-btn-cyberpunk'}`}
+                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
               >
                 {isSubmitting ? (
                   <>
-                    <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent mr-2"></div>
+                    <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
                     PROCESSING...
                   </>
                 ) : (

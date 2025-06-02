@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { 
+  Download, 
   Settings2,
+  ChevronDown, 
+  Share2,
   Waypoints,
   Blocks,
   Trash2,
   ChartSpline,
-  Workflow
+  Send,
+  Workflow,
+  Sparkles
 } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { WalletType, loadConfigFromCookies } from "./Utils";
@@ -13,10 +18,10 @@ import { useToast } from "./Notifications";
 import { countActiveWallets, validateActiveWallets, getScriptName, maxWalletsConfig } from './Wallets';
 import TradingCard from './TradingForm';
 
-import { executePumpSell } from './utils/pumpsell';
-import { executePumpBuy } from './utils/pumpbuy';
-import { executeBoopSell } from './utils/boopsell';
-import { executeBoopBuy } from './utils/boopbuy';
+import { executePumpSell, validatePumpSellInputs } from './utils/pumpsell';
+import { executePumpBuy, validatePumpBuyInputs } from './utils/pumpbuy';
+import { executeBoopSell, validateBoopSellInputs } from './utils/boopsell';
+import { executeBoopBuy, validateBoopBuyInputs } from './utils/boopbuy';
 
 // Enhanced cyberpunk-styled Switch component (simplified)
 const Switch = React.forwardRef<
@@ -26,7 +31,7 @@ const Switch = React.forwardRef<
   <SwitchPrimitive.Root
     className={`
       peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full
-      border-2 border-[#02b36d40]
+      border-2 border-[#02b36d40] transition-colors duration-300
       focus-visible:outline-none focus-visible:ring-2
       focus-visible:ring-[#02b36d] focus-visible:ring-offset-2
       focus-visible:ring-offset-[#050a0e] disabled:cursor-not-allowed
@@ -38,7 +43,7 @@ const Switch = React.forwardRef<
     <SwitchPrimitive.Thumb
       className={`
         pointer-events-none block h-5 w-5 rounded-full
-        bg-white shadow-lg ring-0
+        bg-white shadow-lg ring-0 transition-transform
         data-[state=checked]:translate-x-5 data-[state=checked]:bg-[#e4fbf2]
         data-[state=unchecked]:translate-x-0 data-[state=unchecked]:bg-[#7ddfbd]`}
     />
@@ -60,7 +65,7 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({ classNam
       focus:outline-none focus:border-[#02b36d] focus:ring-2 focus:ring-[#02b36d20]
       focus:ring-offset-1 focus:ring-offset-[#0a1419]
       disabled:cursor-not-allowed disabled:opacity-50
-      ${className}`}
+      transition-all duration-300 ${className}`}
     {...props}
   />
 );
@@ -227,8 +232,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         
         const savedConfig = loadConfigFromCookies();
         // Call the routing API to determine best DEX
-        const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
-        const response = await fetch(`${baseUrl}/api/tokens/route`, {
+        const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -264,14 +268,14 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         const bestDex = protocolToDex[data.protocol.toLowerCase()];
         
         if (!bestDex) {
-          showToast(`Unknown protocol. Using fallback.`, "error");
+          showToast(`Unknown protocol: ${data.protocol}. Using Jupiter as fallback.`, "error");
           // Use Jupiter as fallback
           const tempDex = 'jupiter';
           const tempHandleTradeSubmit = originalHandleTradeSubmit.bind(null, tempDex);
           await tempHandleTradeSubmit(wallets, isBuyMode);
         } else {
           // Use determined best DEX
-          showToast(`Using best route for optimal rate`, "success");
+          showToast(`Using ${dexOptions.find(d => d.value === bestDex)?.label} for best rate`, "success");
           const tempHandleTradeSubmit = originalHandleTradeSubmit.bind(null, bestDex);
           await tempHandleTradeSubmit(wallets, isBuyMode);
         }
@@ -324,22 +328,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateMoonBuyInputs, executeMoonBuy } = await import('./utils/moonbuy');
           
-          // const validation = validateMoonBuyInputs(formattedWallets, tokenConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateMoonBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing buy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing MoonBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute MoonBuy operation
           const result = await executeMoonBuy(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Buy transactions submitted successfully", "success");
+            showToast("MoonBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`MoonBuy failed: ${result.error}`, "error");
           }
         } else {
           // MoonSell flow - implementation unchanged
@@ -358,22 +363,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateMoonSellInputs, executeMoonSell } = await import('./utils/moonsell');
           
-          // const validation = validateMoonSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateMoonSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing MoonSell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute MoonSell operation
           const result = await executeMoonSell(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("MoonSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`MoonSell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -418,22 +424,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           });
           
           // Validate inputs before executing
-          // const validation = validateBoopBuyInputs(formattedWallets, tokenConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateBoopBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing buy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing BoopBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute BoopBuy operation
           const result = await executeBoopBuy(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Buy transactions submitted successfully", "success");
+            showToast("BoopBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`BoopBuy failed: ${result.error}`, "error");
           }
         } else {
           // BoopSell flow
@@ -450,22 +457,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           });
           
           // Validate inputs before executing
-          // const validation = validateBoopSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateBoopSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing BoopSell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute BoopSell operation
           const result = await executeBoopSell(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("BoopSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`BoopSell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -510,22 +518,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           });
           
           // Validate inputs before executing
-          // const validation = validatePumpBuyInputs(formattedWallets, tokenConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validatePumpBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing buy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing PumpBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute PumpBuy operation
           const result = await executePumpBuy(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Buy transactions submitted successfully", "success");
+            showToast("PumpBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`PumpBuy failed: ${result.error}`, "error");
           }
         } else {
           // PumpSell flow
@@ -542,22 +551,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           });
           
           // Validate inputs before executing
-          // const validation = validatePumpSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validatePumpSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing PumpSell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute PumpSell operation
           const result = await executePumpSell(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("PumpSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`PumpSell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -606,22 +616,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateJupSwapInputs, executeJupSwap } = await import('./utils/jupbuy');
           
-          // const validation = validateJupSwapInputs(formattedWallets, swapConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateJupSwapInputs(formattedWallets, swapConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing swap (buy) for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing Jupiter Swap (Buy) for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute JupSwap operation
           const result = await executeJupSwap(formattedWallets, swapConfig);
           
           if (result.success) {
-            showToast("Buy transactions submitted successfully", "success");
+            showToast("Jupiter Buy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`Jupiter Buy failed: ${result.error}`, "error");
           }
         } else {
           // Jupiter Sell flow
@@ -643,15 +654,16 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import the dedicated sell functions from selljup
           const { validateJupSellInputs, executeJupSell } = await import('./utils/jupsell');
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets (${sellConfig.sellPercent}%)`);
+          console.log(`Executing Jupiter Sell for ${tokenAddress} with ${activeWallets.length} wallets (${sellConfig.sellPercent}%)`);
           
           // Execute JupSell operation with RPC URL
           const result = await executeJupSell(formattedWallets, sellConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("Jupiter Sell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`Jupiter Sell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -698,22 +710,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateRayBuyInputs, executeRayBuy } = await import('./utils/raybuy');
           
-          // const validation = validateRayBuyInputs(formattedWallets, tokenConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateRayBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing buy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing RayBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute MoonBuy operation
           const result = await executeRayBuy(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Buy transactions submitted successfully", "success");
+            showToast("RayBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`RayBuy failed: ${result.error}`, "error");
           }
         } else {
           // RaySell flow
@@ -732,22 +745,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateRaySellInputs, executeRaySell } = await import('./utils/raysell');
           
-          // const validation = validateRaySellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateRaySellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing RaySell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute RaySell operation
           const result = await executeRaySell(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("RaySell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`RaySell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -793,22 +807,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateLaunchBuyInputs, executeLaunchBuy } = await import('./utils/launchbuy');
           
-          // const validation = validateLaunchBuyInputs(formattedWallets, tokenConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateLaunchBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing buy for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing RayBuy for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute MoonBuy operation
           const result = await executeLaunchBuy(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Buy transactions submitted successfully", "success");
+            showToast("RayBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`RayBuy failed: ${result.error}`, "error");
           }
         } else {
           // RaySell flow
@@ -827,22 +842,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateLaunchSellInputs, executeLaunchSell } = await import('./utils/launchsell');
           
-          // const validation = validateLaunchSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateLaunchSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing RaySell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute RaySell operation
           const result = await executeLaunchSell(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("RaySell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`RaySell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -889,22 +905,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateSwapBuyInputs, executeSwapBuy } = await import('./utils/swapbuy');
           
-          // const validation = validateSwapBuyInputs(formattedWallets, tokenConfig, walletBalances);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateSwapBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing swap for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing Swap for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute Swap operation
           const result = await executeSwapBuy(formattedWallets, tokenConfig);
           
           if (result.success) {
             showToast("Swap transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Buy failed: ${result.error}`, "error");
+            showToast(`MoonBuy failed: ${result.error}`, "error");
           }
         } else {
           // MoonSell flow
@@ -923,22 +940,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import and validate inputs before executing
           const { validateSwapSellInputs, executeSwapSell } = await import('./utils/swapsell');
           
-          // const validation = validateSwapSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          // if (!validation.valid) {
-          //   showToast(`Validation failed: ${validation.error}`, "error");
-          //   setIsLoading(false);
-          //   return;
-          // }
+          const validation = validateSwapSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            setIsLoading(false);
+            return;
+          }
           
-          console.log(`Executing sell for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing MoonSell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute MoonSell operation
           const result = await executeSwapSell(formattedWallets, tokenConfig);
           
           if (result.success) {
-            showToast("Sell transactions submitted successfully", "success");
+            showToast("MoonSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
           } else {
-            showToast(`Sell failed: ${result.error}`, "error");
+            showToast(`MoonSell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
@@ -1123,53 +1141,80 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
 
       <br></br>
       
-      {/* GitHub Download Box - simplified */}
+      {/* Enhanced GitHub & Website Section */}
       <div className="mb-4 mx-auto max-w-4xl">
         <div className="bg-gradient-to-br from-[#0a141950] to-[#05080a50] backdrop-blur-sm 
-                     rounded-xl p-3 relative overflow-hidden border border-[#02b36d10] 
+                     rounded-xl p-4 relative overflow-hidden border border-[#02b36d10] 
                      hover:border-[#02b36d30] transition-all duration-300">
           
-          {/* GitHub link content */}
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center">
-              <svg 
-                viewBox="0 0 24 24" 
-                width="18" 
-                height="18" 
-                className="text-[#02b36d] mr-2"
-              >
-                <path
-                  fill="currentColor"
-                  d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.934.359.31.678.92.678 1.855 0 1.337-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"
-                />
-              </svg>
-              <span className="text-xs font-mono tracking-wider text-[#7ddfbd]">
-                OPEN SOURCE 
-              </span>
-            </div>
-            
+          {/* Header */}
+          <div className="flex items-center mb-3">
+            <svg 
+              viewBox="0 0 24 24" 
+              width="20" 
+              height="20" 
+              className="text-[#02b36d] mr-2"
+            >
+              <path
+                fill="currentColor"
+                d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.934.359.31.678.92.678 1.855 0 1.337-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"
+              />
+            </svg>
+            <span className="text-sm font-mono tracking-wider text-[#7ddfbd] font-semibold">
+              OPEN SOURCE PROJECT
+            </span>
+          </div>
+          
+          {/* Description */}
+          <p className="text-xs text-[#7ddfbd80] mb-4 leading-relaxed">
+            Built with transparency in mind. Explore the code, contribute, or fork for your own use.
+          </p>
+          
+          {/* Links */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Main Website Link */}
             <a 
-              href="https://github.com/furydotbot/raze.bot" 
+              href="https://fury.bot" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center py-1 px-3 rounded-md bg-gradient-to-r 
-                         from-[#02b36d20] to-[#02b36d10] border border-[#02b36d30]
-                         hover:from-[#02b36d30] hover:to-[#02b36d20] 
-                         transition-all duration-300"
+              className="flex items-center justify-center py-2 px-4 rounded-lg bg-gradient-to-r 
+                         from-[#02b36d] to-[#02b36d90] text-black font-mono text-xs font-semibold
+                         hover:from-[#02b36d90] hover:to-[#02b36d] 
+                         transition-all duration-300 transform hover:scale-105"
             >
               <svg 
                 viewBox="0 0 24 24" 
-                width="14" 
-                height="14" 
-                className="text-[#02b36d] mr-1"
+                width="16" 
+                height="16" 
+                className="mr-2"
+                fill="currentColor"
               >
-                <path
-                  fill="currentColor"
-                  d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"
-                />
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
-              <span className="text-xs font-mono tracking-wider text-[#02b36d]">
-                FURYDOTBOT
+              FURY.BOT
+            </a>
+            
+            {/* GitHub Link */}
+            <a 
+              href="https://github.com/furydotbot/raze.bot/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center py-2 px-4 rounded-lg bg-gradient-to-r 
+                         from-[#02b36d20] to-[#02b36d10] border border-[#02b36d30]
+                         hover:from-[#02b36d30] hover:to-[#02b36d20] 
+                         transition-all duration-300 transform hover:scale-105"
+            >
+              <svg 
+                viewBox="0 0 24 24" 
+                width="16" 
+                height="16" 
+                className="mr-2 text-[#02b36d]"
+                fill="currentColor"
+              >
+                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.934.359.31.678.92.678 1.855 0 1.337-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+              </svg>
+              <span className="text-xs font-mono tracking-wider text-[#02b36d] font-semibold">
+                @FURYDOTBOT
               </span>
             </a>
           </div>
