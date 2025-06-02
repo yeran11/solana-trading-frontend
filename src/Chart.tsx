@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { Search, AlertCircle, BarChart, List } from 'lucide-react';
+import { Search, AlertCircle, BarChart, List, GripHorizontal } from 'lucide-react';
 
 interface ChartPageProps {
   isLoadingChart: boolean;
@@ -46,9 +46,8 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   const [showGMGN, setShowGMGN] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileView, setMobileView] = useState<'chart' | 'transactions'>('chart');
-  const [chartHeight, setChartHeight] = useState(70); // Percentage height for chart section
+  const [chartHeight, setChartHeight] = useState(70); // Percentage height for chart
   const [isDragging, setIsDragging] = useState(false);
-  const dragStateRef = useRef({ startY: 0, startHeight: 70, lastUpdate: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mobile detection
@@ -68,92 +67,42 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     setMobileView(prev => prev === 'chart' ? 'transactions' : 'chart');
   };
 
-  // Handle resizer drag start
+  // Handle resizer drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isMobile) return;
-    
     e.preventDefault();
-    e.stopPropagation();
-    
-    dragStateRef.current = {
-      startY: e.clientY,
-      startHeight: chartHeight,
-      lastUpdate: Date.now()
-    };
-    
     setIsDragging(true);
-  }, [isMobile, chartHeight]);
+  }, []);
 
-  // Handle resizer drag with optimized throttling
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || isMobile || !containerRef.current) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const now = Date.now();
-    const timeSinceLastUpdate = now - dragStateRef.current.lastUpdate;
-    
-    // Throttle to 60fps (16ms)
-    if (timeSinceLastUpdate < 16) return;
+    if (!isDragging || !containerRef.current) return;
     
     const containerRect = containerRef.current.getBoundingClientRect();
-    const deltaY = e.clientY - dragStateRef.current.startY;
-    const deltaPercentage = (deltaY / containerRect.height) * 100;
-    
-    let newHeight = dragStateRef.current.startHeight + deltaPercentage;
+    const newHeight = ((e.clientY - containerRect.top) / containerRect.height) * 100;
     
     // Constrain between 20% and 80%
-    newHeight = Math.max(20, Math.min(80, newHeight));
-    
-    dragStateRef.current.lastUpdate = now;
-    setChartHeight(newHeight);
-  }, [isDragging, isMobile]);
+    const constrainedHeight = Math.min(Math.max(newHeight, 20), 80);
+    setChartHeight(constrainedHeight);
+  }, [isDragging]);
 
-  // Handle resizer drag end
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
 
-  // Add global mouse event listeners for dragging
+  // Add global mouse event listeners
   useEffect(() => {
-    if (!isDragging) return;
-    
-    const handleGlobalMouseMove = (e: MouseEvent) => handleMouseMove(e);
-    const handleGlobalMouseUp = (e: MouseEvent) => {
-      e.preventDefault();
-      handleMouseUp();
-    };
-    
-    // Add listeners with high priority
-    document.addEventListener('mousemove', handleGlobalMouseMove, { 
-      capture: true, 
-      passive: false 
-    });
-    document.addEventListener('mouseup', handleGlobalMouseUp, { 
-      capture: true, 
-      passive: false 
-    });
-    document.addEventListener('mouseleave', handleGlobalMouseUp, { 
-      capture: true 
-    });
-    
-    // Prevent text selection and set cursor
-    document.body.style.cursor = 'ns-resize';
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
-    document.body.style.msUserSelect = 'none';
-    
-    return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove, { capture: true });
-      document.removeEventListener('mouseup', handleGlobalMouseUp, { capture: true });
-      document.removeEventListener('mouseleave', handleGlobalMouseUp, { capture: true });
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
       
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      document.body.style.webkitUserSelect = '';
-      document.body.style.msUserSelect = '';
-    };
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
   }, [isDragging, handleMouseMove, handleMouseUp]);
   
   // Reset loading state when token changes
@@ -293,7 +242,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       const transactionsSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
       
       return (
-        <div ref={containerRef} className="relative flex-1 overflow-hidden flex flex-col chart-container">
+        <div ref={containerRef} className="relative flex-1 overflow-hidden flex flex-col">
           {renderLoader(frameLoading || isLoadingChart)}
           
           <div className="absolute inset-0 overflow-hidden flex flex-col">
@@ -328,9 +277,9 @@ export const ChartPage: React.FC<ChartPageProps> = ({
             ) : (
               // Desktop: Show both views split with resizable divider
               <>
-                {/* GMGN Chart - Dynamic height on desktop */}
+                {/* GMGN Chart - Dynamic height based on chartHeight state */}
                 <div 
-                  className="relative"
+                  className="relative transition-all duration-150 ease-out"
                   style={{ height: `${chartHeight}%` }}
                 >
                   <iframe 
@@ -348,22 +297,26 @@ export const ChartPage: React.FC<ChartPageProps> = ({
                 </div>
                 
                 {/* Resizable divider */}
-                  <div 
-                    className={`relative h-3 bg-[#222222] hover:bg-[#87D693]/50 transition-colors cursor-ns-resize group select-none ${
-                      isDragging ? 'bg-[#87D693]/70' : ''
-                    }`}
-                    onMouseDown={handleMouseDown}
-                    style={{ touchAction: 'none' }}
-                  >
-                    {/* Expanded clickable area */}
-                    <div className="absolute inset-x-0 -top-4 -bottom-4 flex items-center justify-center pointer-events-auto">
-                      <div className="w-16 h-1.5 bg-[#87D693]/40 rounded-full group-hover:bg-[#87D693]/70 transition-colors" />
-                    </div>
-                  </div>
-                
-                {/* Transactions list - Dynamic height on desktop */}
                 <div 
-                  className="relative"
+                  className={`relative h-1 bg-[#222222] hover:bg-[#87D693]/30 transition-colors cursor-ns-resize group ${
+                    isDragging ? 'bg-[#87D693]/50' : ''
+                  }`}
+                  onMouseDown={handleMouseDown}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div 
+                      className="flex items-center justify-center w-12 h-4 rounded-full bg-[#333333] group-hover:bg-[#87D693]/20 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <GripHorizontal className="h-3 w-3 text-gray-400 group-hover:text-[#87D693] transition-colors" />
+                    </motion.div>
+                  </div>
+                </div>
+                
+                {/* Transactions list - Dynamic height based on remaining space */}
+                <div 
+                  className="relative transition-all duration-150 ease-out"
                   style={{ height: `${100 - chartHeight}%` }}
                 >
                   <iframe 
