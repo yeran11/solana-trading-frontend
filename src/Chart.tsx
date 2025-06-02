@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Search, AlertCircle, BarChart, List } from 'lucide-react';
 
@@ -48,8 +48,8 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   const [mobileView, setMobileView] = useState<'chart' | 'transactions'>('chart');
   const [chartHeight, setChartHeight] = useState(70); // Percentage height for chart section
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStartY, setDragStartY] = useState(0);
-  const [dragStartHeight, setDragStartHeight] = useState(70);
+  const dragStateRef = useRef({ startY: 0, startHeight: 70, lastUpdate: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Mobile detection
   useEffect(() => {
@@ -69,54 +69,92 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   };
 
   // Handle resizer drag start
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isMobile) return;
-    setIsDragging(true);
-    setDragStartY(e.clientY);
-    setDragStartHeight(chartHeight);
+    
     e.preventDefault();
-  };
+    e.stopPropagation();
+    
+    dragStateRef.current = {
+      startY: e.clientY,
+      startHeight: chartHeight,
+      lastUpdate: Date.now()
+    };
+    
+    setIsDragging(true);
+  }, [isMobile, chartHeight]);
 
-  // Handle resizer drag
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || isMobile) return;
+  // Handle resizer drag with optimized throttling
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || isMobile || !containerRef.current) return;
     
-    const containerElement = document.querySelector('.chart-container');
-    if (!containerElement) return;
+    e.preventDefault();
+    e.stopPropagation();
     
-    const containerRect = containerElement.getBoundingClientRect();
-    const deltaY = e.clientY - dragStartY;
+    const now = Date.now();
+    const timeSinceLastUpdate = now - dragStateRef.current.lastUpdate;
+    
+    // Throttle to 60fps (16ms)
+    if (timeSinceLastUpdate < 16) return;
+    
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const deltaY = e.clientY - dragStateRef.current.startY;
     const deltaPercentage = (deltaY / containerRect.height) * 100;
     
-    let newHeight = dragStartHeight + deltaPercentage;
+    let newHeight = dragStateRef.current.startHeight + deltaPercentage;
     
     // Constrain between 20% and 80%
     newHeight = Math.max(20, Math.min(80, newHeight));
     
+    dragStateRef.current.lastUpdate = now;
     setChartHeight(newHeight);
-  };
+  }, [isDragging, isMobile]);
 
   // Handle resizer drag end
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
   // Add global mouse event listeners for dragging
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
+    if (!isDragging) return;
+    
+    const handleGlobalMouseMove = (e: MouseEvent) => handleMouseMove(e);
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      e.preventDefault();
+      handleMouseUp();
+    };
+    
+    // Add listeners with high priority
+    document.addEventListener('mousemove', handleGlobalMouseMove, { 
+      capture: true, 
+      passive: false 
+    });
+    document.addEventListener('mouseup', handleGlobalMouseUp, { 
+      capture: true, 
+      passive: false 
+    });
+    document.addEventListener('mouseleave', handleGlobalMouseUp, { 
+      capture: true 
+    });
+    
+    // Prevent text selection and set cursor
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    document.body.style.msUserSelect = 'none';
+    
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove, { capture: true });
+      document.removeEventListener('mouseup', handleGlobalMouseUp, { capture: true });
+      document.removeEventListener('mouseleave', handleGlobalMouseUp, { capture: true });
       
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
-    }
-  }, [isDragging, dragStartY, dragStartHeight, chartHeight, isMobile]);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      document.body.style.msUserSelect = '';
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
   
   // Reset loading state when token changes
   useEffect(() => {
@@ -255,7 +293,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       const transactionsSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
       
       return (
-        <div className="relative flex-1 overflow-hidden flex flex-col chart-container">
+        <div ref={containerRef} className="relative flex-1 overflow-hidden flex flex-col chart-container">
           {renderLoader(frameLoading || isLoadingChart)}
           
           <div className="absolute inset-0 overflow-hidden flex flex-col">
@@ -310,17 +348,18 @@ export const ChartPage: React.FC<ChartPageProps> = ({
                 </div>
                 
                 {/* Resizable divider */}
-                 <div 
-                   className={`relative h-2 bg-[#222222] hover:bg-[#87D693]/50 transition-colors cursor-ns-resize group ${
-                     isDragging ? 'bg-[#87D693]/70' : ''
-                   }`}
-                   onMouseDown={handleMouseDown}
-                 >
-                   {/* Expanded clickable area */}
-                   <div className="absolute inset-x-0 -top-3 -bottom-3 flex items-center justify-center">
-                     <div className="w-12 h-1 bg-[#87D693]/30 rounded-full group-hover:bg-[#87D693]/60 transition-colors" />
-                   </div>
-                 </div>
+                  <div 
+                    className={`relative h-3 bg-[#222222] hover:bg-[#87D693]/50 transition-colors cursor-ns-resize group select-none ${
+                      isDragging ? 'bg-[#87D693]/70' : ''
+                    }`}
+                    onMouseDown={handleMouseDown}
+                    style={{ touchAction: 'none' }}
+                  >
+                    {/* Expanded clickable area */}
+                    <div className="absolute inset-x-0 -top-4 -bottom-4 flex items-center justify-center pointer-events-auto">
+                      <div className="w-16 h-1.5 bg-[#87D693]/40 rounded-full group-hover:bg-[#87D693]/70 transition-colors" />
+                    </div>
+                  </div>
                 
                 {/* Transactions list - Dynamic height on desktop */}
                 <div 
