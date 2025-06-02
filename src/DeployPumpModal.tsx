@@ -92,7 +92,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       formData.append('image', file);
       
       // Create URL based on base URL
-      const baseUrl = 'https://bsc.predator.bot';
+      const baseUrl = 'https://img.raze.bot';
       const uploadUrl = `${baseUrl}/upload-image`;
       
       // Upload with progress tracking
