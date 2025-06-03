@@ -14,7 +14,7 @@
 </p>
 
 
-![Solana UI image](https://i.imgur.com/T9IzS4k.png)
+![Solana UI image](https://i.imgur.com/fDrfNv3.png)
 
 **Solana UI** is a multi-wallet trading platform designed for the Solana blockchain.
 It provides users with a seamless interface to connect various Solana wallets and execute trades efficiently.
