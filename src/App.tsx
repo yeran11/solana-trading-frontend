@@ -90,6 +90,43 @@ const WalletManager: React.FC = () => {
   const [customBuyModalOpen, setCustomBuyModalOpen] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [tickEffect, setTickEffect] = useState(false);
+  
+  // Status notification state
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [isStatusVisible, setIsStatusVisible] = useState(false);
+
+  // Fetch status from API
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+        
+        // Send to our backend proxy instead of directly to Jito
+        const response = await fetch(`${baseUrl}/status`);
+        const data = await response.json(); // Parse as JSON instead of text
+        const statusText = data.status || ''; // Extract the status field
+        const trimmedText = statusText.trim();
+        
+        if (trimmedText && trimmedText !== statusMessage) {
+          setStatusMessage(trimmedText);
+          setIsStatusVisible(true);
+        } else if (!trimmedText && isStatusVisible) {
+          setIsStatusVisible(false);
+          setStatusMessage('');
+        }
+      } catch (error) {
+        console.error('Failed to fetch status:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchStatus();
+    
+    // Set up interval to check every 30 seconds
+    const interval = setInterval(fetchStatus, 30000);
+    
+    return () => clearInterval(interval);
+  }, [statusMessage, isStatusVisible]);
 
   // Extract API key from URL
   useEffect(() => {
@@ -299,6 +336,27 @@ const WalletManager: React.FC = () => {
     <div className="h-screen flex flex-col overflow-hidden bg-[#050a0e] text-[#b3f0d7] cyberpunk-bg">
       {/* Cyberpunk scanline effect */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-10"></div>
+      
+      {/* Status Notification Banner */}
+      {isStatusVisible && statusMessage && (
+        <div className="relative bg-gradient-to-r from-red-900/90 to-red-800/90 border-b border-red-500/50 p-3 backdrop-blur-sm z-30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+              <span className="text-red-100 font-mono text-sm font-medium">
+                ⚠️ SYSTEM ALERT: {statusMessage}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsStatusVisible(false)}
+              className="text-red-300 hover:text-red-100 transition-colors p-1"
+              aria-label="Close notification"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Top Navigation */}
       <nav className="relative border-b border-[#02b36d70] p-4 backdrop-blur-sm bg-[#050a0e99] z-20">
