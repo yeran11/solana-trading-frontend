@@ -1116,7 +1116,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">Burn</span>
               </button>
               
-              {/* PumpBuy Button */}
+              {/* Stagger Button */}
               <button
                 onClick={() => {
                   if (!tokenAddress) {
@@ -1132,7 +1132,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 <div className="p-3 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
                   <Workflow size={20} className="text-[#02b36d]" />
                 </div>
-                <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">PumpBuy</span>
+                <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">Stagger</span>
               </button>
             </div>
           </div>
