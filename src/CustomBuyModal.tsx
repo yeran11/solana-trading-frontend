@@ -54,14 +54,14 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const [bulkAmount, setBulkAmount] = useState('0.1');
   const [currentTransactionIndex, setCurrentTransactionIndex] = useState(0);
   const [transactionResults, setTransactionResults] = useState<any[]>([]);
-  const [selectedProtocol, setSelectedProtocol] = useState<string>('auto'); // Default to auto
+  const [selectedProtocol, setSelectedProtocol] = useState<string>('jupiter'); // Default to jupiter
+  const [isLoadingBestProtocol, setIsLoadingBestProtocol] = useState<boolean>(false);
 
   const wallets = getWallets();
   const { showToast } = useToast();
 
-  // DEX/Protocol options
+  // DEX/Protocol options (removed auto option)
   const protocolOptions = [
-    { value: 'auto', label: 'Auto (Best Route)', icon: '🤖' },
     { value: 'jupiter', label: 'Jupiter', icon: '🪐' },
     { value: 'raydium', label: 'Raydium', icon: '🌊' },
     { value: 'pumpfun', label: 'Pump.fun', icon: '🚀' },
@@ -140,8 +140,67 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     if (isOpen) {
       resetForm();
       handleRefresh();
+      // Auto-select best protocol when modal opens
+      autoSelectBestProtocol();
     }
   }, [isOpen, tokenAddress]);
+
+  // Auto-select the best protocol based on routing API
+  const autoSelectBestProtocol = async () => {
+    if (!tokenAddress) return;
+    
+    setIsLoadingBestProtocol(true);
+    try {
+      const savedConfig = loadConfigFromCookies();
+      const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'buy',
+          tokenMintAddress: tokenAddress,
+          amount: '0.1', // Use default amount for routing
+          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Map protocol to our supported protocols
+        const protocolMapping = {
+          'pumpfun': 'pumpfun',
+          'moonshot': 'moonshot',
+          'pumpswap': 'pumpswap',
+          'raydium': 'raydium',
+          'jupiter': 'jupiter',
+          'launchpad': 'launchpad',
+          'boopfun': 'boopfun'
+        };
+
+        const bestProtocol = protocolMapping[data.protocol.toLowerCase()];
+        
+        if (bestProtocol && protocolOptions.find(p => p.value === bestProtocol)) {
+          setSelectedProtocol(bestProtocol);
+          const protocolLabel = protocolOptions.find(p => p.value === bestProtocol)?.label;
+          showToast(`🎯 Auto-selected ${protocolLabel} for optimal trading`, 'success');
+        } else {
+          console.warn(`Unknown protocol: ${data.protocol}. Keeping Jupiter as default.`);
+          showToast(`⚠️ Unknown protocol returned, using Jupiter as default`, 'error');
+        }
+      } else {
+        console.error('Auto-routing failed:', data.error);
+        showToast(`⚠️ Auto-routing failed, using Jupiter: ${data.error}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error auto-selecting protocol:', error);
+      showToast(`⚠️ Auto-selection failed, using Jupiter: ${error.message}`, 'error');
+    } finally {
+      setIsLoadingBestProtocol(false);
+    }
+  };
 
   // Initialize wallet amounts when wallets are selected/deselected
   useEffect(() => {
@@ -168,7 +227,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     setSelectedWallets([]);
     setWalletAmounts({});
     setTransactionDelay('1');
-    setSelectedProtocol('auto');
+    setSelectedProtocol('jupiter');
+    setIsLoadingBestProtocol(false);
     setIsConfirmed(false);
     setCurrentStep(0);
     setSearchTerm('');
@@ -186,71 +246,12 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     return wallet ? wallet.address : '';
   };
 
-  // Determine best protocol when auto is selected
-  const determineBestProtocol = async (amount: number): Promise<string> => {
-    try {
-      const savedConfig = loadConfigFromCookies();
-      const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: 'buy',
-          tokenMintAddress: tokenAddress,
-          amount: amount.toString(),
-          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to determine best route');
-      }
-
-      // Map protocol to our supported protocols
-      const protocolMapping = {
-        'pumpfun': 'pumpfun',
-        'moonshot': 'moonshot',
-        'pumpswap': 'pumpswap',
-        'raydium': 'raydium',
-        'jupiter': 'jupiter',
-        'launchpad': 'launchpad',
-        'boopfun': 'boopfun'
-      };
-
-      const bestProtocol = protocolMapping[data.protocol.toLowerCase()];
-      
-      if (!bestProtocol) {
-        console.warn(`Unknown protocol: ${data.protocol}. Using Jupiter as fallback.`);
-        return 'jupiter';
-      }
-
-      const protocolLabel = protocolOptions.find(p => p.value === bestProtocol)?.label || bestProtocol;
-      showToast(`🎯 Auto-selected ${protocolLabel} for best rate`, 'success');
-      
-      return bestProtocol;
-    } catch (error) {
-      console.error('Error determining best protocol:', error);
-      showToast(`⚠️ Auto-route failed, using Jupiter: ${error.message}`, 'error');
-      return 'jupiter'; // Fallback to Jupiter
-    }
-  };
-
   // Get unsigned transaction for a single wallet
   const getUnsignedTransaction = async (
     walletAddress: string,
     amount: number
   ): Promise<string> => {
     try {
-      // Determine the protocol to use
-      let protocolToUse = selectedProtocol;
-      if (selectedProtocol === 'auto') {
-        protocolToUse = await determineBestProtocol(amount);
-      }
-
       const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
       
       const response = await fetch(`${baseUrl}/api/tokens/buy`, {
@@ -260,7 +261,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
           walletAddresses: [walletAddress],
           tokenAddress,
           solAmount: amount,
-          protocol: protocolToUse,
+          protocol: selectedProtocol,
           amounts: [amount]
         }),
       });
@@ -392,7 +393,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     let failCount = 0;
     
     const protocolLabel = protocolOptions.find(p => p.value === selectedProtocol)?.label || selectedProtocol;
-    showToast(`Starting custom buy with ${protocolLabel}${selectedProtocol === 'auto' ? ' (auto-routing)' : ''}`, 'success');
+    showToast(`🚀 Starting custom buy with ${protocolLabel}`, 'success');
     
     try {
       for (let i = 0; i < selectedWallets.length; i++) {
@@ -405,7 +406,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
         showToast(`Processing transaction ${i + 1}/${selectedWallets.length} for ${walletAddress.slice(0, 8)}...`, 'success');
         
         try {
-          // 1. Get unsigned transaction (protocol selection happens here)
+          // 1. Get unsigned transaction
           const unsignedTransaction = await getUnsignedTransaction(walletAddress, amount);
           
           // 2. Sign transaction
