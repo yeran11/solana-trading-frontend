@@ -954,8 +954,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                       <input
                         type="text"
                         value={transactionDelay}
-                        placeholder="1"
-                        className="w-20 px-3 py-1.5 bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono text-center"
+                        placeholder="0.45"
+                        className="w-24 px-3 py-1.5 bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono text-center"
                         onChange={(e) => {
                           const value = e.target.value;
                           if (value === '' || /^\d*\.?\d*$/.test(value)) {
@@ -969,8 +969,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
               </div>
               <div className="text-xs text-[#7ddfbd] mt-2 font-mono relative z-10">
                 {selectedProtocol === 'auto' 
-                  ? 'AUTO-SELECTS BEST DEX • SET DELAY TO 0 FOR NO DELAY'
-                  : `USES ${protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} • SET DELAY TO 0 FOR NO DELAY`
+                  ? 'AUTO-SELECTS BEST DEX • SET TO 0 FOR NO DELAY'
+                  : `USES ${protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} • SET TO 0 FOR NO DELAY`
                 }
               </div>
             </div>
