@@ -62,13 +62,13 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
 
   // DEX/Protocol options (removed auto option)
   const protocolOptions = [
-    { value: 'jupiter', label: 'Jupiter', icon: '🪐' },
-    { value: 'raydium', label: 'Raydium', icon: '🌊' },
-    { value: 'pumpfun', label: 'Pump.fun', icon: '🚀' },
-    { value: 'moonshot', label: 'Moonshot', icon: '🌙' },
-    { value: 'pumpswap', label: 'PumpSwap', icon: '💫' },
-    { value: 'launchpad', label: 'Launchpad', icon: '🛸' },
-    { value: 'boopfun', label: 'Boop.fun', icon: '👻' }
+    { value: 'jupiter', label: 'Jupiter' },
+    { value: 'raydium', label: 'Raydium' },
+    { value: 'pumpfun', label: 'Pump.fun' },
+    { value: 'moonshot', label: 'Moonshot' },
+    { value: 'pumpswap', label: 'PumpSwap' },
+    { value: 'launchpad', label: 'Launchpad' },
+    { value: 'boopfun', label: 'Boop.fun' }
   ];
 
   // Format SOL balance for display
@@ -902,7 +902,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
               </div>
             </div>
             
-            {/* Transaction delay setting */}
+            {/* Protocol and Delay settings on same row */}
             <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
               <div className="absolute inset-0 z-0 opacity-5"
                    style={{
@@ -911,76 +911,66 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                      backgroundPosition: 'center center',
                    }}>
               </div>
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-2">
-                  <Clock size={16} className="text-[#02b36d]" />
-                  <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
-                    DELAY BETWEEN TRANSACTIONS (SECONDS)
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={transactionDelay}
-                      placeholder="1"
-                      className="w-24 px-3 py-1.5 bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono text-center"
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          setTransactionDelay(value);
-                        }
-                      }}
-                    />
+              <div className="grid grid-cols-2 gap-4 relative z-10">
+                {/* Protocol selection */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#02b36d20]">
+                      <svg className="w-3 h-3 text-[#02b36d]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 12l2 2 4-4" />
+                        <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3" />
+                        <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3" />
+                      </svg>
+                    </div>
+                    <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
+                      PROTOCOL
+                    </label>
                   </div>
-                  <span className="text-xs text-[#7ddfbd] ml-2 font-mono">SEC</span>
-                </div>
-              </div>
-              <div className="text-xs text-[#7ddfbd] mt-2 font-mono relative z-10">
-                SET TO 0 FOR NO DELAY. HIGHER VALUES REDUCE RATE LIMITING RISK.
-              </div>
-            </div>
-            
-            {/* Protocol selection */}
-            <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
-              <div className="absolute inset-0 z-0 opacity-5"
-                   style={{
-                     backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-                     backgroundSize: '20px 20px',
-                     backgroundPosition: 'center center',
-                   }}>
-              </div>
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#02b36d20]">
-                    <svg className="w-3 h-3 text-[#02b36d]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 12l2 2 4-4" />
-                      <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3" />
-                      <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3" />
-                    </svg>
+                  <div className="flex items-center">
+                    <select 
+                      value={selectedProtocol}
+                      onChange={(e) => setSelectedProtocol(e.target.value)}
+                      className="bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] px-3 py-1.5 focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono min-w-[120px]"
+                    >
+                      {protocolOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
-                    TRADING PROTOCOL
-                  </label>
                 </div>
-                <div className="flex items-center">
-                  <select 
-                    value={selectedProtocol}
-                    onChange={(e) => setSelectedProtocol(e.target.value)}
-                    className="bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] px-3 py-1.5 focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono min-w-[180px]"
-                  >
-                    {protocolOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.icon} {option.label}
-                      </option>
-                    ))}
-                  </select>
+                
+                {/* Transaction delay */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-[#02b36d]" />
+                    <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
+                      DELAY (SEC)
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={transactionDelay}
+                        placeholder="1"
+                        className="w-20 px-3 py-1.5 bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono text-center"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                            setTransactionDelay(value);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="text-xs text-[#7ddfbd] mt-2 font-mono relative z-10">
                 {selectedProtocol === 'auto' 
-                  ? 'AUTOMATICALLY SELECTS THE BEST DEX FOR OPTIMAL PRICING'
-                  : `USES ${protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} FOR ALL TRANSACTIONS`
+                  ? 'AUTO-SELECTS BEST DEX • SET DELAY TO 0 FOR NO DELAY'
+                  : `USES ${protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} • SET DELAY TO 0 FOR NO DELAY`
                 }
               </div>
             </div>
@@ -1155,7 +1145,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                     <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
                       <span className="text-sm text-[#7ddfbd] font-mono">PROTOCOL: </span>
                       <span className="text-sm text-[#e4fbf2] font-medium font-mono">
-                        {protocolOptions.find(p => p.value === selectedProtocol)?.icon} {protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()}
+                        {protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()}
                       </span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
