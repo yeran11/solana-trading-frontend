@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, ChevronRight, DollarSign, X, Info, Search } from 'lucide-react';
+import { CheckCircle, ChevronRight, DollarSign, X, Info, Search, Clock } from 'lucide-react';
 import { getWallets } from './Utils';
 import { useToast } from "./Notifications";
 import { loadConfigFromCookies } from './Utils';
@@ -22,9 +22,11 @@ interface CustomBuyModalProps extends BaseModalProps {
   tokenBalances: Map<string, number>;
 }
 
-// Interface for transactions bundle
-interface TransactionBundle {
-  transactions: string[]; // Base58 encoded transaction data
+// Interface for single transaction
+interface Transaction {
+  transaction: string; // Base58 encoded transaction data
+  walletAddress: string;
+  amount: number;
 }
 
 export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
@@ -39,7 +41,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({}); // Individual amounts per wallet
-  const [useRpc, setUseRpc] = useState<boolean>(false); // Toggle for useRpc
+  const [transactionDelay, setTransactionDelay] = useState<string>('1'); // Delay in seconds between transactions
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<{ symbol: string } | null>(null);
@@ -50,6 +52,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const [sortDirection, setSortDirection] = useState('asc');
   const [balanceFilter, setBalanceFilter] = useState('all');
   const [bulkAmount, setBulkAmount] = useState('0.1');
+  const [currentTransactionIndex, setCurrentTransactionIndex] = useState(0);
+  const [transactionResults, setTransactionResults] = useState<any[]>([]);
 
   const wallets = getWallets();
   const { showToast } = useToast();
@@ -150,7 +154,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const resetForm = () => {
     setSelectedWallets([]);
     setWalletAmounts({});
-    setUseRpc(false);
+    setTransactionDelay('1');
     setIsConfirmed(false);
     setCurrentStep(0);
     setSearchTerm('');
@@ -158,6 +162,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     setSortOption('address');
     setSortDirection('asc');
     setBalanceFilter('all');
+    setCurrentTransactionIndex(0);
+    setTransactionResults([]);
   };
 
   // Helper to get wallet address from private key
@@ -166,12 +172,11 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     return wallet ? wallet.address : '';
   };
 
-  // Get unsigned transactions from the backend
-  const getUnsignedTransactions = async (
-    walletAddresses: string[],
-    amounts: number[],
-    useRpcSetting: boolean
-  ): Promise<TransactionBundle[]> => {
+  // Get unsigned transaction for a single wallet
+  const getUnsignedTransaction = async (
+    walletAddress: string,
+    amount: number
+  ): Promise<string> => {
     try {
       const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
       
@@ -179,12 +184,11 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddresses,
+          walletAddresses: [walletAddress],
           tokenAddress,
-          solAmount: 0.1, // Default amount, will be overridden by amounts array
+          solAmount: amount,
           protocol: "jupiter",
-          amounts,
-          useRpc: useRpcSetting
+          amounts: [amount]
         }),
       });
 
@@ -195,108 +199,77 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
       const data = await response.json();
       
       if (!data.success) {
-        throw new Error(data.error || 'Failed to get unsigned transactions');
+        throw new Error(data.error || 'Failed to get unsigned transaction');
       }
       
-      // Handle different response formats to ensure compatibility
-      if (data.bundles && Array.isArray(data.bundles)) {
-        // Wrap any bundle that is a plain array
-        return data.bundles.map((bundle: any) =>
-          Array.isArray(bundle) ? { transactions: bundle } : bundle
-        );
-      } else if (data.transactions && Array.isArray(data.transactions)) {
-        // If we get a flat array of transactions, create a single bundle
-        return [{ transactions: data.transactions }];
-      } else if (Array.isArray(data)) {
-        // Legacy format where data itself is an array
-        return [{ transactions: data }];
+      // Extract the first transaction from the response
+      if (data.bundles && Array.isArray(data.bundles) && data.bundles[0]?.transactions?.[0]) {
+        return data.bundles[0].transactions[0];
+      } else if (data.transactions && Array.isArray(data.transactions) && data.transactions[0]) {
+        return data.transactions[0];
+      } else if (Array.isArray(data) && data[0]) {
+        return data[0];
       } else {
-        throw new Error('No transactions returned from backend');
+        throw new Error('No transaction returned from backend');
       }
     } catch (error) {
-      console.error('Error getting unsigned transactions:', error);
+      console.error('Error getting unsigned transaction:', error);
       throw error;
     }
   };
 
-  // Sign transactions on the frontend
-  const signTransactions = (
-    bundle: TransactionBundle,
-    privateKeys: string[]
-  ): TransactionBundle => {
-    // Check if the bundle has a valid transactions array
-    if (!bundle.transactions || !Array.isArray(bundle.transactions)) {
-      console.error("Invalid bundle format, transactions property is missing or not an array:", bundle);
-      return { transactions: [] };
-    }
+  // Sign a single transaction
+  const signTransaction = (
+    transactionBase58: string,
+    privateKey: string
+  ): string => {
+    try {
+      // Create keypair from private key
+      const keypair = web3.Keypair.fromSecretKey(bs58.decode(privateKey));
 
-    // Create keypairs from private keys
-    const walletKeypairs = privateKeys.map(privateKey => 
-      web3.Keypair.fromSecretKey(bs58.decode(privateKey))
-    );
-
-    const signedTransactions = bundle.transactions.map(txBase58 => {
       // Deserialize transaction
-      const txBuffer = bs58.decode(txBase58);
+      const txBuffer = bs58.decode(transactionBase58);
       const transaction = web3.VersionedTransaction.deserialize(txBuffer);
       
-      // Extract required signers from staticAccountKeys
-      const signers: web3.Keypair[] = [];
-      for (const accountKey of transaction.message.staticAccountKeys) {
-        const pubkeyStr = accountKey.toBase58();
-        const matchingKeypair = walletKeypairs.find(
-          kp => kp.publicKey.toBase58() === pubkeyStr
-        );
-        if (matchingKeypair && !signers.includes(matchingKeypair)) {
-          signers.push(matchingKeypair);
-        }
-      }
-      
       // Sign the transaction
-      transaction.sign(signers);
+      transaction.sign([keypair]);
       
       // Serialize and encode the fully signed transaction
       return bs58.encode(transaction.serialize());
-    });
-    
-    return { transactions: signedTransactions };
+    } catch (error) {
+      console.error('Error signing transaction:', error);
+      throw error;
+    }
   };
 
-  // Send signed transactions to the backend
-  const sendSignedTransactions = async (
-    signedBundles: TransactionBundle[],
-    useRpcSetting: boolean
-  ): Promise<any> => {
+  // Send a single signed transaction
+  const sendSignedTransaction = async (signedTransaction: string): Promise<any> => {
     try {
       const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
       
-      // Use the new unified endpoint
-      const endpoint = '/api/transactions/send';
-      
-      // Prepare all bundles for sending
-      const sendPromises = signedBundles.map(async (bundle) => {
-        const response = await fetch(`${baseUrl}${endpoint}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactions: bundle.transactions,
-            useRpc: useRpcSetting
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        return response.json();
+      const response = await fetch(`${baseUrl}/api/transactions/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactions: [signedTransaction],
+          useRpc: false
+        }),
       });
-      
-      // Wait for all bundles to be sent
-      return Promise.all(sendPromises);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      return response.json();
     } catch (error) {
-      console.error('Error sending signed transactions:', error);
+      console.error('Error sending signed transaction:', error);
       throw error;
     }
+  };
+
+  // Sleep function for delays
+  const sleep = (ms: number): Promise<void> => {
+    return new Promise(resolve => setTimeout(resolve, ms));
   };
 
   const handleNext = () => {
@@ -317,6 +290,13 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
         showToast('Please enter valid amounts for all wallets', 'error');
         return;
       }
+
+      // Check if delay is valid
+      const delay = parseFloat(transactionDelay);
+      if (isNaN(delay) || delay < 0) {
+        showToast('Please enter a valid delay (0 or more seconds)', 'error');
+        return;
+      }
     }
     
     setCurrentStep((prev) => Math.min(prev + 1, STEPS_CUSTOMBUY.length - 1));
@@ -326,51 +306,86 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
-  // Updated handleCustomBuy function that doesn't send private keys to the server
+  // Updated handleCustomBuy function for sequential processing
   const handleCustomBuy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConfirmed) return;
     setIsSubmitting(true);
+    setCurrentTransactionIndex(0);
+    setTransactionResults([]);
+    
+    const delay = parseFloat(transactionDelay) * 1000; // Convert to milliseconds
+    let successCount = 0;
+    let failCount = 0;
     
     try {
-      // Map wallets to addresses
-      const walletAddresses = selectedWallets.map(privateKey => 
-        getWalletAddressFromKey(privateKey)
-      );
+      for (let i = 0; i < selectedWallets.length; i++) {
+        setCurrentTransactionIndex(i + 1);
+        
+        const privateKey = selectedWallets[i];
+        const walletAddress = getWalletAddressFromKey(privateKey);
+        const amount = parseFloat(walletAmounts[privateKey]);
+        
+        showToast(`Processing transaction ${i + 1}/${selectedWallets.length} for ${walletAddress.slice(0, 8)}...`, 'success');
+        
+        try {
+          // 1. Get unsigned transaction
+          const unsignedTransaction = await getUnsignedTransaction(walletAddress, amount);
+          
+          // 2. Sign transaction
+          const signedTransaction = signTransaction(unsignedTransaction, privateKey);
+          
+          // 3. Send transaction
+          const result = await sendSignedTransaction(signedTransaction);
+          
+          setTransactionResults(prev => [...prev, {
+            wallet: walletAddress,
+            amount,
+            success: true,
+            result
+          }]);
+          
+          successCount++;
+          showToast(`✅ Transaction ${i + 1} successful for ${walletAddress.slice(0, 8)}...`, 'success');
+          
+        } catch (error) {
+          console.error(`Transaction ${i + 1} failed:`, error);
+          setTransactionResults(prev => [...prev, {
+            wallet: walletAddress,
+            amount,
+            success: false,
+            error: error.message
+          }]);
+          
+          failCount++;
+          showToast(`❌ Transaction ${i + 1} failed for ${walletAddress.slice(0, 8)}...: ${error.message}`, 'error');
+        }
+        
+        // Add delay between transactions (except after the last one)
+        if (i < selectedWallets.length - 1 && delay > 0) {
+          await sleep(delay);
+        }
+      }
       
-      // Map wallet amounts to numeric values
-      const amounts = selectedWallets.map(wallet => parseFloat(walletAmounts[wallet]));
+      // Final summary
+      showToast(`Custom buy completed! ${successCount} successful, ${failCount} failed transactions`, successCount > 0 ? 'success' : 'error');
       
-      // 1. Get unsigned transactions from backend
-      const unsignedBundles = await getUnsignedTransactions(
-        walletAddresses,
-        amounts,
-        useRpc
-      );
+      if (successCount > 0) {
+        handleRefresh(); // Refresh balances
+      }
       
-      console.log(`Received ${unsignedBundles.length} unsigned transaction bundles`);
+      // Don't close modal immediately so user can see results
+      setTimeout(() => {
+        resetForm();
+        onClose();
+      }, 3000);
       
-      // 2. Sign transactions on the frontend
-      const signedBundles = unsignedBundles.map(bundle => 
-        signTransactions(bundle, selectedWallets)
-      );
-      
-      console.log(`Signed ${signedBundles.length} transaction bundles`);
-      
-      // 3. Send signed transactions to backend
-      const results = await sendSignedTransactions(signedBundles, useRpc);
-      
-      console.log('Transaction results:', results);
-      
-      showToast('Custom buy operation completed successfully', 'success');
-      resetForm();
-      onClose();
-      handleRefresh(); // Refresh balances
     } catch (error) {
       console.error('Custom buy execution error:', error);
       showToast(`Custom buy operation failed: ${error.message}`, 'error');
     } finally {
       setIsSubmitting(false);
+      setCurrentTransactionIndex(0);
     }
   };
 
@@ -810,6 +825,45 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
               </div>
             </div>
             
+            {/* Transaction delay setting */}
+            <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
+              <div className="absolute inset-0 z-0 opacity-5"
+                   style={{
+                     backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
+                     backgroundSize: '20px 20px',
+                     backgroundPosition: 'center center',
+                   }}>
+              </div>
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-[#02b36d]" />
+                  <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
+                    DELAY BETWEEN TRANSACTIONS (SECONDS)
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={transactionDelay}
+                      placeholder="1"
+                      className="w-24 px-3 py-1.5 bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono text-center"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                          setTransactionDelay(value);
+                        }
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs text-[#7ddfbd] ml-2 font-mono">SEC</span>
+                </div>
+              </div>
+              <div className="text-xs text-[#7ddfbd] mt-2 font-mono relative z-10">
+                SET TO 0 FOR NO DELAY. HIGHER VALUES REDUCE RATE LIMITING RISK.
+              </div>
+            </div>
+            
             {/* Individual wallet amounts */}
             <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
               <div className="absolute inset-0 z-0 opacity-5"
@@ -857,43 +911,18 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
               </div>
             </div>
             
-            {/* Use RPC toggle */}
-            <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
-              <div className="absolute inset-0 z-0 opacity-5"
-                   style={{
-                     backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-                     backgroundSize: '20px 20px',
-                     backgroundPosition: 'center center',
-                   }}>
-              </div>
-              <div className="flex items-center justify-between relative z-10">
-                <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
-                  USE RPC
-                </label>
-                <div 
-                  onClick={() => setUseRpc(!useRpc)}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-                    useRpc ? "bg-[#02b36d]" : "bg-[#091217] border border-[#02b36d40]"
-                  }`}
-                >
-                  <div
-                    className={`bg-[#e4fbf2] w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      useRpc ? "translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </div>
-              </div>
-              <div className="text-xs text-[#7ddfbd] mt-2 font-mono relative z-10">
-                TOGGLE TO USE RPC FOR THIS TRANSACTION
-              </div>
-            </div>
-            
             {/* Total summary */}
             <div className="bg-[#02b36d10] border border-[#02b36d40] rounded-lg p-4 modal-glow">
-              <div className="flex justify-between">
+              <div className="flex justify-between mb-2">
                 <span className="text-sm font-medium text-[#02b36d] font-mono tracking-wider">TOTAL BUY AMOUNT:</span>
                 <span className="text-sm font-medium text-[#02b36d] font-mono tracking-wider">
                   {calculateTotalBuyAmount()} SOL
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-[#02b36d] font-mono tracking-wider">ESTIMATED TIME:</span>
+                <span className="text-sm font-medium text-[#02b36d] font-mono tracking-wider">
+                  ~{Math.ceil((selectedWallets.length - 1) * parseFloat(transactionDelay || '0') + selectedWallets.length * 2)} SEC
                 </span>
               </div>
             </div>
@@ -920,6 +949,35 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                 <span className="text-[#02b36d]">/</span> REVIEW OPERATION <span className="text-[#02b36d]">/</span>
               </h3>
             </div>
+            
+            {/* Transaction progress indicator (only show during processing) */}
+            {isSubmitting && (
+              <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden mb-4">
+                <div className="absolute inset-0 z-0 opacity-5"
+                     style={{
+                       backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
+                       backgroundSize: '20px 20px',
+                       backgroundPosition: 'center center',
+                     }}>
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-[#02b36d] font-mono tracking-wider">
+                      PROCESSING TRANSACTIONS
+                    </span>
+                    <span className="text-sm text-[#7ddfbd] font-mono">
+                      {currentTransactionIndex}/{selectedWallets.length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#050a0e] rounded-full h-2 progress-bar-cyberpunk">
+                    <div 
+                      className="bg-[#02b36d] h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${(currentTransactionIndex / selectedWallets.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Left column - Token and Operation Details */}
@@ -970,8 +1028,12 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                   </h4>
                   <div className="space-y-2 relative z-10">
                     <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
-                      <span className="text-sm text-[#7ddfbd] font-mono">USE RPC: </span>
-                      <span className="text-sm text-[#e4fbf2] font-medium font-mono">{useRpc ? 'YES' : 'NO'}</span>
+                      <span className="text-sm text-[#7ddfbd] font-mono">PROCESSING MODE: </span>
+                      <span className="text-sm text-[#e4fbf2] font-medium font-mono">SEQUENTIAL</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
+                      <span className="text-sm text-[#7ddfbd] font-mono">TRANSACTION DELAY: </span>
+                      <span className="text-sm text-[#e4fbf2] font-medium font-mono">{transactionDelay}s</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
                       <span className="text-sm text-[#7ddfbd] font-mono">TOTAL WALLETS: </span>
@@ -1009,7 +1071,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                     </div>
                     <label htmlFor="confirm" className="text-sm text-[#7ddfbd] leading-relaxed font-mono">
                       I CONFIRM THAT I WANT TO BUY {tokenInfo?.symbol || 'TOKEN'} USING THE SPECIFIED AMOUNTS
-                      ACROSS {selectedWallets.length} WALLETS WITH USERPC SET TO {useRpc ? 'ENABLED' : 'DISABLED'}. THIS ACTION CANNOT BE UNDONE.
+                      ACROSS {selectedWallets.length} WALLETS WITH {transactionDelay}s DELAY BETWEEN TRANSACTIONS. 
+                      TRANSACTIONS WILL BE PROCESSED SEQUENTIALLY. THIS ACTION CANNOT BE UNDONE.
                     </label>
                   </div>
                 </div>
