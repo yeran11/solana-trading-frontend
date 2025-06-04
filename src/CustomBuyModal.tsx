@@ -54,9 +54,22 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const [bulkAmount, setBulkAmount] = useState('0.1');
   const [currentTransactionIndex, setCurrentTransactionIndex] = useState(0);
   const [transactionResults, setTransactionResults] = useState<any[]>([]);
+  const [selectedProtocol, setSelectedProtocol] = useState<string>('auto'); // Default to auto
 
   const wallets = getWallets();
   const { showToast } = useToast();
+
+  // DEX/Protocol options
+  const protocolOptions = [
+    { value: 'auto', label: 'Auto (Best Route)', icon: '🤖' },
+    { value: 'jupiter', label: 'Jupiter', icon: '🪐' },
+    { value: 'raydium', label: 'Raydium', icon: '🌊' },
+    { value: 'pumpfun', label: 'Pump.fun', icon: '🚀' },
+    { value: 'moonshot', label: 'Moonshot', icon: '🌙' },
+    { value: 'pumpswap', label: 'PumpSwap', icon: '💫' },
+    { value: 'launchpad', label: 'Launchpad', icon: '🛸' },
+    { value: 'boopfun', label: 'Boop.fun', icon: '👻' }
+  ];
 
   // Format SOL balance for display
   const formatSolBalance = (balance: number) => {
@@ -155,6 +168,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     setSelectedWallets([]);
     setWalletAmounts({});
     setTransactionDelay('1');
+    setSelectedProtocol('auto');
     setIsConfirmed(false);
     setCurrentStep(0);
     setSearchTerm('');
@@ -172,12 +186,71 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     return wallet ? wallet.address : '';
   };
 
+  // Determine best protocol when auto is selected
+  const determineBestProtocol = async (amount: number): Promise<string> => {
+    try {
+      const savedConfig = loadConfigFromCookies();
+      const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'buy',
+          tokenMintAddress: tokenAddress,
+          amount: amount.toString(),
+          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to determine best route');
+      }
+
+      // Map protocol to our supported protocols
+      const protocolMapping = {
+        'pumpfun': 'pumpfun',
+        'moonshot': 'moonshot',
+        'pumpswap': 'pumpswap',
+        'raydium': 'raydium',
+        'jupiter': 'jupiter',
+        'launchpad': 'launchpad',
+        'boopfun': 'boopfun'
+      };
+
+      const bestProtocol = protocolMapping[data.protocol.toLowerCase()];
+      
+      if (!bestProtocol) {
+        console.warn(`Unknown protocol: ${data.protocol}. Using Jupiter as fallback.`);
+        return 'jupiter';
+      }
+
+      const protocolLabel = protocolOptions.find(p => p.value === bestProtocol)?.label || bestProtocol;
+      showToast(`🎯 Auto-selected ${protocolLabel} for best rate`, 'success');
+      
+      return bestProtocol;
+    } catch (error) {
+      console.error('Error determining best protocol:', error);
+      showToast(`⚠️ Auto-route failed, using Jupiter: ${error.message}`, 'error');
+      return 'jupiter'; // Fallback to Jupiter
+    }
+  };
+
   // Get unsigned transaction for a single wallet
   const getUnsignedTransaction = async (
     walletAddress: string,
     amount: number
   ): Promise<string> => {
     try {
+      // Determine the protocol to use
+      let protocolToUse = selectedProtocol;
+      if (selectedProtocol === 'auto') {
+        protocolToUse = await determineBestProtocol(amount);
+      }
+
       const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
       
       const response = await fetch(`${baseUrl}/api/tokens/buy`, {
@@ -187,7 +260,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
           walletAddresses: [walletAddress],
           tokenAddress,
           solAmount: amount,
-          protocol: "jupiter",
+          protocol: protocolToUse,
           amounts: [amount]
         }),
       });
@@ -318,6 +391,9 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     let successCount = 0;
     let failCount = 0;
     
+    const protocolLabel = protocolOptions.find(p => p.value === selectedProtocol)?.label || selectedProtocol;
+    showToast(`Starting custom buy with ${protocolLabel}${selectedProtocol === 'auto' ? ' (auto-routing)' : ''}`, 'success');
+    
     try {
       for (let i = 0; i < selectedWallets.length; i++) {
         setCurrentTransactionIndex(i + 1);
@@ -329,7 +405,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
         showToast(`Processing transaction ${i + 1}/${selectedWallets.length} for ${walletAddress.slice(0, 8)}...`, 'success');
         
         try {
-          // 1. Get unsigned transaction
+          // 1. Get unsigned transaction (protocol selection happens here)
           const unsignedTransaction = await getUnsignedTransaction(walletAddress, amount);
           
           // 2. Sign transaction
@@ -864,6 +940,50 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
               </div>
             </div>
             
+            {/* Protocol selection */}
+            <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
+              <div className="absolute inset-0 z-0 opacity-5"
+                   style={{
+                     backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
+                     backgroundSize: '20px 20px',
+                     backgroundPosition: 'center center',
+                   }}>
+              </div>
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#02b36d20]">
+                    <svg className="w-3 h-3 text-[#02b36d]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 12l2 2 4-4" />
+                      <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3" />
+                      <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3" />
+                    </svg>
+                  </div>
+                  <label className="text-sm text-[#7ddfbd] font-mono tracking-wider">
+                    TRADING PROTOCOL
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <select 
+                    value={selectedProtocol}
+                    onChange={(e) => setSelectedProtocol(e.target.value)}
+                    className="bg-[#050a0e] border border-[#02b36d30] rounded text-sm text-[#e4fbf2] px-3 py-1.5 focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono min-w-[180px]"
+                  >
+                    {protocolOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.icon} {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="text-xs text-[#7ddfbd] mt-2 font-mono relative z-10">
+                {selectedProtocol === 'auto' 
+                  ? 'AUTOMATICALLY SELECTS THE BEST DEX FOR OPTIMAL PRICING'
+                  : `USES ${protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} FOR ALL TRANSACTIONS`
+                }
+              </div>
+            </div>
+            
             {/* Individual wallet amounts */}
             <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d40] relative overflow-hidden">
               <div className="absolute inset-0 z-0 opacity-5"
@@ -1032,6 +1152,12 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                       <span className="text-sm text-[#e4fbf2] font-medium font-mono">SEQUENTIAL</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
+                      <span className="text-sm text-[#7ddfbd] font-mono">PROTOCOL: </span>
+                      <span className="text-sm text-[#e4fbf2] font-medium font-mono">
+                        {protocolOptions.find(p => p.value === selectedProtocol)?.icon} {protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-[#02b36d30]">
                       <span className="text-sm text-[#7ddfbd] font-mono">TRANSACTION DELAY: </span>
                       <span className="text-sm text-[#e4fbf2] font-medium font-mono">{transactionDelay}s</span>
                     </div>
@@ -1071,7 +1197,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                     </div>
                     <label htmlFor="confirm" className="text-sm text-[#7ddfbd] leading-relaxed font-mono">
                       I CONFIRM THAT I WANT TO BUY {tokenInfo?.symbol || 'TOKEN'} USING THE SPECIFIED AMOUNTS
-                      ACROSS {selectedWallets.length} WALLETS WITH {transactionDelay}s DELAY BETWEEN TRANSACTIONS. 
+                      ACROSS {selectedWallets.length} WALLETS WITH {transactionDelay}s DELAY BETWEEN TRANSACTIONS
+                      VIA {protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} PROTOCOL. 
                       TRANSACTIONS WILL BE PROCESSED SEQUENTIALLY. THIS ACTION CANNOT BE UNDONE.
                     </label>
                   </div>
