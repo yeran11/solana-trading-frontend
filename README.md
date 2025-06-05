@@ -40,7 +40,7 @@ Find the full documentation here:
 ## 🚀 Demo
 
 Try the live version here:  
-👉 [https://sol.app.fury.bot](https://sol.app.fury.bot)
+👉 [https://sol.app.fury.bot](https://sol.app.raze.bot)
 
 ---
 
