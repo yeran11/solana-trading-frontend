@@ -212,8 +212,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         }
         
         const savedConfig = loadConfigFromCookies();
-        // Call the routing API to determine best DEX
-        const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
+        const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+        const response = await fetch(`${baseUrl}/api/tokens/route`, {
           method: 'POST',
           headers: {
             'accept': 'application/json',

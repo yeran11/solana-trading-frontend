@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Users, ArrowDownCircle, ArrowUpCircle, Loader2, Sparkles } from 'lucide-react';
+import { loadConfigFromCookies } from './Utils';
 
 // Helper function to format numbers with k, M, B suffixes
 const formatNumber = (num) => {
@@ -83,6 +84,20 @@ const TradingCard = ({
   const [estimatedSellSol, setEstimatedSellSol] = useState("0");
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   
+  // Cache for route fetching with 1-minute expiry
+  const [routeCache, setRouteCache] = useState(new Map());
+  const CACHE_DURATION = 60000; // 1 minute in milliseconds
+  
+  // Helper function to generate cache key
+  const generateCacheKey = (action, tokenAddress, amount) => {
+    return `${action}-${tokenAddress}-${amount}`;
+  };
+  
+  // Helper function to check if cache is valid
+  const isCacheValid = (timestamp) => {
+    return Date.now() - timestamp < CACHE_DURATION;
+  };
+  
   const handleAmountChange = (e, type) => {
     const value = e.target.value.replace(/[^0-9.]/g, '');
     if (type === 'buy') setBuyAmount(value);
@@ -101,9 +116,24 @@ const TradingCard = ({
     const totalAmount = (parseFloat(amount) * activeWallets).toString();
     console.log(`Buy estimate: ${amount} SOL × ${activeWallets} wallets = ${totalAmount} SOL total`);
     
+    // Check cache first
+    const cacheKey = generateCacheKey("buy", tokenAddress, totalAmount);
+    const cachedData = routeCache.get(cacheKey);
+    
+    if (cachedData && isCacheValid(cachedData.timestamp)) {
+      console.log("Using cached buy estimate");
+      setEstimatedBuyTokens(cachedData.tokenAmount);
+      if (cachedData.bestDex && selectedDex === 'auto') {
+        setBestDex(cachedData.bestDex);
+      }
+      return cachedData.tokenAmount;
+    }
+    
     try {
       setIsLoadingEstimate(true);
-      const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
+      const savedConfig = loadConfigFromCookies();
+      const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+      const response = await fetch(`${baseUrl}/api/tokens/route`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -113,12 +143,13 @@ const TradingCard = ({
           action: "buy",
           tokenMintAddress: tokenAddress,
           amount: totalAmount,
-          rpcUrl: "https://api.mainnet-beta.solana.com"
+          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
         })
       });
       
       const data = await response.json();
       
+      let matchedDex = null;
       if (data.success && selectedDex === 'auto') {
         // Set best DEX based on protocol returned
         const protocolToDex = {
@@ -131,7 +162,7 @@ const TradingCard = ({
           'boopfun': 'boopfun'
         };
         
-        const matchedDex = protocolToDex[data.protocol.toLowerCase()];
+        matchedDex = protocolToDex[data.protocol.toLowerCase()];
         if (matchedDex) {
           setBestDex(matchedDex);
         }
@@ -141,6 +172,15 @@ const TradingCard = ({
       const tokenAmount = data.success ? 
         (parseFloat(data.outputAmount)).toFixed(2) : 
         "0";
+      
+      // Cache the result
+      const newRouteCache = new Map(routeCache);
+      newRouteCache.set(cacheKey, {
+        tokenAmount,
+        bestDex: matchedDex,
+        timestamp: Date.now()
+      });
+      setRouteCache(newRouteCache);
         
       setEstimatedBuyTokens(tokenAmount);
       return tokenAmount;
@@ -175,9 +215,26 @@ const TradingCard = ({
     if (tokenAmount <= 0) return "0";
     console.log(`Selling ${sellPercentage}% of ${totalTokenBalance} tokens = ${tokenAmount} tokens (${Math.floor(tokenAmount)} raw)`);
     
+    // Check cache first
+    const rawTokenAmount = Math.floor(tokenAmount).toString();
+    const cacheKey = generateCacheKey("sell", tokenAddress, rawTokenAmount);
+    const cachedData = routeCache.get(cacheKey);
+    
+    if (cachedData && isCacheValid(cachedData.timestamp)) {
+      console.log("Using cached sell estimate");
+      setEstimatedSellSol(cachedData.solAmount);
+      if (cachedData.bestDex && selectedDex === 'auto') {
+        setBestDex(cachedData.bestDex);
+      }
+      return cachedData.solAmount;
+    }
+    
     try {
+      
+      const savedConfig = loadConfigFromCookies();
       setIsLoadingEstimate(true);
-      const response = await fetch('https://solana.Raze.bot/api/tokens/route', {
+      const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+      const response = await fetch(`${baseUrl}/api/tokens/route`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -186,13 +243,14 @@ const TradingCard = ({
         body: JSON.stringify({
           action: "sell",
           tokenMintAddress: tokenAddress,
-          amount: Math.floor(tokenAmount).toString(), // Convert to raw token amount
-          rpcUrl: "https://api.mainnet-beta.solana.com"
+          amount: rawTokenAmount, // Convert to raw token amount
+          rpcUrl: savedConfig?.rpcEndpoint ||"https://api.mainnet-beta.solana.com"
         })
       });
       
       const data = await response.json();
       
+      let matchedDex = null;
       if (data.success && selectedDex === 'auto') {
         // Set best DEX based on protocol returned
         const protocolToDex = {
@@ -205,7 +263,7 @@ const TradingCard = ({
           'boopfun': 'boopfun'
         };
         
-        const matchedDex = protocolToDex[data.protocol.toLowerCase()];
+        matchedDex = protocolToDex[data.protocol.toLowerCase()];
         if (matchedDex) {
           setBestDex(matchedDex);
         }
@@ -215,6 +273,15 @@ const TradingCard = ({
       const solAmount = data.success ? 
         (parseFloat(data.outputAmount) / 1e9).toFixed(4) : 
         "0";
+      
+      // Cache the result
+      const newRouteCache = new Map(routeCache);
+      newRouteCache.set(cacheKey, {
+        solAmount,
+        bestDex: matchedDex,
+        timestamp: Date.now()
+      });
+      setRouteCache(newRouteCache);
         
       setEstimatedSellSol(solAmount);
       return solAmount;

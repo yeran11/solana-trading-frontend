@@ -83,7 +83,10 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
  */
 const fetchTokenProtocol = async (tokenAddress: string): Promise<string> => {
   try {
-    const response = await fetch('https://solana.fury.bot/api/tokens/route', {
+    
+    const savedConfig = loadConfigFromCookies();
+    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    const response = await fetch(`${baseUrl}/api/tokens/route`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -93,7 +96,7 @@ const fetchTokenProtocol = async (tokenAddress: string): Promise<string> => {
         action: "sell",
         tokenMintAddress: tokenAddress,
         amount: "1000000000", // 1 token for protocol detection
-        rpcUrl: "https://api.mainnet-beta.solana.com"
+        rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
       })
     });
     

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, ChevronRight, X, DollarSign, Info, Search, Settings, ArrowDown, Trash2, Plus, PlusCircle } from 'lucide-react';
-import { getWallets } from './Utils';
+import { getWallets, loadConfigFromCookies } from './Utils';
 import { useToast } from "./Notifications";
 // Import the cleaner operation functions at the top of the file
 import { executeCleanerOperation, validateCleanerInputs, WalletInfo } from './utils/cleaner';
@@ -110,8 +110,10 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       if (!tokenAddress || !tokenAmount || tokenAmount <= 0) {
         return 0;
       }
-      
-      const response = await fetch('https://solana.fury.bot/api/tokens/route', {
+        
+      const savedConfig = loadConfigFromCookies();
+      const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+      const response = await fetch(`${baseUrl}/api/tokens/route`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -121,7 +123,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
           action: "sell",
           tokenMintAddress: tokenAddress,
           amount: Math.floor(tokenAmount * 1e9).toString(),
-          rpcUrl: "https://api.mainnet-beta.solana.com"
+          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
         })
       });
       
