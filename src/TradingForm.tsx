@@ -84,9 +84,9 @@ const TradingCard = ({
   const [estimatedSellSol, setEstimatedSellSol] = useState("0");
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   
-  // Cache for route fetching with 1-minute expiry
+  // Cache for route fetching with 10 sec expiry
   const [routeCache, setRouteCache] = useState(new Map());
-  const CACHE_DURATION = 60000; // 1 minute in milliseconds
+  const CACHE_DURATION = 10000; // 10 sec in milliseconds
   
   // Helper function to generate cache key
   const generateCacheKey = (action, tokenAddress, amount) => {
