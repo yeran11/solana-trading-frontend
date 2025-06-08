@@ -24,7 +24,7 @@ It provides users with a seamless interface to connect various Solana wallets an
 ## 📚 Documentation
 
 Find the full documentation here:  
-👉 [https://docs.fury.bot/fury-ui/solana-ui](https://docs.fury.bot/fury-ui/solana-ui)
+👉 [https://docs.raze.bot/how-to-use](https://docs.raze.bot/how-to-use)
 
 ---
 
