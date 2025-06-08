@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Users, ArrowDownCircle, ArrowUpCircle, Loader2, Sparkles } from 'lucide-react';
 
+// Helper function to format numbers with k, M, B suffixes
+const formatNumber = (num) => {
+  const number = parseFloat(num);
+  if (isNaN(number) || number === 0) return "0";
+  
+  const absNum = Math.abs(number);
+  
+  if (absNum >= 1000000000) {
+    return (number / 1000000000).toFixed(2).replace(/\.?0+$/, '') + 'B';
+  } else if (absNum >= 1000000) {
+    return (number / 1000000).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  } else if (absNum >= 1000) {
+    return (number / 1000).toFixed(2).replace(/\.?0+$/, '') + 'k';
+  } else if (absNum >= 1) {
+    return number.toFixed(2).replace(/\.?0+$/, '');
+  } else {
+    // For very small numbers, show more decimal places
+    return number.toFixed(6).replace(/\.?0+$/, '');
+  }
+};
+
 // Cyberpunk Tooltip component (simplified)
 const Tooltip = ({ children, content, position = 'top' }) => {
   const positionClasses = {
@@ -118,7 +139,7 @@ const TradingCard = ({
       
       // Convert from raw token amount to readable format (assume 9 decimals for most SOL tokens)
       const tokenAmount = data.success ? 
-        (parseFloat(data.outputAmount) / 1e9).toFixed(2) : 
+        (parseFloat(data.outputAmount)).toFixed(2) : 
         "0";
         
       setEstimatedBuyTokens(tokenAmount);
@@ -152,7 +173,7 @@ const TradingCard = ({
     const tokenAmount = totalTokenBalance * (sellPercentage / 100);
     
     if (tokenAmount <= 0) return "0";
-    console.log(`Selling ${sellPercentage}% of ${totalTokenBalance} tokens = ${tokenAmount} tokens (${Math.floor(tokenAmount * 1e9)} raw)`);
+    console.log(`Selling ${sellPercentage}% of ${totalTokenBalance} tokens = ${tokenAmount} tokens (${Math.floor(tokenAmount)} raw)`);
     
     try {
       setIsLoadingEstimate(true);
@@ -165,7 +186,7 @@ const TradingCard = ({
         body: JSON.stringify({
           action: "sell",
           tokenMintAddress: tokenAddress,
-          amount: Math.floor(tokenAmount * 1e9).toString(), // Convert to raw token amount
+          amount: Math.floor(tokenAmount).toString(), // Convert to raw token amount
           rpcUrl: "https://api.mainnet-beta.solana.com"
         })
       });
@@ -379,12 +400,15 @@ const TradingCard = ({
     </Tooltip>
   );
 
-  // Estimate display component (simplified)
+  // Estimate display component with formatted numbers
   const EstimateDisplay = ({ isBuy, amount }) => {
     // Use real estimated values from API
     const estimatedValue = isBuy 
       ? estimatedBuyTokens
       : estimatedSellSol;
+    
+    // Format the number with k, M, B suffixes
+    const formattedValue = formatNumber(estimatedValue);
       
     return (
       <div 
@@ -394,7 +418,7 @@ const TradingCard = ({
                      : 'text-[#ff323280] bg-[#ff323208] border border-[#ff323220]'}`}
       >
         <span className={`font-bold ${isBuy ? 'text-[#02b36d]' : 'text-[#ff3232]'}`}>
-          {estimatedValue}
+          {formattedValue}
         </span>
       </div>
     );

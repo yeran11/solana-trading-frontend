@@ -22,16 +22,17 @@ interface CleanerTokensModalProps extends BaseModalProps {
   tokenBalances: Map<string, number>;
 }
 
-// New interfaces for handling multiple sellers and buyers
+// Updated interfaces for handling multiple sellers and buyers with direct SOL amounts
 interface SellerConfig {
   privateKey: string;
   sellPercentage: string;
+  estimatedSolValue: number; // New field to store estimated SOL value
   buyers: BuyerConfig[];
 }
 
 interface BuyerConfig {
   privateKey: string;
-  buyPercentage: string;
+  buyAmount: string; // Changed from buyPercentage to buyAmount (direct SOL amount)
 }
 
 export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
@@ -103,6 +104,64 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
     return solBalance < 0.01; // Threshold for "insufficient" SOL
   };
 
+  // New function to estimate SOL value from selling tokens
+  const fetchEstimatedSellAmount = async (tokenAddress: string, tokenAmount: number): Promise<number> => {
+    try {
+      if (!tokenAddress || !tokenAmount || tokenAmount <= 0) {
+        return 0;
+      }
+      
+      const response = await fetch('https://solana.fury.bot/api/tokens/route', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: "sell",
+          tokenMintAddress: tokenAddress,
+          amount: Math.floor(tokenAmount * 1e9).toString(),
+          rpcUrl: "https://api.mainnet-beta.solana.com"
+        })
+      });
+      
+      if (!response.ok) {
+        console.error(`Sell estimation API error: ${response.status}`);
+        return 0;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.outputAmount) {
+        const solAmount = parseFloat(data.outputAmount) / 1e9;
+        return isNaN(solAmount) ? 0 : solAmount;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error("Error fetching sell estimate:", error);
+      return 0;
+    }
+  };
+
+  // Function to update estimated SOL value for a seller
+  const updateSellerEstimatedValue = async (index: number) => {
+    const seller = sellers[index];
+    const sellerWallet = getWalletByPrivateKey(seller.privateKey);
+    if (!sellerWallet) return;
+
+    const tokenBalance = getWalletTokenBalance(sellerWallet.address) || 0;
+    const sellPercentage = parseFloat(seller.sellPercentage) || 0;
+    const tokenAmountToSell = tokenBalance * (sellPercentage / 100);
+    
+    if (tokenAmountToSell > 0) {
+      const estimatedSol = await fetchEstimatedSellAmount(tokenAddress, tokenAmountToSell);
+      const updatedSellers = [...sellers];
+      updatedSellers[index].estimatedSolValue = estimatedSol;
+      setSellers(updatedSellers);
+    }
+  };
+
   // Get available wallets for seller selection (excluding already selected sellers and only with token balance > 0)
   const getAvailableSellerWallets = () => {
     const selectedSellerKeys = sellers.map(seller => seller.privateKey);
@@ -165,19 +224,37 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
   };
 
   // Add a new seller to the list
-  const addSeller = (privateKey: string) => {
-    setSellers([...sellers, {
+  const addSeller = async (privateKey: string) => {
+    const newSeller: SellerConfig = {
       privateKey,
       sellPercentage: '100', // Default to 100%
+      estimatedSolValue: 0, // Will be calculated
       buyers: [] // No buyers initially
-    }]);
+    };
+    
+    const newSellers = [...sellers, newSeller];
+    setSellers(newSellers);
+    
+    // Calculate estimated SOL value for the new seller
+    const sellerWallet = getWalletByPrivateKey(privateKey);
+    if (sellerWallet) {
+      const tokenBalance = getWalletTokenBalance(sellerWallet.address) || 0;
+      if (tokenBalance > 0) {
+        const estimatedSol = await fetchEstimatedSellAmount(tokenAddress, tokenBalance);
+        newSellers[newSellers.length - 1].estimatedSolValue = estimatedSol;
+        setSellers([...newSellers]);
+      }
+    }
   };
 
-  // Update a seller's sell percentage
-  const updateSellerPercentage = (index: number, percentage: string) => {
+  // Update a seller's sell percentage and recalculate estimated SOL value
+  const updateSellerPercentage = async (index: number, percentage: string) => {
     const updatedSellers = [...sellers];
     updatedSellers[index].sellPercentage = percentage;
     setSellers(updatedSellers);
+    
+    // Recalculate estimated SOL value
+    await updateSellerEstimatedValue(index);
   };
 
   // Remove a seller from the list
@@ -192,15 +269,15 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
     const updatedSellers = [...sellers];
     updatedSellers[sellerIndex].buyers.push({
       privateKey: buyerPrivateKey,
-      buyPercentage: '100' // Default to 100%
+      buyAmount: '0.1' // Default to 0.1 SOL
     });
     setSellers(updatedSellers);
   };
 
-  // Update a buyer's buy percentage
-  const updateBuyerPercentage = (sellerIndex: number, buyerIndex: number, percentage: string) => {
+  // Update a buyer's buy amount
+  const updateBuyerAmount = (sellerIndex: number, buyerIndex: number, amount: string) => {
     const updatedSellers = [...sellers];
-    updatedSellers[sellerIndex].buyers[buyerIndex].buyPercentage = percentage;
+    updatedSellers[sellerIndex].buyers[buyerIndex].buyAmount = amount;
     setSellers(updatedSellers);
   };
 
@@ -250,16 +327,16 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
         return;
       }
       
-      // Validate each buyer has a valid percentage
+      // Validate each buyer has a valid SOL amount
       for (let i = 0; i < sellers.length; i++) {
         const invalidBuyer = sellers[i].buyers.find(
-          buyer => !buyer.buyPercentage || 
-                   parseFloat(buyer.buyPercentage) <= 0 || 
-                   parseFloat(buyer.buyPercentage) > 100
+          buyer => !buyer.buyAmount || 
+                   parseFloat(buyer.buyAmount) <= 0 || 
+                   parseFloat(buyer.buyAmount) > 100 // Max 100 SOL per buy
         );
         
         if (invalidBuyer) {
-          showToast(`Please enter valid buy percentages (1-100) for all buyers of seller ${i + 1}`, 'error');
+          showToast(`Please enter valid buy amounts (0.001-100 SOL) for all buyers of seller ${i + 1}`, 'error');
           return;
         }
       }
@@ -274,8 +351,8 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
 
   // Helper function to create a delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Replace the existing handleBuySell function with this updated version:
+  
+  // Updated handleBuySell function to work with direct SOL amounts
   const handleBuySell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConfirmed) return;
@@ -296,9 +373,11 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       let successCount = 0;
       let failCount = 0;
       
+      // Track which sellers have already sold their tokens
+      const sellersProcessed = new Set<string>();
+      
       // Process each seller-buyer pair
       for (const seller of sellers) {
-        const buyerCount = seller.buyers.length;
         const sellerPercentage = parseFloat(seller.sellPercentage);
         
         // Get seller wallet info
@@ -309,10 +388,14 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
           continue;
         }
         
+        // Get seller's token balance
+        const tokenBalance = getWalletTokenBalance(sellerWallet.address) || 0;
+        
+        // Check if this seller has already sold their tokens
+        const isFirstBuyerForSeller = !sellersProcessed.has(seller.privateKey);
+        
         // For each buyer of this seller
-        for (let buyerIndex = 0; buyerIndex < buyerCount; buyerIndex++) {
-          const buyer = seller.buyers[buyerIndex];
-          
+        for (const buyer of seller.buyers) {
           // Get buyer wallet info
           const buyerWallet = getWalletByPrivateKey(buyer.privateKey);
           if (!buyerWallet) {
@@ -321,9 +404,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
             continue;
           }
           
-          // Calculate the adjusted sell percentage for this buyer
-          // Each buyer gets an equal portion of the seller's total percentage
-          const adjustedSellPercentage = sellerPercentage / buyerCount;
+          const buyAmount = parseFloat(buyer.buyAmount);
           
           // Create wallet info objects
           const sellerWalletInfo: WalletInfo = {
@@ -336,14 +417,13 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
             privateKey: buyer.privateKey
           };
           
-          // Validate inputs
-          const tokenBalance = getWalletTokenBalance(sellerWallet.address) || 0;
+          // Validate inputs - Note: we're now validating with direct buy amount
           const validation = validateCleanerInputs(
             sellerWalletInfo,
             buyerWalletInfo,
             tokenAddress,
-            adjustedSellPercentage,
-            parseFloat(buyer.buyPercentage),
+            sellerPercentage,
+            buyAmount, // Direct SOL amount instead of percentage
             tokenBalance
           );
           
@@ -359,17 +439,26 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            // Execute the cleaner operation
+            // Execute the cleaner operation with direct buy amount
+            // Only include sell percentage for the first buyer of each seller
             const result = await executeCleanerOperation(
               sellerWalletInfo,
               buyerWalletInfo,
               tokenAddress,
-              adjustedSellPercentage,
-              parseFloat(buyer.buyPercentage)
+              isFirstBuyerForSeller ? sellerPercentage : 0, // Only sell on first buyer
+              buyAmount, // Direct SOL amount
+              tokenBalance,
+              0.05 // Extra distribution SOL
             );
             
             if (result.success) {
               successCount++;
+              console.log(`Operation ${successCount} successful:`, result.result);
+              
+              // Mark this seller as processed after first successful operation
+              if (isFirstBuyerForSeller) {
+                sellersProcessed.add(seller.privateKey);
+              }
             } else {
               console.error('Operation failed:', result.error);
               failCount++;
@@ -389,6 +478,9 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       } else {
         showToast(`${successCount} operations succeeded, ${failCount} failed`, 'error');
       }
+      
+      // Refresh balances after operations
+      handleRefresh();
       
       resetForm();
       onClose();
@@ -415,6 +507,12 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
   // Count total number of operations that will be executed
   const getTotalOperationsCount = () => {
     return sellers.reduce((count, seller) => count + seller.buyers.length, 0);
+  };
+
+  // Calculate total distribution amount for a seller
+  const getTotalDistributionAmount = (seller: SellerConfig) => {
+    const totalBuyAmount = seller.buyers.reduce((sum, buyer) => sum + parseFloat(buyer.buyAmount || '0'), 0);
+    return totalBuyAmount + 0.05; // Add 0.05 SOL extra for distribution
   };
 
   // If modal is not open, don't render anything
@@ -824,6 +922,16 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                 </div>
                               </div>
                               
+                              {/* Estimated SOL value display */}
+                              {seller.estimatedSolValue > 0 && (
+                                <div className="mt-2 p-1.5 bg-[#02b36d20] border border-[#02b36d30] rounded text-xs text-[#02b36d] font-mono">
+                                  <div className="flex items-center justify-between">
+                                    <span>ESTIMATED SOL VALUE:</span>
+                                    <span className="font-bold">{seller.estimatedSolValue.toFixed(6)} SOL</span>
+                                  </div>
+                                </div>
+                              )}
+                              
                               {/* Warning for low SOL */}
                               {lowSOL && (
                                 <div className="mt-2 p-1.5 bg-[#5f020230] border border-[#5f020250] rounded text-xs text-red-400 font-mono">
@@ -986,23 +1094,25 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                           <span className="text-sm text-[#02b36d] font-mono">{sellers[currentSellerIndex].sellPercentage}%</span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-sm text-[#7ddfbd] font-mono">BALANCES:</span>
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-sm ${
-                              hasInsufficientSOL(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') 
-                                ? 'text-red-400' 
-                                : 'text-[#7ddfbd]'
-                            } font-mono`}>
-                              {formatSolBalance(getWalletBalance(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') || 0)} SOL
-                              {hasInsufficientSOL(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') && (
-                                <span className="ml-1">⚠️</span>
-                              )}
-                            </span>
-                            <span className="text-sm text-[#02b36d] font-mono">
-                              {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') || 0)} TOKENS
-                            </span>
-                          </div>
+                          <span className="text-sm text-[#7ddfbd] font-mono">ESTIMATED SOL VALUE:</span>
+                          <span className="text-sm text-[#02b36d] font-mono font-bold">
+                            {sellers[currentSellerIndex].estimatedSolValue.toFixed(6)} SOL
+                          </span>
                         </div>
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-sm text-[#7ddfbd] font-mono">TOKEN BALANCE:</span>
+                          <span className="text-sm text-[#02b36d] font-mono">
+                            {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') || 0)} TOKENS
+                          </span>
+                        </div>
+                        {hasInsufficientSOL(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') && (
+                          <div className="mt-2 p-1.5 bg-[#5f020230] border border-[#5f020250] rounded text-xs text-red-400 font-mono">
+                            <div className="flex items-center">
+                              <Info size={10} className="mr-1" />
+                              <span>INSUFFICIENT SOL BALANCE</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       {/* List of selected buyers */}
@@ -1038,23 +1148,24 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                 </div>
                               </div>
                               
-                              {/* Buy percentage input */}
+                              {/* Buy amount input - Changed from percentage to direct SOL amount */}
                               <div className="flex items-center mt-2">
-                                <div className="text-xs text-[#7ddfbd] mr-2 w-28 font-mono">BUY BACK PERCENTAGE:</div>
+                                <div className="text-xs text-[#7ddfbd] mr-2 w-24 font-mono">BUY AMOUNT:</div>
                                 <div className="relative flex-1">
                                   <input
                                     type="text"
-                                    value={buyer.buyPercentage}
+                                    value={buyer.buyAmount}
                                     onChange={(e) => {
                                       const value = e.target.value;
                                       if (value === '' || /^\d*\.?\d*$/.test(value) && parseFloat(value) <= 100) {
-                                        updateBuyerPercentage(currentSellerIndex, buyerIndex, value);
+                                        updateBuyerAmount(currentSellerIndex, buyerIndex, value);
                                       }
                                     }}
                                     className="w-full pl-2 pr-8 py-1 bg-[#091217] border border-[#02b36d30] rounded text-[#e4fbf2] text-sm focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                                    placeholder="0.1"
                                   />
                                   <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                    <span className="text-xs text-[#7ddfbd] font-mono">%</span>
+                                    <span className="text-xs text-[#7ddfbd] font-mono">SOL</span>
                                   </div>
                                 </div>
                               </div>
@@ -1070,14 +1181,26 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       {/* Distribution info */}
                       {sellers[currentSellerIndex].buyers.length > 0 && (
                         <div className="mt-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30]">
-                          <div className="text-xs text-[#7ddfbd] mb-1 font-mono">
-                            EACH BUYER WILL RECEIVE AN EQUAL PORTION OF THE TOKENS BEING SOLD
+                          <div className="text-xs text-[#7ddfbd] mb-2 font-mono">
+                            DISTRIBUTION CALCULATION
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-[#e4fbf2] font-mono">EACH BUYER WILL RECEIVE:</span>
-                            <span className="text-[#02b36d] font-medium font-mono">
-                              {(parseFloat(sellers[currentSellerIndex].sellPercentage) / sellers[currentSellerIndex].buyers.length).toFixed(2)}% OF TOKENS
-                            </span>
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-[#7ddfbd] font-mono">TOTAL BUY AMOUNT:</span>
+                              <span className="text-[#e4fbf2] font-mono">
+                                {sellers[currentSellerIndex].buyers.reduce((sum, buyer) => sum + parseFloat(buyer.buyAmount || '0'), 0).toFixed(3)} SOL
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-[#7ddfbd] font-mono">EXTRA DISTRIBUTION:</span>
+                              <span className="text-[#e4fbf2] font-mono">0.050 SOL</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm border-t border-[#02b36d30] pt-1">
+                              <span className="text-[#02b36d] font-mono font-bold">TOTAL DISTRIBUTION:</span>
+                              <span className="text-[#02b36d] font-mono font-bold">
+                                {getTotalDistributionAmount(sellers[currentSellerIndex]).toFixed(3)} SOL
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -1146,6 +1269,20 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                         <span className="text-sm text-[#e4fbf2] font-mono glitch-text">{formatAddress(tokenAddress)}</span>
                       </div>
                     </div>
+                    
+                    {/* Batch structure explanation */}
+                    <div className="mt-4 p-3 bg-[#0a1419] rounded border border-[#02b36d20]">
+                      <div className="text-xs text-[#7ddfbd] mb-1 font-mono font-bold">BATCH STRUCTURE:</div>
+                      <div className="text-xs text-[#7ddfbd] font-mono">
+                        • Each seller's FIRST buyer gets: SELL + DISTRIBUTION + BUY transactions
+                      </div>
+                      <div className="text-xs text-[#7ddfbd] font-mono">
+                        • Each seller's SUBSEQUENT buyers get: DISTRIBUTION + BUY transactions only
+                      </div>
+                      <div className="text-xs text-[#02b36d] font-mono mt-1">
+                        This ensures each seller only sells their tokens once.
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Detailed breakdown */}
@@ -1176,39 +1313,52 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                 <span className="text-xs text-[#7ddfbd] font-mono">
                                   {formatTokenBalance(getWalletTokenBalance(sellerAddress) || 0)} TOKENS
                                 </span>
+                                <span className="text-xs text-[#02b36d] font-mono font-bold">
+                                  EST: {seller.estimatedSolValue.toFixed(6)} SOL
+                                </span>
                               </div>
                             </div>
                             
                             <div className="ml-0 sm:ml-4 space-y-2">
                               {seller.buyers.length > 0 ? (
-                                seller.buyers.map((buyer, buyerIndex) => (
-                                  <div key={buyerIndex} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-[#0a1419] p-2 rounded border border-[#02b36d20]">
-                                    <div className="flex items-center">
-                                      <span className="text-xs text-[#7ddfbd] mr-2 font-mono">BUYER:</span>
-                                      <span className="text-xs font-mono text-[#e4fbf2] glitch-text">
-                                        {formatAddress(getWalletByPrivateKey(buyer.privateKey)?.address || '')}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-xs text-[#7ddfbd] font-mono">
-                                          {formatSolBalance(getWalletBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} SOL
+                                seller.buyers.map((buyer, buyerIndex) => {
+                                  const isFirstBuyer = buyerIndex === 0;
+                                  return (
+                                    <div key={buyerIndex} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-[#0a1419] p-2 rounded border border-[#02b36d20]">
+                                      <div className="flex items-center">
+                                        <span className="text-xs text-[#7ddfbd] mr-2 font-mono">
+                                          {isFirstBuyer ? 'BUYER #1 (WITH SELL):' : `BUYER #${buyerIndex + 1}:`}
                                         </span>
-                                        <span className="text-xs text-[#02b36d] font-mono">
-                                          {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} TOKENS
+                                        <span className="text-xs font-mono text-[#e4fbf2] glitch-text">
+                                          {formatAddress(getWalletByPrivateKey(buyer.privateKey)?.address || '')}
                                         </span>
                                       </div>
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-xs px-1.5 py-0.5 bg-[#091217] rounded text-[#e4fbf2] font-mono">
-                                          {(parseFloat(seller.sellPercentage) / seller.buyers.length).toFixed(2)}%
-                                        </span>
-                                        <span className="text-xs px-1.5 py-0.5 bg-[#02b36d20] rounded text-[#02b36d] font-mono">
-                                          BUY: {buyer.buyPercentage}%
-                                        </span>
+                                      <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-xs text-[#7ddfbd] font-mono">
+                                            {formatSolBalance(getWalletBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} SOL
+                                          </span>
+                                          <span className="text-xs text-[#02b36d] font-mono">
+                                            {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} TOKENS
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          {isFirstBuyer && (
+                                            <span className="text-xs px-1.5 py-0.5 bg-[#5f020240] rounded text-red-300 font-mono">
+                                              SELL: {seller.sellPercentage}%
+                                            </span>
+                                          )}
+                                          <span className="text-xs px-1.5 py-0.5 bg-[#02b36d20] rounded text-[#02b36d] font-mono">
+                                            BUY: {buyer.buyAmount} SOL
+                                          </span>
+                                          <span className="text-xs px-1.5 py-0.5 bg-[#091217] rounded text-[#e4fbf2] font-mono">
+                                            DIST: {(parseFloat(buyer.buyAmount) + 0.05).toFixed(3)} SOL
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))
+                                  );
+                                })
                               ) : (
                                 <div className="text-xs text-[#7ddfbd] italic font-mono">NO BUYERS CONFIGURED</div>
                               )}

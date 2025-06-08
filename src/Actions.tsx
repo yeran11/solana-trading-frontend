@@ -51,25 +51,6 @@ const Switch = React.forwardRef<
 ));
 Switch.displayName = 'Switch';
 
-// Enhanced cyberpunk-styled Label component
-const Label: React.FC<React.HTMLAttributes<HTMLLabelElement>> = ({ className, ...props }) => (
-  <label className={`text-sm font-mono tracking-wide text-[#7ddfbd] ${className}`} {...props} />
-);
-
-// Enhanced cyberpunk-styled Input component
-const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({ className, ...props }) => (
-  <input
-    className={`
-      flex h-10 w-full rounded-md border border-[#02b36d40]
-      bg-[#0a1419] px-3 py-2 text-sm text-[#e4fbf2] font-mono
-      focus:outline-none focus:border-[#02b36d] focus:ring-2 focus:ring-[#02b36d20]
-      focus:ring-offset-1 focus:ring-offset-[#0a1419]
-      disabled:cursor-not-allowed disabled:opacity-50
-      transition-all duration-300 ${className}`}
-    {...props}
-  />
-);
-
 interface ActionsPageProps {
   tokenAddress: string;
   transactionFee: string;
@@ -227,7 +208,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             return;
           }
           
-          amount = Math.floor(tokenAmount * 1e9).toString(); // Convert to raw token amount
+          amount = Math.floor(tokenAmount).toString(); // Convert to raw token amount
         }
         
         const savedConfig = loadConfigFromCookies();
@@ -647,7 +628,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           const tokenBalanceMap = new Map<string, bigint>();
           activeWallets.forEach(wallet => {
             // Convert to bigint for compatibility with selljup validation
-            const balance = BigInt(Math.floor((tokenBalances.get(wallet.address) || 0) * 1e9));
+            const balance = BigInt(Math.floor((tokenBalances.get(wallet.address) || 0)));
             tokenBalanceMap.set(wallet.address, balance);
           });
           
