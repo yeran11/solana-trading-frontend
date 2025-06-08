@@ -53,7 +53,6 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 }) => {
   const [isCreatingWallets, setIsCreatingWallets] = useState(false);
   const [walletQuantity, setWalletQuantity] = useState('1');
-  const [isImporting, setIsImporting] = useState(false);
   const [importKey, setImportKey] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
@@ -161,7 +160,6 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
         
         setImportKey('');
         setImportError(null);
-        setIsImporting(false);
         showToast('Wallet imported successfully', 'success');
       } else {
         setImportError('Failed to import wallet');
@@ -181,13 +179,26 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/);
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
       
       // Base58 pattern for Solana private keys
       const base58Pattern = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
-      const foundKeys = lines
-        .map(line => line.trim())
-        .filter(line => base58Pattern.test(line));
+      
+      let foundKeys: string[] = [];
+      
+      if (fileExtension === 'key') {
+        // For .key files, treat the entire content as a single private key
+        const trimmedText = text.trim();
+        if (base58Pattern.test(trimmedText)) {
+          foundKeys = [trimmedText];
+        }
+      } else {
+        // For .txt files, process line by line
+        const lines = text.split(/\r?\n/);
+        foundKeys = lines
+          .map(line => line.trim())
+          .filter(line => base58Pattern.test(line));
+      }
 
       if (foundKeys.length === 0) {
         setImportError('No valid private keys found in file');
@@ -374,78 +385,6 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Import Wallets Section */}
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Key size={20} className="text-[#02b36d]" />
-                  IMPORT WALLETS
-                </h3>
-                
-                <div className="space-y-4">
-                  {/* Single Import */}
-                  <div>
-                    <button
-                      onClick={() => setIsImporting(!isImporting)}
-                      className="mb-3 px-4 py-2 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300"
-                    >
-                      {isImporting ? 'CANCEL' : 'IMPORT SINGLE WALLET'}
-                    </button>
-                    
-                    {isImporting && (
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          placeholder="Enter private key (base58)"
-                          value={importKey}
-                          onChange={(e) => {
-                            setImportKey(e.target.value);
-                            setImportError(null);
-                          }}
-                          className={`w-full bg-[#091217] border ${
-                            importError ? 'border-[#ff2244]' : 'border-[#02b36d40]'
-                          } rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono`}
-                        />
-                        {importError && (
-                          <div className="text-[#ff2244] text-sm font-mono flex items-center">
-                            <span className="mr-1">!</span> {importError}
-                          </div>
-                        )}
-                        <button
-                          onClick={handleImportWallet}
-                          className="w-full bg-[#02b36d] hover:bg-[#01a35f] text-black font-bold p-3 rounded cyberpunk-btn font-mono tracking-wider"
-                        >
-                          IMPORT WALLET
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bulk Import */}
-                  <div className="border-t border-[#02b36d20] pt-4">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".txt"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      disabled={isProcessingFile}
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isProcessingFile}
-                      className={`w-full p-3 ${
-                        isProcessingFile 
-                          ? 'bg-[#02b36d20] cursor-not-allowed' 
-                          : 'bg-[#091217] hover:bg-[#02b36d20] cyberpunk-btn'
-                      } border border-[#02b36d40] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2`}
-                    >
-                      <FileUp size={16} />
-                      {isProcessingFile ? 'PROCESSING FILE...' : 'IMPORT FROM FILE (.txt)'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               {/* Wallet Management Actions */}
               <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
                 <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
@@ -453,22 +392,92 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                   WALLET MANAGEMENT
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => downloadAllWallets(wallets)}
-                    className="p-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2"
-                  >
-                    <Download size={16} />
-                    EXPORT ALL WALLETS
-                  </button>
-                  
-                  <button
-                    onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
-                    className="p-3 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2 text-[#ff2244]"
-                  >
-                    <Trash2 size={16} />
-                    REMOVE EMPTY WALLETS
-                  </button>
+                <div className="space-y-6">
+                  {/* Import Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-bold text-[#e4fbf2] font-mono flex items-center gap-2">
+                      <Key size={16} className="text-[#02b36d]" />
+                      IMPORT WALLETS
+                    </h4>
+                    
+                    {/* Single Import */}
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Enter private key (base58)"
+                        value={importKey}
+                        onChange={(e) => {
+                          setImportKey(e.target.value);
+                          setImportError(null);
+                        }}
+                        className={`w-full bg-[#091217] border ${
+                          importError ? 'border-[#ff2244]' : 'border-[#02b36d40]'
+                        } rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono`}
+                      />
+                      {importError && (
+                        <div className="text-[#ff2244] text-sm font-mono flex items-center">
+                          <span className="mr-1">!</span> {importError}
+                        </div>
+                      )}
+                      <button
+                        onClick={handleImportWallet}
+                        disabled={!importKey.trim()}
+                        className={`w-full p-3 ${
+                          !importKey.trim()
+                            ? 'bg-[#02b36d20] cursor-not-allowed'
+                            : 'bg-[#02b36d] hover:bg-[#01a35f] cyberpunk-btn'
+                        } text-black font-bold rounded font-mono tracking-wider transition-all duration-300`}
+                      >
+                        IMPORT WALLET
+                      </button>
+                    </div>
+
+                    {/* File Import */}
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt,.key"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={isProcessingFile}
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isProcessingFile}
+                        className={`w-full p-3 ${
+                          isProcessingFile 
+                            ? 'bg-[#02b36d20] cursor-not-allowed' 
+                            : 'bg-[#091217] hover:bg-[#02b36d20] cyberpunk-btn'
+                        } border border-[#02b36d40] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2`}
+                      >
+                        <FileUp size={16} />
+                        {isProcessingFile ? 'PROCESSING FILE...' : 'IMPORT FROM FILE (.txt/.key)'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Management Actions */}
+                  <div className="border-t border-[#02b36d20] pt-4">
+                    <h4 className="text-md font-bold text-[#e4fbf2] font-mono mb-4">ACTIONS</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        onClick={() => downloadAllWallets(wallets)}
+                        className="p-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2"
+                      >
+                        <Download size={16} />
+                        EXPORT ALL WALLETS
+                      </button>
+                      
+                      <button
+                        onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
+                        className="p-3 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2 text-[#ff2244]"
+                      >
+                        <Trash2 size={16} />
+                        REMOVE EMPTY WALLETS
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -12,8 +12,6 @@ import {
   CheckSquare,
   Square,
   MoreVertical,
-  Eye,
-  EyeOff,
   Wallet,
   Settings,
   X
@@ -67,7 +65,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWallets, setSelectedWallets] = useState<Set<number>>(new Set());
-  const [showPrivateKeys, setShowPrivateKeys] = useState(false);
+  const [showPrivateKeys, setShowPrivateKeys] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'withSOL' | 'withTokens' | 'empty'>('all');
 
   // Filter and sort wallets - useMemo must also be called before conditional return
@@ -311,15 +309,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
 
 
 
-          {/* Privacy Toggle */}
-          <WalletTooltip content={showPrivateKeys ? "Hide Private Keys" : "Show Private Keys"} position="bottom">
-            <button
-              onClick={() => setShowPrivateKeys(!showPrivateKeys)}
-              className="p-2 border border-[#02b36d40] hover:border-[#02b36d] rounded transition-all duration-300"
-            >
-              {showPrivateKeys ? <EyeOff size={16} className="text-[#02b36d]" /> : <Eye size={16} className="text-[#02b36d]" />}
-            </button>
-          </WalletTooltip>
+
         </div>
 
         {/* Table Container */}
@@ -368,9 +358,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                       </button>
                     </th>
                   )}
-                  {showPrivateKeys && (
-                    <th className="p-3 text-left text-[#7ddfbd]">PRIVATE KEY</th>
-                  )}
+                  <th className="p-3 text-left text-[#7ddfbd]">PRIVATE KEY</th>
                   <th className="p-3 text-left text-[#7ddfbd]">ACTIONS</th>
                 </tr>
               </thead>
@@ -419,18 +407,16 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                           </span>
                         </td>
                       )}
-                      {showPrivateKeys && (
-                        <td className="p-3">
-                          <WalletTooltip content="Click to copy private key" position="top">
-                            <button
-                              onClick={() => copyToClipboard(wallet.privateKey, showToast)}
-                              className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors font-mono text-xs"
-                            >
-                              {wallet.privateKey.substring(0, 8)}...{wallet.privateKey.substring(-8)}
-                            </button>
-                          </WalletTooltip>
-                        </td>
-                      )}
+                      <td className="p-3">
+                        <WalletTooltip content="Click to copy private key" position="top">
+                          <button
+                            onClick={() => copyToClipboard(wallet.privateKey, showToast)}
+                            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors font-mono text-xs"
+                          >
+                            {wallet.privateKey.substring(0, 8)}...{wallet.privateKey.substring(-8)}
+                          </button>
+                        </WalletTooltip>
+                      </td>
                       <td className="p-3">
                         <div className="flex gap-1">
 
