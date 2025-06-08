@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   RefreshCw, Coins, CheckSquare, Square, ArrowDownAZ, ArrowUpAZ, 
@@ -30,7 +31,7 @@ interface WalletOperationsButtonsProps {
   setIsModalOpen: (open: boolean) => void;
 }
 
-type OperationTab = 'distribute' | 'consolidate' | 'transfer' | 'deposit' | 'mixer';
+type OperationTab = 'distribute' | 'consolidate' | 'transfer' | 'deposit' | 'mixer' | 'fund';
 
 export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = ({
   wallets,
@@ -49,6 +50,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   // State for active modal
   const [activeModal, setActiveModal] = useState<OperationTab | null>(null);
   
+  // State for fund wallets modal
+  const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  
   // State for operations drawer
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
@@ -66,6 +70,29 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   // Function to close the active modal
   const closeModal = () => {
     setActiveModal(null);
+  };
+  
+  // Function to open fund wallets modal
+  const openFundModal = () => {
+    setIsFundModalOpen(true);
+    setIsDrawerOpen(false);
+  };
+  
+  // Function to close fund wallets modal
+  const closeFundModal = () => {
+    setIsFundModalOpen(false);
+  };
+  
+  // Function to open distribute from fund modal
+  const openDistributeFromFund = () => {
+    setIsFundModalOpen(false);
+    setActiveModal('distribute');
+  };
+  
+  // Function to open mixer from fund modal
+  const openMixerFromFund = () => {
+    setIsFundModalOpen(false);
+    setActiveModal('mixer');
   };
 
   // Check if all wallets are active
@@ -121,27 +148,22 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
       }
     },
     {
-      icon: <Share2 size={16} />,
-      label: "Distribute SOL",
-      onClick: () => openModal('distribute')
+      icon: <HandCoins size={16} />,
+      label: "Fund Wallets",
+      onClick: openFundModal
     },
     {
       icon: <Share size={16} />,
-      label: "Mixer SOL",
-      onClick: () => openModal('mixer')
-    },
-    {
-      icon: <Network size={16} />,
       label: "Consolidate SOL",
       onClick: () => openModal('consolidate')
     },
     {
-      icon: <Send size={16} />,
+      icon: <Network size={16} />,
       label: "Transfer Assets",
       onClick: () => openModal('transfer')
     },
     {
-      icon: <HandCoins size={16} />,
+      icon: <Send size={16} />,
       label: "Deposit SOL",
       onClick: () => openModal('deposit')
     }
@@ -215,6 +237,76 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
         solBalances={solBalances}
         connection={connection}
       />
+      
+      {/* Fund Wallets Modal */}
+      {isFundModalOpen && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={closeFundModal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#05080a] border border-[#02b36d30] rounded-lg p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-mono text-[#02b36d] tracking-wider">Fund Wallets</h2>
+                <button
+                  onClick={closeFundModal}
+                  className="text-[#02b36d] hover:text-[#7ddfbd] transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                <motion.button
+                  variants={buttonVariants}
+                  initial="rest"
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={openDistributeFromFund}
+                  className="w-full flex items-center gap-3 p-4 rounded-md
+                           bg-[#071015] border border-[#02b36d30] hover:border-[#02b36d50]
+                           text-[#02b36d] hover:text-[#7ddfbd] transition-all duration-300
+                           hover:shadow-md hover:shadow-[#02b36d15]"
+                >
+                  <Share2 size={20} />
+                  <div className="text-left">
+                    <div className="font-mono text-sm tracking-wider">Distribute SOL</div>
+                    <div className="text-xs text-[#02b36d80] mt-1">Send SOL from main wallet to multiple wallets</div>
+                  </div>
+                </motion.button>
+                
+                <motion.button
+                  variants={buttonVariants}
+                  initial="rest"
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={openMixerFromFund}
+                  className="w-full flex items-center gap-3 p-4 rounded-md
+                           bg-[#071015] border border-[#02b36d30] hover:border-[#02b36d50]
+                           text-[#02b36d] hover:text-[#7ddfbd] transition-all duration-300
+                           hover:shadow-md hover:shadow-[#02b36d15]"
+                >
+                  <Share size={20} />
+                  <div className="text-left">
+                    <div className="font-mono text-sm tracking-wider">Mixer SOL</div>
+                    <div className="text-xs text-[#02b36d80] mt-1">Mix SOL between wallets for privacy</div>
+                  </div>
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Main controls bar - slimmer and more minimal */}
       <div className="w-full mb-1 bg-[#05080a95] backdrop-blur-sm rounded-md p-0.5 
