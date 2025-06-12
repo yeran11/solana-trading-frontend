@@ -25,7 +25,7 @@ interface WalletOperationsButtonsProps {
   isRefreshing: boolean;
   showingTokenWallets: boolean;
   handleBalanceToggle: () => void;
-  setWallets: React.Dispatch<React.SetStateAction<WalletType[]>>;
+  setWallets: (wallets: WalletType[]) => void;
   sortDirection: string;
   handleSortWallets: () => void;
   setIsModalOpen: (open: boolean) => void;
@@ -100,15 +100,13 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
 
   // Function to toggle all wallets
   const toggleAllWalletsHandler = () => {
-    setWallets(prev => {
-      const allActive = prev.every(wallet => wallet.isActive);
-      const newWallets = prev.map(wallet => ({
-        ...wallet,
-        isActive: !allActive
-      }));
-      saveWalletsToCookies(newWallets);
-      return newWallets;
-    });
+    const allActive = wallets.every(wallet => wallet.isActive);
+    const newWallets = wallets.map(wallet => ({
+      ...wallet,
+      isActive: !allActive
+    }));
+    saveWalletsToCookies(newWallets);
+    setWallets(newWallets);
   };
 
   // Function to open wallets modal

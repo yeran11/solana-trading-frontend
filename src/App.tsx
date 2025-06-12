@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, useCallback } from 'react';
+import React, { useState, useEffect, useRef, lazy, useCallback, useReducer, useMemo } from 'react';
 import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import ServiceSelector from './Menu.tsx';
@@ -60,105 +60,265 @@ const WalletManager: React.FC = () => {
     };
   }, []);
 
-  // State declarations
-  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-  const [tokenAddress, setTokenAddress] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'network' | 'wallets' | 'advanced'>('network');
-  const [config, setConfig] = useState<ConfigType>({
-    rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
-    transactionFee: '0.000005',
-    apiKey: ''
-  });
-  const [currentPage, setCurrentPage] = useState<'wallets' | 'chart' | 'actions'>('wallets');
-  const [wallets, setWallets] = useState<WalletType[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [connection, setConnection] = useState<Connection | null>(null);
-  const [solBalances, setSolBalances] = useState<Map<string, number>>(new Map());
-  const [tokenBalances, setTokenBalances] = useState<Map<string, number>>(new Map());
-  const [ammKey, setAmmKey] = useState<string | null>(null);
-  const [isLoadingChart, setIsLoadingChart] = useState(false);
-  const [currentMarketCap, setCurrentMarketCap] = useState<number | null>(null);
-  const { showToast } = useToast();
-  
-  // Modal states
-  const [burnModalOpen, setBurnModalOpen] = useState(false);
-  const [calculatePNLModalOpen, setCalculatePNLModalOpen] = useState(false);
-  const [deployModalOpen, setDeployModalOpen] = useState(false);
-  const [cleanerTokensModalOpen, setCleanerTokensModalOpen] = useState(false);
-  const [customBuyModalOpen, setCustomBuyModalOpen] = useState(false);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [tickEffect, setTickEffect] = useState(false);
-  
-  // Status notification state
-  const [statusMessage, setStatusMessage] = useState<string>('');
-  const [isStatusVisible, setIsStatusVisible] = useState(false);
-
-  // Fetch status from API
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-        
-        // Send to our backend proxy instead of directly to Jito
-        const response = await fetch(`${baseUrl}/status`);
-        const data = await response.json(); // Parse as JSON instead of text
-        const statusText = data.status || ''; // Extract the status field
-        const trimmedText = statusText.trim();
-        
-        if (trimmedText && trimmedText !== statusMessage) {
-          setStatusMessage(trimmedText);
-          setIsStatusVisible(true);
-        } else if (!trimmedText && isStatusVisible) {
-          setIsStatusVisible(false);
-          setStatusMessage('');
-        }
-      } catch (error) {
-        console.error('Failed to fetch status:', error);
-      }
+  // Optimized state management with useReducer
+  interface AppState {
+    copiedAddress: string | null;
+    tokenAddress: string;
+    isModalOpen: boolean;
+    isSettingsOpen: boolean;
+    activeTab: 'network' | 'wallets' | 'advanced';
+    config: ConfigType;
+    currentPage: 'wallets' | 'chart' | 'actions';
+    wallets: WalletType[];
+    isRefreshing: boolean;
+    connection: Connection | null;
+    solBalances: Map<string, number>;
+    tokenBalances: Map<string, number>;
+    ammKey: string | null;
+    isLoadingChart: boolean;
+    currentMarketCap: number | null;
+    modals: {
+      burnModalOpen: boolean;
+      calculatePNLModalOpen: boolean;
+      deployModalOpen: boolean;
+      cleanerTokensModalOpen: boolean;
+      customBuyModalOpen: boolean;
     };
+    sortDirection: 'asc' | 'desc';
+    tickEffect: boolean;
+    status: {
+      message: string;
+      isVisible: boolean;
+    };
+  }
 
-    // Fetch immediately
-    fetchStatus();
-    
-    // Set up interval to check every 30 seconds
-    const interval = setInterval(fetchStatus, 30000);
-    
+  type AppAction = 
+    | { type: 'SET_COPIED_ADDRESS'; payload: string | null }
+    | { type: 'SET_TOKEN_ADDRESS'; payload: string }
+    | { type: 'SET_MODAL_OPEN'; payload: boolean }
+    | { type: 'SET_SETTINGS_OPEN'; payload: boolean }
+    | { type: 'SET_ACTIVE_TAB'; payload: 'network' | 'wallets' | 'advanced' }
+    | { type: 'SET_CONFIG'; payload: ConfigType }
+    | { type: 'SET_CURRENT_PAGE'; payload: 'wallets' | 'chart' | 'actions' }
+    | { type: 'SET_WALLETS'; payload: WalletType[] }
+    | { type: 'SET_REFRESHING'; payload: boolean }
+    | { type: 'SET_CONNECTION'; payload: Connection | null }
+    | { type: 'SET_SOL_BALANCES'; payload: Map<string, number> }
+    | { type: 'SET_TOKEN_BALANCES'; payload: Map<string, number> }
+    | { type: 'SET_AMM_KEY'; payload: string | null }
+    | { type: 'SET_LOADING_CHART'; payload: boolean }
+    | { type: 'SET_MARKET_CAP'; payload: number | null }
+    | { type: 'SET_MODAL'; payload: { modal: keyof AppState['modals']; open: boolean } }
+    | { type: 'SET_SORT_DIRECTION'; payload: 'asc' | 'desc' }
+    | { type: 'SET_TICK_EFFECT'; payload: boolean }
+    | { type: 'SET_STATUS'; payload: { message: string; isVisible: boolean } }
+    | { type: 'UPDATE_BALANCE'; payload: { address: string; solBalance?: number; tokenBalance?: number } };
+
+  const initialState: AppState = {
+    copiedAddress: null,
+    tokenAddress: '',
+    isModalOpen: false,
+    isSettingsOpen: false,
+    activeTab: 'network',
+    config: {
+      rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
+      transactionFee: '0.000005',
+      apiKey: ''
+    },
+    currentPage: 'wallets',
+    wallets: [],
+    isRefreshing: false,
+    connection: null,
+    solBalances: new Map(),
+    tokenBalances: new Map(),
+    ammKey: null,
+    isLoadingChart: false,
+    currentMarketCap: null,
+    modals: {
+      burnModalOpen: false,
+      calculatePNLModalOpen: false,
+      deployModalOpen: false,
+      cleanerTokensModalOpen: false,
+      customBuyModalOpen: false
+    },
+    sortDirection: 'asc',
+    tickEffect: false,
+    status: {
+      message: '',
+      isVisible: false
+    }
+  };
+
+  const appReducer = (state: AppState, action: AppAction): AppState => {
+    switch (action.type) {
+      case 'SET_COPIED_ADDRESS':
+        return { ...state, copiedAddress: action.payload };
+      case 'SET_TOKEN_ADDRESS':
+        return { ...state, tokenAddress: action.payload };
+      case 'SET_MODAL_OPEN':
+        return { ...state, isModalOpen: action.payload };
+      case 'SET_SETTINGS_OPEN':
+        return { ...state, isSettingsOpen: action.payload };
+      case 'SET_ACTIVE_TAB':
+        return { ...state, activeTab: action.payload };
+      case 'SET_CONFIG':
+        return { ...state, config: action.payload };
+      case 'SET_CURRENT_PAGE':
+        return { ...state, currentPage: action.payload };
+      case 'SET_WALLETS':
+        return { ...state, wallets: action.payload };
+      case 'SET_REFRESHING':
+        return { ...state, isRefreshing: action.payload };
+      case 'SET_CONNECTION':
+        return { ...state, connection: action.payload };
+      case 'SET_SOL_BALANCES':
+        return { ...state, solBalances: action.payload };
+      case 'SET_TOKEN_BALANCES':
+        return { ...state, tokenBalances: action.payload };
+      case 'SET_AMM_KEY':
+        return { ...state, ammKey: action.payload };
+      case 'SET_LOADING_CHART':
+        return { ...state, isLoadingChart: action.payload };
+      case 'SET_MARKET_CAP':
+        return { ...state, currentMarketCap: action.payload };
+      case 'SET_MODAL':
+        return {
+          ...state,
+          modals: {
+            ...state.modals,
+            [action.payload.modal]: action.payload.open
+          }
+        };
+      case 'SET_SORT_DIRECTION':
+        return { ...state, sortDirection: action.payload };
+      case 'SET_TICK_EFFECT':
+        return { ...state, tickEffect: action.payload };
+      case 'SET_STATUS':
+        return { ...state, status: action.payload };
+      case 'UPDATE_BALANCE':
+        const newState = { ...state };
+        if (action.payload.solBalance !== undefined) {
+          newState.solBalances = new Map(state.solBalances);
+          newState.solBalances.set(action.payload.address, action.payload.solBalance);
+        }
+        if (action.payload.tokenBalance !== undefined) {
+          newState.tokenBalances = new Map(state.tokenBalances);
+          newState.tokenBalances.set(action.payload.address, action.payload.tokenBalance);
+        }
+        return newState;
+      default:
+        return state;
+    }
+  };
+
+  const [state, dispatch] = useReducer(appReducer, initialState);
+  const { showToast } = useToast();
+
+  // Memoized selectors for expensive calculations
+  const memoizedBalances = useMemo(() => {
+    return {
+      totalSolBalance: Array.from(state.solBalances.values()).reduce((sum, balance) => sum + balance, 0),
+      totalTokenBalance: Array.from(state.tokenBalances.values()).reduce((sum, balance) => sum + balance, 0),
+      walletsWithBalance: state.wallets.filter(wallet => 
+        (state.solBalances.get(wallet.address) || 0) > 0 || 
+        (state.tokenBalances.get(wallet.address) || 0) > 0
+      )
+    };
+  }, [state.solBalances, state.tokenBalances, state.wallets]);
+
+  // Memoized callbacks to prevent unnecessary re-renders
+  const memoizedCallbacks = useMemo(() => ({
+    setCopiedAddress: (address: string | null) => dispatch({ type: 'SET_COPIED_ADDRESS', payload: address }),
+    setTokenAddress: (address: string) => dispatch({ type: 'SET_TOKEN_ADDRESS', payload: address }),
+    setIsModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL_OPEN', payload: open }),
+    setIsSettingsOpen: (open: boolean) => dispatch({ type: 'SET_SETTINGS_OPEN', payload: open }),
+    setActiveTab: (tab: 'network' | 'wallets' | 'advanced') => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab }),
+    setConfig: (config: ConfigType) => dispatch({ type: 'SET_CONFIG', payload: config }),
+    setCurrentPage: (page: 'wallets' | 'chart' | 'actions') => dispatch({ type: 'SET_CURRENT_PAGE', payload: page }),
+    setWallets: (wallets: WalletType[]) => dispatch({ type: 'SET_WALLETS', payload: wallets }),
+    setIsRefreshing: (refreshing: boolean) => dispatch({ type: 'SET_REFRESHING', payload: refreshing }),
+    setConnection: (connection: Connection | null) => dispatch({ type: 'SET_CONNECTION', payload: connection }),
+    setSolBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_SOL_BALANCES', payload: balances }),
+    setTokenBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_TOKEN_BALANCES', payload: balances }),
+    setAmmKey: (key: string | null) => dispatch({ type: 'SET_AMM_KEY', payload: key }),
+    setIsLoadingChart: (loading: boolean) => dispatch({ type: 'SET_LOADING_CHART', payload: loading }),
+    setCurrentMarketCap: (cap: number | null) => dispatch({ type: 'SET_MARKET_CAP', payload: cap }),
+    setBurnModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'burnModalOpen', open } }),
+    setCalculatePNLModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'calculatePNLModalOpen', open } }),
+    setDeployModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'deployModalOpen', open } }),
+    setCleanerTokensModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'cleanerTokensModalOpen', open } }),
+    setCustomBuyModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'customBuyModalOpen', open } }),
+    setSortDirection: (direction: 'asc' | 'desc') => dispatch({ type: 'SET_SORT_DIRECTION', payload: direction }),
+    setTickEffect: (effect: boolean) => dispatch({ type: 'SET_TICK_EFFECT', payload: effect }),
+    setStatusMessage: (message: string) => dispatch({ type: 'SET_STATUS', payload: { message, isVisible: state.status.isVisible } }),
+    setIsStatusVisible: (visible: boolean) => dispatch({ type: 'SET_STATUS', payload: { message: state.status.message, isVisible: visible } })
+  }), [state.status]);
+
+  // Debounced status fetching to reduce API calls
+  const debouncedStatusFetch = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        try {
+          const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+          const response = await fetch(`${baseUrl}/status`);
+          const data = await response.json();
+          const statusText = data.status || '';
+          const trimmedText = statusText.trim();
+          
+          if (trimmedText && trimmedText !== state.status.message) {
+            memoizedCallbacks.setStatusMessage(trimmedText);
+            memoizedCallbacks.setIsStatusVisible(true);
+          } else if (!trimmedText && state.status.isVisible) {
+            memoizedCallbacks.setIsStatusVisible(false);
+            memoizedCallbacks.setStatusMessage('');
+          }
+        } catch (error) {
+          console.error('Failed to fetch status:', error);
+        }
+      }, 1000);
+    };
+  }, [state.status.message, state.status.isVisible, memoizedCallbacks]);
+
+  // Fetch status from API with reduced frequency
+  useEffect(() => {
+    debouncedStatusFetch();
+    const interval = setInterval(debouncedStatusFetch, 60000); // Reduced to 60 seconds
     return () => clearInterval(interval);
-  }, [statusMessage, isStatusVisible]);
+  }, [debouncedStatusFetch]);
 
   // Extract API key from URL
   useEffect(() => {
-    handleApiKeyFromUrl(setConfig, saveConfigToCookies, showToast);
-  }, []);
+    handleApiKeyFromUrl(memoizedCallbacks.setConfig, saveConfigToCookies, showToast);
+  }, [memoizedCallbacks.setConfig]);
 
   // Read tokenAddress from URL parameter on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('tokenAddress');
     if (tokenFromUrl) {
-      setTokenAddress(tokenFromUrl);
+      memoizedCallbacks.setTokenAddress(tokenFromUrl);
     }
-  }, []);
+  }, [memoizedCallbacks.setTokenAddress]);
 
   // Update URL when tokenAddress changes
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (tokenAddress) {
-      url.searchParams.set('tokenAddress', tokenAddress);
+    if (state.tokenAddress) {
+      url.searchParams.set('tokenAddress', state.tokenAddress);
     } else {
       url.searchParams.delete('tokenAddress');
     }
     window.history.replaceState({}, '', url.toString());
-  }, [tokenAddress]);
+  }, [state.tokenAddress]);
 
   // Fetch AMM key when token address changes
   useEffect(() => {
-    if (tokenAddress) {
-      fetchAmmKey(tokenAddress, setAmmKey, setIsLoadingChart);
+    if (state.tokenAddress) {
+      fetchAmmKey(state.tokenAddress, memoizedCallbacks.setAmmKey, memoizedCallbacks.setIsLoadingChart);
     }
-  }, [tokenAddress]);
+  }, [state.tokenAddress, memoizedCallbacks.setAmmKey, memoizedCallbacks.setIsLoadingChart]);
   
   // Initialize app on mount
   useEffect(() => {
@@ -166,12 +326,12 @@ const WalletManager: React.FC = () => {
       // Load saved config
       const savedConfig = loadConfigFromCookies();
       if (savedConfig) {
-        setConfig(savedConfig);
+        memoizedCallbacks.setConfig(savedConfig);
         
         // Create connection after loading config
         try {
           const conn = new Connection(savedConfig.rpcEndpoint);
-          setConnection(conn);
+          memoizedCallbacks.setConnection(conn);
         } catch (error) {
           console.error('Error creating connection:', error);
         }
@@ -180,121 +340,124 @@ const WalletManager: React.FC = () => {
       // Load saved wallets
       const savedWallets = loadWalletsFromCookies();
       if (savedWallets && savedWallets.length > 0) {
-        setWallets(savedWallets);
+        memoizedCallbacks.setWallets(savedWallets);
       }
     };
 
     initializeApp();
-  }, []);
+  }, [memoizedCallbacks]);
 
   // Save wallets when they change
   useEffect(() => {
-    if (wallets.length > 0) {
-      saveWalletsToCookies(wallets);
+    if (state.wallets.length > 0) {
+      saveWalletsToCookies(state.wallets);
     }
-  }, [wallets]);
+  }, [state.wallets]);
 
   // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
-    if (connection && wallets.length > 0) {
-      fetchSolBalances(connection, wallets, setSolBalances);
+    if (state.connection && state.wallets.length > 0) {
+      fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
     }
-  }, [connection, wallets.length]);
+  }, [state.connection, state.wallets.length, memoizedCallbacks.setSolBalances]);
 
   // Fetch token balances when token address changes or wallets change
   useEffect(() => {
-    if (connection && wallets.length > 0 && tokenAddress) {
-      fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
+    if (state.connection && state.wallets.length > 0 && state.tokenAddress) {
+      fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
     }
-  }, [connection, wallets.length, tokenAddress]);
+  }, [state.connection, state.wallets.length, state.tokenAddress, memoizedCallbacks.setTokenBalances]);
 
   // Update connection when RPC endpoint changes
   useEffect(() => {
     try {
-      const conn = new Connection(config.rpcEndpoint);
-      setConnection(conn);
+      const conn = new Connection(state.config.rpcEndpoint);
+      memoizedCallbacks.setConnection(conn);
     } catch (error) {
       console.error('Error creating connection:', error);
     }
-  }, [config.rpcEndpoint]);
+  }, [state.config.rpcEndpoint, memoizedCallbacks.setConnection]);
 
   // Refresh balances on load
   useEffect(() => {
-    if (connection && wallets.length > 0) {
+    if (state.connection && state.wallets.length > 0) {
       handleRefresh();
     }
-  }, [connection]);
+  }, [state.connection, state.wallets.length]);
 
   // Add effect to refresh balances when token address changes
   useEffect(() => {
-    if (connection && wallets.length > 0 && tokenAddress) {
+    if (state.connection && state.wallets.length > 0 && state.tokenAddress) {
       handleRefresh();
     }
-  }, [tokenAddress]);
+  }, [state.tokenAddress, state.connection, state.wallets.length]);
 
   // Trigger tick animation when wallet count changes
   useEffect(() => {
-    setTickEffect(true);
-    const timer = setTimeout(() => setTickEffect(false), 500);
+    memoizedCallbacks.setTickEffect(true);
+    const timer = setTimeout(() => memoizedCallbacks.setTickEffect(false), 500);
     return () => clearTimeout(timer);
-  }, [wallets.length]);
+  }, [state.wallets.length, memoizedCallbacks.setTickEffect]);
 
   // Helper functions
-  const handleRefresh = async () => {
-    if (!connection) return;
+  const handleRefresh = useCallback(async () => {
+    if (!state.connection) return;
     
-    setIsRefreshing(true);
+    memoizedCallbacks.setIsRefreshing(true);
     
     try {
       // Fetch SOL balances
-      await fetchSolBalances(connection, wallets, setSolBalances);
+      await fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
       
       // Fetch token balances if token address is provided
-      if (tokenAddress) {
-        await fetchTokenBalances(connection, wallets, tokenAddress, setTokenBalances);
+      if (state.tokenAddress) {
+        await fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);
     } finally {
       // Set refreshing to false
-      setIsRefreshing(false);
+      memoizedCallbacks.setIsRefreshing(false);
     }
-  };
+  }, [state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setIsRefreshing, memoizedCallbacks.setSolBalances, memoizedCallbacks.setTokenBalances]);
 
-  const handleConfigChange = (key: keyof ConfigType, value: string) => {
-    setConfig(prev => {
-      const newConfig = { ...prev, [key]: value };
-      saveConfigToCookies(newConfig);
-      return newConfig;
-    });
-  };
+  const handleConfigChange = useCallback((key: keyof ConfigType, value: string) => {
+    const newConfig = { ...state.config, [key]: value };
+    saveConfigToCookies(newConfig);
+    memoizedCallbacks.setConfig(newConfig);
+  }, [memoizedCallbacks.setConfig, state.config]);
 
-  const handleSaveSettings = () => {
-    saveConfigToCookies(config);
-    setIsSettingsOpen(false);
-  };
+  const handleSaveSettings = useCallback(() => {
+    saveConfigToCookies(state.config);
+    memoizedCallbacks.setIsSettingsOpen(false);
+  }, [state.config, memoizedCallbacks.setIsSettingsOpen]);
 
-  const handleDeleteWallet = (id: number) => {
-    const walletToDelete = wallets.find(w => w.id === id);
+  const handleDeleteWallet = useCallback((id: number) => {
+    const walletToDelete = state.wallets.find(w => w.id === id);
     if (walletToDelete) {
       // Remove from balances maps
-      setSolBalances(prev => {
-        const newBalances = new Map(prev);
-        newBalances.delete(walletToDelete.address);
-        return newBalances;
-      });
+      const newSolBalances = new Map(state.solBalances);
+      newSolBalances.delete(walletToDelete.address);
+      memoizedCallbacks.setSolBalances(newSolBalances);
       
-      setTokenBalances(prev => {
-        const newBalances = new Map(prev);
-        newBalances.delete(walletToDelete.address);
-        return newBalances;
-      });
+      const newTokenBalances = new Map(state.tokenBalances);
+      newTokenBalances.delete(walletToDelete.address);
+      memoizedCallbacks.setTokenBalances(newTokenBalances);
     }
     
-    setWallets(prev => deleteWallet(prev, id));
-  };
+    const updatedWallets = deleteWallet(state.wallets, id);
+    memoizedCallbacks.setWallets(updatedWallets);
+  }, [state.wallets, state.solBalances, state.tokenBalances, memoizedCallbacks.setSolBalances, memoizedCallbacks.setTokenBalances, memoizedCallbacks.setWallets]);
 
   // Modal action handlers
+  const openSettingsModal = useCallback(() => memoizedCallbacks.setIsSettingsOpen(true), [memoizedCallbacks.setIsSettingsOpen]);
+  const closeSettingsModal = useCallback(() => memoizedCallbacks.setIsSettingsOpen(false), [memoizedCallbacks.setIsSettingsOpen]);
+  const openWalletOverview = useCallback(() => memoizedCallbacks.setIsModalOpen(true), [memoizedCallbacks.setIsModalOpen]);
+  const closeWalletOverview = useCallback(() => memoizedCallbacks.setIsModalOpen(false), [memoizedCallbacks.setIsModalOpen]);
+  const openWalletsPage = useCallback(() => memoizedCallbacks.setCurrentPage('wallets'), [memoizedCallbacks.setCurrentPage]);
+  const openChartPage = useCallback(() => memoizedCallbacks.setCurrentPage('chart'), [memoizedCallbacks.setCurrentPage]);
+  const openActionsPage = useCallback(() => memoizedCallbacks.setCurrentPage('actions'), [memoizedCallbacks.setCurrentPage]);
+
   const handleBurn = async (amount: string) => {
     try {
       console.log('burn', amount, 'SOL to');
@@ -338,17 +501,17 @@ const WalletManager: React.FC = () => {
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-10"></div>
       
       {/* Status Notification Banner */}
-      {isStatusVisible && statusMessage && (
+      {state.status.isVisible && state.status.message && (
         <div className="relative bg-gradient-to-r from-red-900/90 to-red-800/90 border-b border-red-500/50 p-3 backdrop-blur-sm z-30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
               <span className="text-red-100 font-mono text-sm font-medium">
-                ⚠️ SYSTEM ALERT: {statusMessage}
+                ⚠️ SYSTEM ALERT: {state.status.message}
               </span>
             </div>
             <button
-              onClick={() => setIsStatusVisible(false)}
+              onClick={() => memoizedCallbacks.setIsStatusVisible(false)}
               className="text-red-300 hover:text-red-100 transition-colors p-1"
               aria-label="Close notification"
             >
@@ -368,8 +531,8 @@ const WalletManager: React.FC = () => {
             <input
               type="text"
               placeholder="TOKEN ADDRESS"
-              value={tokenAddress}
-              onChange={(e) => setTokenAddress(e.target.value)}
+              value={state.tokenAddress}
+              onChange={(e) => memoizedCallbacks.setTokenAddress(e.target.value)}
               className="w-full bg-[#0a1419] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono tracking-wider"
             />
             <div className="absolute right-3 top-3 text-[#02b36d40] text-xs font-mono">SOL</div>
@@ -382,7 +545,7 @@ const WalletManager: React.FC = () => {
                 try {
                   const text = await navigator.clipboard.readText();
                   if (text) {
-                    setTokenAddress(text);
+                    memoizedCallbacks.setTokenAddress(text);
                     showToast("Token address pasted from clipboard", "success");
                   }
                 } catch (err) {
@@ -400,7 +563,7 @@ const WalletManager: React.FC = () => {
           <WalletTooltip content="Open Settings" position="bottom">
             <button 
               className="p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn"
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={() => memoizedCallbacks.setIsSettingsOpen(true)}
             >
               <Settings size={20} className="text-[#02b36d]" />
             </button>
@@ -409,8 +572,8 @@ const WalletManager: React.FC = () => {
           <div className="flex items-center ml-4">
             <div className="flex flex-col items-start">
               <div className="text-xs text-[#7ddfbd] font-mono uppercase tracking-wider">WALLETS</div>
-              <div className={`font-bold text-[#02b36d] font-mono ${tickEffect ? 'scale-110 transition-transform' : 'transition-transform'}`}>
-                {wallets.length}
+              <div className={`font-bold text-[#02b36d] font-mono ${state.tickEffect ? 'scale-110 transition-transform' : 'transition-transform'}`}>
+                {state.wallets.length}
               </div>
             </div>
           </div>
@@ -437,19 +600,19 @@ const WalletManager: React.FC = () => {
           >
             {/* Left Column */}
             <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] overflow-y-auto">
-              {connection && (
+              {state.connection && (
                 <WalletsPage
-                  wallets={wallets}
-                  setWallets={setWallets}
+                  wallets={state.wallets}
+                  setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
-                  isRefreshing={isRefreshing}
-                  setIsModalOpen={setIsModalOpen}
-                  tokenAddress={tokenAddress}
-                  sortDirection={sortDirection}
-                  handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
-                  connection={connection}
-                  solBalances={solBalances}
-                  tokenBalances={tokenBalances}
+                  isRefreshing={state.isRefreshing}
+                  setIsModalOpen={memoizedCallbacks.setIsModalOpen}
+                  tokenAddress={state.tokenAddress}
+                  sortDirection={state.sortDirection}
+                  handleSortWallets={() => handleSortWallets(state.wallets, state.sortDirection, memoizedCallbacks.setSortDirection, state.solBalances, memoizedCallbacks.setWallets)}
+                  connection={state.connection}
+                  solBalances={state.solBalances}
+                  tokenBalances={state.tokenBalances}
                 />
               )}
             </div>
@@ -457,29 +620,29 @@ const WalletManager: React.FC = () => {
             {/* Middle Column */}
             <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] overflow-y-auto">
               <ChartPage
-                isLoadingChart={isLoadingChart}
-                tokenAddress={tokenAddress}
-                ammKey={ammKey}
-                walletAddresses={wallets.map(w => w.address)}
+                isLoadingChart={state.isLoadingChart}
+                tokenAddress={state.tokenAddress}
+                ammKey={state.ammKey}
+                walletAddresses={state.wallets.map(w => w.address)}
               />
             </div>
 
             {/* Right Column */}
             <div className="backdrop-blur-sm bg-[#050a0e99] overflow-y-auto">
               <ActionsPage
-                tokenAddress={tokenAddress}
-                transactionFee={config.transactionFee}
+                tokenAddress={state.tokenAddress}
+                transactionFee={state.config.transactionFee}
                 handleRefresh={handleRefresh}
-                wallets={wallets}
-                ammKey={ammKey}
-                solBalances={solBalances}
-                tokenBalances={tokenBalances}
-                currentMarketCap={currentMarketCap}
-                setBurnModalOpen={setBurnModalOpen}
-                setCalculatePNLModalOpen={setCalculatePNLModalOpen}
-                setDeployModalOpen={setDeployModalOpen}
-                setCleanerTokensModalOpen={setCleanerTokensModalOpen}
-                setCustomBuyModalOpen={setCustomBuyModalOpen}
+                wallets={state.wallets}
+                ammKey={state.ammKey}
+                solBalances={state.solBalances}
+                tokenBalances={state.tokenBalances}
+                currentMarketCap={state.currentMarketCap}
+                setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
+                setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
+                setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
+                setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
+                setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
               />
             </div>
           </Split>
@@ -487,23 +650,23 @@ const WalletManager: React.FC = () => {
 
         {/* Mobile Layout */}
         <MobileLayout
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
+          currentPage={state.currentPage}
+          setCurrentPage={memoizedCallbacks.setCurrentPage}
           children={{
             WalletsPage: (
-              connection ? (
+              state.connection ? (
                 <WalletsPage
-                  wallets={wallets}
-                  setWallets={setWallets}
+                  wallets={state.wallets}
+                  setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
-                  isRefreshing={isRefreshing}
-                  setIsModalOpen={setIsModalOpen}
-                  tokenAddress={tokenAddress}
-                  sortDirection={sortDirection}
-                  handleSortWallets={() => handleSortWallets(wallets, sortDirection, setSortDirection, solBalances, setWallets)}
-                  connection={connection}
-                  solBalances={solBalances}
-                  tokenBalances={tokenBalances}
+                  isRefreshing={state.isRefreshing}
+                  setIsModalOpen={memoizedCallbacks.setIsModalOpen}
+                  tokenAddress={state.tokenAddress}
+                  sortDirection={state.sortDirection}
+                  handleSortWallets={() => handleSortWallets(state.wallets, state.sortDirection, memoizedCallbacks.setSortDirection, state.solBalances, memoizedCallbacks.setWallets)}
+                  connection={state.connection}
+                  solBalances={state.solBalances}
+                  tokenBalances={state.tokenBalances}
                 />
               ) : (
                 <div className="p-4 text-center text-[#7ddfbd]">
@@ -516,27 +679,27 @@ const WalletManager: React.FC = () => {
             ),
             ChartPage: (
               <ChartPage
-                isLoadingChart={isLoadingChart}
-                tokenAddress={tokenAddress}
-                ammKey={ammKey}
-                walletAddresses={wallets.map(w => w.address)}
+                isLoadingChart={state.isLoadingChart}
+                tokenAddress={state.tokenAddress}
+                ammKey={state.ammKey}
+                walletAddresses={state.wallets.map(w => w.address)}
               />
             ),
             ActionsPage: (
               <ActionsPage
-                tokenAddress={tokenAddress}
-                transactionFee={config.transactionFee}
+                tokenAddress={state.tokenAddress}
+                transactionFee={state.config.transactionFee}
                 handleRefresh={handleRefresh}
-                wallets={wallets}
-                ammKey={ammKey}
-                solBalances={solBalances}
-                tokenBalances={tokenBalances}
-                currentMarketCap={currentMarketCap}
-                setBurnModalOpen={setBurnModalOpen}
-                setCalculatePNLModalOpen={setCalculatePNLModalOpen}
-                setDeployModalOpen={setDeployModalOpen}
-                setCleanerTokensModalOpen={setCleanerTokensModalOpen}
-                setCustomBuyModalOpen={setCustomBuyModalOpen}
+                wallets={state.wallets}
+                ammKey={state.ammKey}
+                solBalances={state.solBalances}
+                tokenBalances={state.tokenBalances}
+                currentMarketCap={state.currentMarketCap}
+                setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
+                setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
+                setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
+                setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
+                setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
               />
             )
           }}
@@ -545,88 +708,88 @@ const WalletManager: React.FC = () => {
   
       {/* Enhanced Settings Modal */}
       <EnhancedSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        config={config}
+        isOpen={state.isSettingsOpen}
+        onClose={() => memoizedCallbacks.setIsSettingsOpen(false)}
+        config={state.config}
         onConfigChange={handleConfigChange}
         onSave={handleSaveSettings}
-        wallets={wallets}
-        setWallets={setWallets}
-        connection={connection}
-        solBalances={solBalances}
-        setSolBalances={setSolBalances}
-        tokenBalances={tokenBalances}
-        setTokenBalances={setTokenBalances}
-        tokenAddress={tokenAddress}
+        wallets={state.wallets}
+        setWallets={memoizedCallbacks.setWallets}
+        connection={state.connection}
+        solBalances={state.solBalances}
+        setSolBalances={memoizedCallbacks.setSolBalances}
+        tokenBalances={state.tokenBalances}
+        setTokenBalances={memoizedCallbacks.setTokenBalances}
+        tokenAddress={state.tokenAddress}
         showToast={showToast}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab={state.activeTab}
+        setActiveTab={memoizedCallbacks.setActiveTab}
       />
   
       {/* Enhanced Wallet Overview */}
       <EnhancedWalletOverview
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        wallets={wallets}
-        setWallets={setWallets}
-        solBalances={solBalances}
-        tokenBalances={tokenBalances}
-        tokenAddress={tokenAddress}
-        connection={connection}
+        isOpen={state.isModalOpen}
+        onClose={() => memoizedCallbacks.setIsModalOpen(false)}
+        wallets={state.wallets}
+        setWallets={memoizedCallbacks.setWallets}
+        solBalances={state.solBalances}
+        tokenBalances={state.tokenBalances}
+        tokenAddress={state.tokenAddress}
+        connection={state.connection}
         handleRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
+        isRefreshing={state.isRefreshing}
         showToast={showToast}
         onOpenSettings={() => {
-          setIsModalOpen(false); // Close wallet overview first
-          setActiveTab('wallets');
-          setIsSettingsOpen(true);
+          memoizedCallbacks.setIsModalOpen(false); // Close wallet overview first
+          memoizedCallbacks.setActiveTab('wallets');
+          memoizedCallbacks.setIsSettingsOpen(true);
         }}
       />
 
       {/* Modals */}
       <BurnModal
-        isOpen={burnModalOpen}
+        isOpen={state.modals.burnModalOpen}
         onBurn={handleBurn}
-        onClose={() => setBurnModalOpen(false)}
+        onClose={() => memoizedCallbacks.setBurnModalOpen(false)}
         handleRefresh={handleRefresh}
-        tokenAddress={tokenAddress}
-        solBalances={solBalances} 
-        tokenBalances={tokenBalances}
+        tokenAddress={state.tokenAddress}
+        solBalances={state.solBalances} 
+        tokenBalances={state.tokenBalances}
       />
 
       <PnlModal
-        isOpen={calculatePNLModalOpen}
-        onClose={() => setCalculatePNLModalOpen(false)}
+        isOpen={state.modals.calculatePNLModalOpen}
+        onClose={() => memoizedCallbacks.setCalculatePNLModalOpen(false)}
         handleRefresh={handleRefresh}    
-        tokenAddress={tokenAddress}
+        tokenAddress={state.tokenAddress}
       />
       
       <DeployModal
-        isOpen={deployModalOpen}
-        onClose={() => setDeployModalOpen(false)}
+        isOpen={state.modals.deployModalOpen}
+        onClose={() => memoizedCallbacks.setDeployModalOpen(false)}
         handleRefresh={handleRefresh} 
-        solBalances={solBalances} 
+        solBalances={state.solBalances} 
         onDeploy={handleDeploy}    
       />
       
       <CleanerTokensModal
-        isOpen={cleanerTokensModalOpen}
-        onClose={() => setCleanerTokensModalOpen(false)}
+        isOpen={state.modals.cleanerTokensModalOpen}
+        onClose={() => memoizedCallbacks.setCleanerTokensModalOpen(false)}
         onCleanerTokens={handleCleaner}
         handleRefresh={handleRefresh}
-        tokenAddress={tokenAddress}
-        solBalances={solBalances} 
-        tokenBalances={tokenBalances}
+        tokenAddress={state.tokenAddress}
+        solBalances={state.solBalances} 
+        tokenBalances={state.tokenBalances}
       />
       
       <CustomBuyModal
-        isOpen={customBuyModalOpen}
-        onClose={() => setCustomBuyModalOpen(false)}
+        isOpen={state.modals.customBuyModalOpen}
+        onClose={() => memoizedCallbacks.setCustomBuyModalOpen(false)}
         onCustomBuy={handleCustomBuy}
         handleRefresh={handleRefresh}
-        tokenAddress={tokenAddress}
-        solBalances={solBalances} 
-        tokenBalances={tokenBalances}
+        tokenAddress={state.tokenAddress}
+        solBalances={state.solBalances} 
+        tokenBalances={state.tokenBalances}
       />
     </div>
   );

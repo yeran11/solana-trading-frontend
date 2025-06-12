@@ -394,7 +394,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     let failCount = 0;
     
     const protocolLabel = protocolOptions.find(p => p.value === selectedProtocol)?.label || selectedProtocol;
-    showToast(`🚀 Starting STAGGER with ${protocolLabel}`, 'success');
+    showToast(`🚀 Starting CUSTOM BUY with ${protocolLabel}`, 'success');
     
     try {
       for (let i = 0; i < selectedWallets.length; i++) {
@@ -446,7 +446,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
       }
       
       // Final summary
-      showToast(`STAGGER completed! ${successCount} successful, ${failCount} failed transactions`, successCount > 0 ? 'success' : 'error');
+      showToast(`CUSTOM BUY completed! ${successCount} successful, ${failCount} failed transactions`, successCount > 0 ? 'success' : 'error');
       
       if (successCount > 0) {
         handleRefresh(); // Refresh balances
@@ -459,8 +459,8 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
       }, 3000);
       
     } catch (error) {
-      console.error('STAGGER execution error:', error);
-      showToast(`STAGGER operation failed: ${error.message}`, 'error');
+      console.error('CUSTOM BUY execution error:', error);
+      showToast(`CUSTOM BUY operation failed: ${error.message}`, 'error');
     } finally {
       setIsSubmitting(false);
       setCurrentTransactionIndex(0);
@@ -1268,7 +1268,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
               <DollarSign size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> STAGGER <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> CUSTOM BUY <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 

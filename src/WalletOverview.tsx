@@ -32,7 +32,7 @@ interface EnhancedWalletOverviewProps {
   isOpen: boolean;
   onClose: () => void;
   wallets: WalletType[];
-  setWallets: React.Dispatch<React.SetStateAction<WalletType[]>>;
+  setWallets: (wallets: WalletType[]) => void;
   solBalances: Map<string, number>;
   tokenBalances: Map<string, number>;
   tokenAddress: string;
@@ -161,11 +161,9 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const deleteSelectedWallets = () => {
     if (selectedWallets.size === 0) return;
     
-    setWallets(prev => {
-      const newWallets = prev.filter(w => !selectedWallets.has(w.id));
-      saveWalletsToCookies(newWallets);
-      return newWallets;
-    });
+    const newWallets = wallets.filter(w => !selectedWallets.has(w.id));
+    saveWalletsToCookies(newWallets);
+    setWallets(newWallets);
     
     showToast(`Deleted ${selectedWallets.size} wallet${selectedWallets.size > 1 ? 's' : ''}`, 'success');
     setSelectedWallets(new Set());
@@ -432,11 +430,9 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                           <WalletTooltip content="Delete Wallet" position="top">
                             <button
                               onClick={() => {
-                                setWallets(prev => {
-                                  const newWallets = deleteWallet(prev, wallet.id);
-                                  saveWalletsToCookies(newWallets);
-                                  return newWallets;
-                                });
+                                const newWallets = deleteWallet(wallets, wallet.id);
+                                saveWalletsToCookies(newWallets);
+                                setWallets(newWallets);
                                 showToast('Wallet deleted', 'success');
                               }}
                               className="p-1 hover:bg-[#ff224420] rounded transition-all duration-300"

@@ -135,21 +135,21 @@ export const handleSortWallets = (
   solBalances: Map<string, number>,
   setWallets: Function
 ) => {
-  setWallets((prev: WalletType[]) => {
-    const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    setSortDirection(newDirection);
+  const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  setSortDirection(newDirection);
+  
+  const sortedWallets = [...wallets].sort((a, b) => {
+    const balanceA = solBalances.get(a.address) || 0;
+    const balanceB = solBalances.get(b.address) || 0;
     
-    return [...prev].sort((a, b) => {
-      const balanceA = solBalances.get(a.address) || 0;
-      const balanceB = solBalances.get(b.address) || 0;
-      
-      if (newDirection === 'asc') {
-        return balanceA - balanceB;
-      } else {
-        return balanceB - balanceA;
-      }
-    });
+    if (newDirection === 'asc') {
+      return balanceA - balanceB;
+    } else {
+      return balanceB - balanceA;
+    }
   });
+  
+  setWallets(sortedWallets);
 };
 
 /**
@@ -162,48 +162,46 @@ export const handleCleanupWallets = (
   setWallets: Function,
   showToast: Function
 ) => {
-  setWallets((prev: WalletType[]) => {
-    // Keep track of seen addresses
-    const seenAddresses = new Set<string>();
-    // Keep track of removal counts
-    let emptyCount = 0;
-    let duplicateCount = 0;
+  // Keep track of seen addresses
+  const seenAddresses = new Set<string>();
+  // Keep track of removal counts
+  let emptyCount = 0;
+  let duplicateCount = 0;
+  
+  // Filter out empty wallets and duplicates
+  const cleanedWallets = wallets.filter(wallet => {
+    // Check for empty balance (no SOL and no tokens)
+    const solBalance = solBalances.get(wallet.address) || 0;
+    const tokenBalance = tokenBalances.get(wallet.address) || 0;
     
-    // Filter out empty wallets and duplicates
-    const cleanedWallets = prev.filter(wallet => {
-      // Check for empty balance (no SOL and no tokens)
-      const solBalance = solBalances.get(wallet.address) || 0;
-      const tokenBalance = tokenBalances.get(wallet.address) || 0;
-      
-      if (solBalance <= 0 && tokenBalance <= 0) {
-        emptyCount++;
-        return false;
-      }
-      
-      // Check for duplicates
-      if (seenAddresses.has(wallet.address)) {
-        duplicateCount++;
-        return false;
-      }
-      
-      seenAddresses.add(wallet.address);
-      return true;
-    });
-
-    // Show appropriate toast message
-    if (emptyCount > 0 || duplicateCount > 0) {
-      const messages: string[] = [];
-      if (emptyCount > 0) {
-        messages.push(`${emptyCount} empty wallet${emptyCount === 1 ? '' : 's'}`);
-      }
-      if (duplicateCount > 0) {
-        messages.push(`${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`);
-      }
-      showToast(`Removed ${messages.join(' and ')}`, "success");
-    } else {
-      showToast("No empty wallets or duplicates found", "success");
+    if (solBalance <= 0 && tokenBalance <= 0) {
+      emptyCount++;
+      return false;
     }
     
-    return cleanedWallets;
+    // Check for duplicates
+    if (seenAddresses.has(wallet.address)) {
+      duplicateCount++;
+      return false;
+    }
+    
+    seenAddresses.add(wallet.address);
+    return true;
   });
+
+  // Show appropriate toast message
+  if (emptyCount > 0 || duplicateCount > 0) {
+    const messages: string[] = [];
+    if (emptyCount > 0) {
+      messages.push(`${emptyCount} empty wallet${emptyCount === 1 ? '' : 's'}`);
+    }
+    if (duplicateCount > 0) {
+      messages.push(`${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`);
+    }
+    showToast(`Removed ${messages.join(' and ')}`, "success");
+  } else {
+    showToast("No empty wallets or duplicates found", "success");
+  }
+  
+  setWallets(cleanedWallets);
 };

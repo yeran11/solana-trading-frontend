@@ -21,16 +21,16 @@ interface EnhancedSettingsModalProps {
   onConfigChange: (key: keyof ConfigType, value: string) => void;
   onSave: () => void;
   wallets: WalletType[];
-  setWallets: React.Dispatch<React.SetStateAction<WalletType[]>>;
+  setWallets: (wallets: WalletType[]) => void;
   connection: Connection | null;
   solBalances: Map<string, number>;
-  setSolBalances: React.Dispatch<React.SetStateAction<Map<string, number>>>;
+  setSolBalances: (balances: Map<string, number>) => void;
   tokenBalances: Map<string, number>;
-  setTokenBalances: React.Dispatch<React.SetStateAction<Map<string, number>>>;
+  setTokenBalances: (balances: Map<string, number>) => void;
   tokenAddress: string;
   showToast: (message: string, type: 'success' | 'error') => void;
   activeTab: 'network' | 'wallets' | 'advanced';
-  setActiveTab: React.Dispatch<React.SetStateAction<'network' | 'wallets' | 'advanced'>>;
+  setActiveTab: (tab: 'network' | 'wallets' | 'advanced') => void;
 }
 
 const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
@@ -96,7 +96,8 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
         await new Promise(resolve => setTimeout(resolve, 10));
       }
       
-      setWallets(prev => [...prev, ...newWallets]);
+      const updatedWallets = [...wallets, ...newWallets];
+      setWallets(updatedWallets);
       setSolBalances(newSolBalances);
       setTokenBalances(newTokenBalances);
       
@@ -132,30 +133,25 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
           return;
         }
         
-        setWallets(prev => [...prev, wallet]);
+        const newWallets = [...wallets, wallet];
+        setWallets(newWallets);
         
         // Fetch SOL balance for the imported wallet
         const solBalance = await fetchSolBalance(connection, wallet.address);
-        setSolBalances(prev => {
-          const newBalances = new Map(prev);
-          newBalances.set(wallet.address, solBalance);
-          return newBalances;
-        });
+        const newSolBalances = new Map(solBalances);
+        newSolBalances.set(wallet.address, solBalance);
+        setSolBalances(newSolBalances);
         
         // Fetch token balance if token address is provided
         if (tokenAddress) {
           const tokenBalance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
-          setTokenBalances(prev => {
-            const newBalances = new Map(prev);
-            newBalances.set(wallet.address, tokenBalance);
-            return newBalances;
-          });
+          const newTokenBalances = new Map(tokenBalances);
+          newTokenBalances.set(wallet.address, tokenBalance);
+          setTokenBalances(newTokenBalances);
         } else {
-          setTokenBalances(prev => {
-            const newBalances = new Map(prev);
-            newBalances.set(wallet.address, 0);
-            return newBalances;
-          });
+          const newTokenBalances = new Map(tokenBalances);
+          newTokenBalances.set(wallet.address, 0);
+          setTokenBalances(newTokenBalances);
         }
         
         setImportKey('');
@@ -248,7 +244,8 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
       if (importedWallets.length === 0) {
         setImportError('No new wallets could be imported');
       } else {
-        setWallets(prev => [...prev, ...importedWallets]);
+        const newWallets = [...wallets, ...importedWallets];
+        setWallets(newWallets);
         showToast(`Successfully imported ${importedWallets.length} wallets`, 'success');
       }
     } catch (error) {
@@ -286,14 +283,14 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 
         {/* Tab Navigation */}
         <div className="flex space-x-1 mb-6 bg-[#0a1419] rounded-lg p-1">
-          {[
+          {([
             { id: 'network', label: 'NETWORK', icon: Globe },
             { id: 'wallets', label: 'WALLETS', icon: Wallet },
             { id: 'advanced', label: 'ADVANCED', icon: Zap }
-          ].map(({ id, label, icon: Icon }) => (
+          ] as const).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id as any)}
+              onClick={() => setActiveTab(id)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-all duration-300 font-mono text-sm ${
                 activeTab === id
                   ? 'bg-[#02b36d] text-black font-bold'

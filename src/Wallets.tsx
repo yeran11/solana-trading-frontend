@@ -176,7 +176,7 @@ export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptTy
 
 interface WalletsPageProps {
   wallets: WalletType[];
-  setWallets: React.Dispatch<React.SetStateAction<WalletType[]>>;
+  setWallets: (wallets: WalletType[]) => void;
   handleRefresh: () => void;
   isRefreshing: boolean;
   setIsModalOpen: (open: boolean) => void;
@@ -305,11 +305,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
 
   const handleBalanceToggle = () => {
     setShowingTokenWallets(!showingTokenWallets);
-    setWallets(prev => {
-      const newWallets = toggleWalletsByBalance(prev, !showingTokenWallets, solBalances, tokenBalances);
-      saveWalletsToCookies(newWallets);
-      return newWallets;
-    });
+    const newWallets = toggleWalletsByBalance(wallets, !showingTokenWallets, solBalances, tokenBalances);
+    saveWalletsToCookies(newWallets);
+    setWallets(newWallets);
   };
 
   const handleRefreshAll = async () => {
@@ -383,11 +381,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                 <tr 
                   key={wallet.id}
                   onClick={() => {
-                    setWallets(prev => {
-                      const newWallets = toggleWallet(prev, wallet.id);
-                      saveWalletsToCookies(newWallets);
-                      return newWallets;
-                    });
+                    const newWallets = toggleWallet(wallets, wallet.id);
+                    saveWalletsToCookies(newWallets);
+                    setWallets(newWallets);
                   }}
                   onMouseEnter={() => setHoverRow(wallet.id)}
                   onMouseLeave={() => setHoverRow(null)}
