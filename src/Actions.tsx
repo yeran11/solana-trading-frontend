@@ -65,6 +65,8 @@ interface ActionsPageProps {
   setDeployModalOpen: (open: boolean) => void;
   setCleanerTokensModalOpen: (open: boolean) => void;
   setCustomBuyModalOpen: (open: boolean) => void;
+  onOpenFloating: () => void;
+  isFloatingCardOpen: boolean;
 }
 
 // Simplified Tooltip component without animations
@@ -106,20 +108,22 @@ export const Tooltip = ({
   );
 };
 
-export const ActionsPage: React.FC<ActionsPageProps> = ({
-  tokenAddress,
-  transactionFee,
-  handleRefresh,
-  wallets,
-  ammKey,
-  solBalances,
-  tokenBalances,
+export const ActionsPage: React.FC<ActionsPageProps> = ({ 
+  tokenAddress, 
+  transactionFee, 
+  ammKey, 
+  handleRefresh, 
+  wallets, 
+  solBalances, 
+  tokenBalances, 
   currentMarketCap,
   setBurnModalOpen,
   setCalculatePNLModalOpen,
   setDeployModalOpen,
   setCleanerTokensModalOpen,
-  setCustomBuyModalOpen
+  setCustomBuyModalOpen,
+  onOpenFloating,
+  isFloatingCardOpen
 }) => {
   // State management (no changes)
   const [buyAmount, setBuyAmount] = useState('');
@@ -131,28 +135,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   const [priceLoading, setPriceLoading] = useState(false);
   const { showToast } = useToast();
 
-  // Token price fetching effect (unchanged)
-  useEffect(() => {
-    const fetchTokenPrice = async () => {
-      if (!tokenAddress) {
-        setTokenPrice(null);
-        return;
-      }
-      
-      try {
-        setPriceLoading(true);
-        const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}`);
-        const data = await response.json();
-        setTokenPrice(data.data[tokenAddress]?.price || null);
-      } catch (error) {
-        setTokenPrice("0");
-      } finally {
-        setPriceLoading(false);
-      }
-    };
-  
-    fetchTokenPrice();
-  }, [tokenAddress, showToast]);
 
   const dexOptions = [
     { value: 'auto', label: 'Auto Route' },
@@ -165,7 +147,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     { value: 'boopfun', label: 'BoopFun' },
   ];
   
-  const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean) => {
+  const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean, dex?: string, buyAmount?: string, sellAmount?: string) => {
     setIsLoading(true);
     
     if (!tokenAddress) {
@@ -174,106 +156,22 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
       return;
     }
     
-    // If selected DEX is "auto", determine best route first
-    if (selectedDex === 'auto') {
-      try {
-        // Determine action and prepare payload
-        const action = isBuyMode ? "buy" : "sell";
-        let amount;
-        
-        if (isBuyMode) {
-          amount = buyAmount; // In SOL
-        } else {
-          // For selling, we need to calculate token amount based on percentage
-          const activeWallets = wallets.filter(wallet => wallet.isActive);
-          if (activeWallets.length === 0) {
-            showToast("Please activate at least one wallet", "error");
-            setIsLoading(false);
-            return;
-          }
-          
-          // Calculate total token balance across all active wallets
-          const totalTokenBalance = activeWallets.reduce((sum, wallet) => {
-            const balance = tokenBalances.get(wallet.address) || 0;
-            return sum + balance;
-          }, 0);
-          
-          // Calculate amount to sell based on percentage
-          const sellPercentage = parseFloat(sellAmount);
-          const tokenAmount = totalTokenBalance * (sellPercentage / 100);
-          
-          if (tokenAmount <= 0) {
-            showToast("No tokens to sell", "error");
-            setIsLoading(false);
-            return;
-          }
-          
-          amount = Math.floor(tokenAmount).toString(); // Convert to raw token amount
-        }
-        
-        const savedConfig = loadConfigFromCookies();
-        const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-        const response = await fetch(`${baseUrl}/api/tokens/route`, {
-          method: 'POST',
-          headers: {
-            'accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            action: action,
-            tokenMintAddress: tokenAddress,
-            amount: amount,
-            rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-          showToast(`Failed to determine best route: ${data.error || "Unknown error"}`, "error");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Map protocol to DEX
-        const protocolToDex = {
-          'pumpfun': 'pumpfun',
-          'moonshot': 'moonshot',
-          'pumpswap': 'pumpswap',
-          'raydium': 'raydium',
-          'jupiter': 'jupiter',
-          'launchpad': 'launchpad',
-          'boopfun': 'boopfun'
-        };
-        
-        const bestDex = protocolToDex[data.protocol.toLowerCase()];
-        
-        if (!bestDex) {
-          showToast(`Unknown protocol: ${data.protocol}. Using Jupiter as fallback.`, "error");
-          // Use Jupiter as fallback
-          const tempDex = 'jupiter';
-          const tempHandleTradeSubmit = originalHandleTradeSubmit.bind(null, tempDex);
-          await tempHandleTradeSubmit(wallets, isBuyMode);
-        } else {
-          // Use determined best DEX
-          showToast(`Using ${dexOptions.find(d => d.value === bestDex)?.label} for best rate`, "success");
-          const tempHandleTradeSubmit = originalHandleTradeSubmit.bind(null, bestDex);
-          await tempHandleTradeSubmit(wallets, isBuyMode);
-        }
-      } catch (error) {
-        console.error("Error determining best route:", error);
-        showToast(`Error determining best route: ${error.message}`, "error");
-        setIsLoading(false);
-      }
+    // Use the provided dex parameter if available, otherwise use selectedDex
+    const dexToUse = dex || selectedDex;
+    
+    // If selected DEX is "auto", use Jupiter as fallback since route determination is handled by FloatingTradingCard
+    if (dexToUse === 'auto') {
+      showToast("Auto mode is optimized for FloatingTradingCard. Using Jupiter as fallback.", "error");
+      await originalHandleTradeSubmit('jupiter', wallets, isBuyMode, buyAmount, sellAmount);
       return;
     }
     
-    // If not auto, use the selected DEX
-    await originalHandleTradeSubmit(selectedDex, wallets, isBuyMode);
+    // If not auto, use the determined DEX
+    await originalHandleTradeSubmit(dexToUse, wallets, isBuyMode, buyAmount, sellAmount);
   };
 
   // Original trade submit function that accepts selectedDex as a parameter
-  const originalHandleTradeSubmit = async (dex: string, wallets: WalletType[], isBuyMode: boolean) => {
+  const originalHandleTradeSubmit = async (dex: string, wallets: WalletType[], isBuyMode: boolean, buyAmountParam?: string, sellAmountParam?: string) => {
     // Replace the moonshot branch in handleTradeSubmit with this implementation
     if (dex === 'moonshot') {
       try {
@@ -296,7 +194,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // MoonBuy flow - implementation unchanged
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            solAmount: parseFloat(buyAmount)
+            solAmount: parseFloat(buyAmountParam || buyAmount)
           };
           
           // Create a balance map for validation
@@ -331,25 +229,11 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // MoonSell flow - implementation unchanged
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            sellPercent: parseFloat(sellAmount)
+            sellPercent: parseFloat(sellAmountParam || sellAmount)
           };
           
-          // Create a token balance map for validation
-          const tokenBalanceMap = new Map<string, number>();
-          activeWallets.forEach(wallet => {
-            const balance = tokenBalances.get(wallet.address) || 0;
-            tokenBalanceMap.set(wallet.address, balance);
-          });
-          
-          // Import and validate inputs before executing
-          const { validateMoonSellInputs, executeMoonSell } = await import('./utils/moonsell');
-          
-          const validation = validateMoonSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          if (!validation.valid) {
-            showToast(`Validation failed: ${validation.error}`, "error");
-            setIsLoading(false);
-            return;
-          }
+          // Import and execute MoonSell
+          const { executeMoonSell } = await import('./utils/moonsell');
           
           console.log(`Executing MoonSell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
@@ -394,7 +278,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // BoopBuy flow 
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            solAmount: parseFloat(buyAmount)
+            solAmount: parseFloat(buyAmountParam || buyAmount)
           };
           
           // Create a balance map for validation
@@ -427,23 +311,11 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // BoopSell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            sellPercent: parseFloat(sellAmount)
+            sellPercent: parseFloat(sellAmountParam || sellAmount)
           };
           
-          // Create a token balance map for validation
-          const tokenBalanceMap = new Map<string, number>();
-          activeWallets.forEach(wallet => {
-            const balance = tokenBalances.get(wallet.address) || 0;
-            tokenBalanceMap.set(wallet.address, balance);
-          });
-          
-          // Validate inputs before executing
-          const validation = validateBoopSellInputs(formattedWallets, tokenConfig, tokenBalanceMap);
-          if (!validation.valid) {
-            showToast(`Validation failed: ${validation.error}`, "error");
-            setIsLoading(false);
-            return;
-          }
+          // Import and execute BoopSell
+          const { executeBoopSell } = await import('./utils/boopsell');
           
           console.log(`Executing BoopSell for ${tokenAddress} with ${activeWallets.length} wallets`);
           
@@ -488,7 +360,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // PumpBuy flow 
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            solAmount: parseFloat(buyAmount)
+            solAmount: parseFloat(buyAmountParam || buyAmount)
           };
           
           // Create a balance map for validation
@@ -521,7 +393,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // PumpSell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            sellPercent: parseFloat(sellAmount)
+            sellPercent: parseFloat(sellAmountParam || sellAmount)
           };
           
           // Create a token balance map for validation
@@ -583,7 +455,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           const swapConfig = {
             inputMint: "So11111111111111111111111111111111111111112", // SOL
             outputMint: tokenAddress,
-            solAmount: parseFloat(buyAmount),
+            solAmount: parseFloat(buyAmountParam || buyAmount),
             slippageBps: 9900 // Default to 1% slippage
           };
           
@@ -620,7 +492,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           const sellConfig = {
             inputMint: tokenAddress, // Token to sell
             outputMint: "So11111111111111111111111111111111111111112", // SOL
-            sellPercent: parseFloat(sellAmount), // Percentage of tokens to sell
+            sellPercent: parseFloat(sellAmountParam || sellAmount), // Percentage of tokens to sell
             slippageBps: 9900 // Default to 1% slippage
           };
           
@@ -678,7 +550,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Ray flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            solAmount: parseFloat(buyAmount)
+            solAmount: parseFloat(buyAmountParam || buyAmount)
           };
           
           // Create a balance map for validation
@@ -713,7 +585,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // RaySell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            sellPercent: parseFloat(sellAmount)
+            sellPercent: parseFloat(sellAmountParam || sellAmount)
           };
           
           // Create a token balance map for validation
@@ -775,7 +647,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Ray flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            solAmount: parseFloat(buyAmount)
+            solAmount: parseFloat(buyAmountParam || buyAmount)
           };
           
           // Create a balance map for validation
@@ -810,7 +682,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // RaySell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            sellPercent: parseFloat(sellAmount)
+            sellPercent: parseFloat(sellAmountParam || sellAmount)
           };
           
           // Create a token balance map for validation
@@ -873,7 +745,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // MoonBuy flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            solAmount: parseFloat(buyAmount)
+            solAmount: parseFloat(buyAmountParam || buyAmount)
           };
           
           // Create a balance map for validation
@@ -908,7 +780,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // MoonSell flow
           const tokenConfig = {
             tokenAddress: tokenAddress,
-            sellPercent: parseFloat(sellAmount)
+            sellPercent: parseFloat(sellAmountParam || sellAmount)
           };
           
           // Create a token balance map for validation
@@ -1013,6 +885,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           maxWalletsConfig={maxWalletsConfig}
           currentMarketCap={currentMarketCap}
           tokenBalances={tokenBalances}
+          onOpenFloating={onOpenFloating}
+          isFloatingCardOpen={isFloatingCardOpen}
         />
         
         {/* Token Operations */}

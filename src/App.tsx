@@ -23,7 +23,7 @@ import {
 } from './Utils';
 import Split from 'react-split';
 import { useToast } from "./Notifications";
-import { 
+import {
   fetchSolBalances,
   fetchTokenBalances,
   fetchAmmKey,
@@ -32,6 +32,7 @@ import {
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
+import { countActiveWallets, validateActiveWallets, getScriptName, maxWalletsConfig } from './Wallets';
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
@@ -47,6 +48,7 @@ const PnlModal = lazy(() => import('./CalculatePNLModal').then(module => ({ defa
 const DeployModal = lazy(() => import('./DeployModal').then(module => ({ default: module.DeployModal })));
 const CleanerTokensModal = lazy(() => import('./CleanerModal').then(module => ({ default: module.CleanerTokensModal })));
 const CustomBuyModal = lazy(() => import('./CustomBuyModal').then(module => ({ default: module.CustomBuyModal })));
+const FloatingTradingCard = lazy(() => import('./FloatingTradingCard'));
 
 const WalletManager: React.FC = () => {
   // Apply styles
@@ -90,6 +92,11 @@ const WalletManager: React.FC = () => {
       message: string;
       isVisible: boolean;
     };
+    floatingCard: {
+      isOpen: boolean;
+      position: { x: number; y: number };
+      isDragging: boolean;
+    };
   }
 
   type AppAction = 
@@ -112,7 +119,10 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_SORT_DIRECTION'; payload: 'asc' | 'desc' }
     | { type: 'SET_TICK_EFFECT'; payload: boolean }
     | { type: 'SET_STATUS'; payload: { message: string; isVisible: boolean } }
-    | { type: 'UPDATE_BALANCE'; payload: { address: string; solBalance?: number; tokenBalance?: number } };
+    | { type: 'UPDATE_BALANCE'; payload: { address: string; solBalance?: number; tokenBalance?: number } }
+    | { type: 'SET_FLOATING_CARD_OPEN'; payload: boolean }
+    | { type: 'SET_FLOATING_CARD_POSITION'; payload: { x: number; y: number } }
+    | { type: 'SET_FLOATING_CARD_DRAGGING'; payload: boolean };
 
   const initialState: AppState = {
     copiedAddress: null,
@@ -123,7 +133,11 @@ const WalletManager: React.FC = () => {
     config: {
       rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
       transactionFee: '0.000005',
-      apiKey: ''
+      apiKey: '',
+      selectedDex: 'auto',
+      isDropdownOpen: false,
+      buyAmount: '',
+      sellAmount: ''
     },
     currentPage: 'wallets',
     wallets: [],
@@ -146,6 +160,11 @@ const WalletManager: React.FC = () => {
     status: {
       message: '',
       isVisible: false
+    },
+    floatingCard: {
+      isOpen: false,
+      position: { x: 100, y: 100 },
+      isDragging: false
     }
   };
 
@@ -206,6 +225,30 @@ const WalletManager: React.FC = () => {
           newState.tokenBalances.set(action.payload.address, action.payload.tokenBalance);
         }
         return newState;
+      case 'SET_FLOATING_CARD_OPEN':
+        return {
+          ...state,
+          floatingCard: {
+            ...state.floatingCard,
+            isOpen: action.payload
+          }
+        };
+      case 'SET_FLOATING_CARD_POSITION':
+        return {
+          ...state,
+          floatingCard: {
+            ...state.floatingCard,
+            position: action.payload
+          }
+        };
+      case 'SET_FLOATING_CARD_DRAGGING':
+        return {
+          ...state,
+          floatingCard: {
+            ...state.floatingCard,
+            isDragging: action.payload
+          }
+        };
       default:
         return state;
     }
@@ -251,8 +294,19 @@ const WalletManager: React.FC = () => {
     setSortDirection: (direction: 'asc' | 'desc') => dispatch({ type: 'SET_SORT_DIRECTION', payload: direction }),
     setTickEffect: (effect: boolean) => dispatch({ type: 'SET_TICK_EFFECT', payload: effect }),
     setStatusMessage: (message: string) => dispatch({ type: 'SET_STATUS', payload: { message, isVisible: state.status.isVisible } }),
-    setIsStatusVisible: (visible: boolean) => dispatch({ type: 'SET_STATUS', payload: { message: state.status.message, isVisible: visible } })
+    setIsStatusVisible: (visible: boolean) => dispatch({ type: 'SET_STATUS', payload: { message: state.status.message, isVisible: visible } }),
+    setFloatingCardOpen: (open: boolean) => dispatch({ type: 'SET_FLOATING_CARD_OPEN', payload: open }),
+    setFloatingCardPosition: (position: { x: number; y: number }) => dispatch({ type: 'SET_FLOATING_CARD_POSITION', payload: position }),
+    setFloatingCardDragging: (dragging: boolean) => dispatch({ type: 'SET_FLOATING_CARD_DRAGGING', payload: dragging })
   }), [state.status]);
+
+  // Separate callbacks for config updates to prevent unnecessary re-renders
+  const configCallbacks = useMemo(() => ({
+    setBuyAmount: (amount: string) => dispatch({ type: 'SET_CONFIG', payload: { ...state.config, buyAmount: amount } }),
+    setSellAmount: (amount: string) => dispatch({ type: 'SET_CONFIG', payload: { ...state.config, sellAmount: amount } }),
+    setSelectedDex: (dex: string) => dispatch({ type: 'SET_CONFIG', payload: { ...state.config, selectedDex: dex } }),
+    setIsDropdownOpen: (open: boolean) => dispatch({ type: 'SET_CONFIG', payload: { ...state.config, isDropdownOpen: open } })
+  }), [state.config]);
 
   // Debounced status fetching to reduce API calls
   const debouncedStatusFetch = useMemo(() => {
@@ -280,6 +334,645 @@ const WalletManager: React.FC = () => {
       }, 1000);
     };
   }, [state.status.message, state.status.isVisible, memoizedCallbacks]);
+
+  // DEX options for trading
+  const dexOptions = [
+    { value: 'auto', label: 'Auto Route' },
+    { value: 'pumpfun', label: 'PumpFun' },
+    { value: 'moonshot', label: 'Moonshot' },
+    { value: 'pumpswap', label: 'PumpSwap' },
+    { value: 'raydium', label: 'Raydium' },
+    { value: 'jupiter', label: 'Jupiter' },
+    { value: 'launchpad', label: 'Launchpad' },
+    { value: 'boopfun', label: 'BoopFun' },
+  ];
+
+  // Handle trade submission
+  const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean, dex?: string, buyAmount?: string, sellAmount?: string) => {
+    memoizedCallbacks.setIsRefreshing(true);
+    
+    if (!state.tokenAddress) {
+      showToast("Please select a token first", "error");
+      memoizedCallbacks.setIsRefreshing(false);
+      return;
+    }
+    
+    // If selected DEX is "auto", use the dex parameter passed from FloatingTradingCard
+    if (state.config.selectedDex === 'auto') {
+      if (dex && dex !== 'auto') {
+        // Use the DEX determined by FloatingTradingCard
+        showToast(`Using ${dexOptions.find(d => d.value === dex)?.label} for best rate`, "success");
+        await originalHandleTradeSubmit(dex, wallets, isBuyMode, buyAmount, sellAmount);
+      } else {
+        // Fallback to Jupiter if no specific DEX is provided
+        showToast("No optimal route determined. Using Jupiter as fallback.", "error");
+        await originalHandleTradeSubmit('jupiter', wallets, isBuyMode, buyAmount, sellAmount);
+      }
+      return;
+    }
+    
+    // If not auto, use the selected DEX
+     await originalHandleTradeSubmit(state.config.selectedDex, wallets, isBuyMode, buyAmount, sellAmount);
+  };
+
+  // Original trade submit function that accepts selectedDex as a parameter
+  const originalHandleTradeSubmit = async (dex: string, wallets: WalletType[], isBuyMode: boolean, buyAmount?: string, sellAmount?: string) => {
+    // Moonshot implementation
+    if (dex === 'moonshot') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for MoonBuy/MoonSell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // MoonBuy flow
+           const tokenConfig = {
+             tokenAddress: state.tokenAddress,
+             solAmount: parseFloat(buyAmount || state.config.buyAmount)
+           };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validateMoonBuyInputs, executeMoonBuy } = await import('./utils/moonbuy');
+          
+          const validation = validateMoonBuyInputs(formattedWallets, tokenConfig, walletBalances);
+           if (!validation.valid) {
+             showToast(`Validation failed: ${validation.error}`, "error");
+             memoizedCallbacks.setIsRefreshing(false);
+             return;
+           }
+          
+          console.log(`Executing MoonBuy for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute MoonBuy operation
+          const result = await executeMoonBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("MoonBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`MoonBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // MoonSell flow
+           const tokenConfig = {
+             tokenAddress: state.tokenAddress,
+             sellPercent: parseFloat(sellAmount || state.config.sellAmount)
+           };
+          
+          // Import and execute MoonSell
+          const { executeMoonSell } = await import('./utils/moonsell');
+          
+          console.log(`Executing MoonSell for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute MoonSell operation
+          const result = await executeMoonSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("MoonSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`MoonSell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Moonshot ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+    
+    // BoopFun implementation
+    if (dex === 'boopfun') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for BoopBuy/BoopSell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // BoopBuy flow
+           const tokenConfig = {
+             tokenAddress: state.tokenAddress,
+             solAmount: parseFloat(buyAmount || state.config.buyAmount)
+           };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validateBoopBuyInputs, executeBoopBuy } = await import('./utils/boopbuy');
+          
+          const validation = validateBoopBuyInputs(formattedWallets, tokenConfig, walletBalances);
+           if (!validation.valid) {
+             showToast(`Validation failed: ${validation.error}`, "error");
+             memoizedCallbacks.setIsRefreshing(false);
+             return;
+           }
+          
+          console.log(`Executing BoopBuy for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute BoopBuy operation
+          const result = await executeBoopBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("BoopBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`BoopBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // BoopSell flow
+           const tokenConfig = {
+             tokenAddress: state.tokenAddress,
+             sellPercent: parseFloat(sellAmount || state.config.sellAmount)
+           };
+          
+          // Import and execute BoopSell
+          const { executeBoopSell } = await import('./utils/boopsell');
+          
+          console.log(`Executing BoopSell for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute BoopSell operation
+          const result = await executeBoopSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("BoopSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`BoopSell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Boop${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+    
+    // PumpFun implementation
+    if (dex === 'pumpfun') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for PumpBuy/PumpSell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // PumpBuy flow
+           const tokenConfig = {
+             tokenAddress: state.tokenAddress,
+             solAmount: parseFloat(buyAmount || state.config.buyAmount)
+           };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validatePumpBuyInputs, executePumpBuy } = await import('./utils/pumpbuy');
+          
+          const validation = validatePumpBuyInputs(formattedWallets, tokenConfig, walletBalances);
+           if (!validation.valid) {
+             showToast(`Validation failed: ${validation.error}`, "error");
+             memoizedCallbacks.setIsRefreshing(false);
+             return;
+           }
+          
+          console.log(`Executing PumpBuy for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute PumpBuy operation
+          const result = await executePumpBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("PumpBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`PumpBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // PumpSell flow
+           const tokenConfig = {
+             tokenAddress: state.tokenAddress,
+             sellPercent: parseFloat(sellAmount || state.config.sellAmount)
+           };
+          
+          // Import and execute PumpSell
+          const { executePumpSell } = await import('./utils/pumpsell');
+          
+          console.log(`Executing PumpSell for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute PumpSell operation
+          const result = await executePumpSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("PumpSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`PumpSell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Pump${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+    
+    // Jupiter implementation
+    if (dex === 'jupiter') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for Jupiter operations
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // Jupiter Buy flow
+          const swapConfig = {
+            inputMint: "So11111111111111111111111111111111111111112", // SOL
+            outputMint: state.tokenAddress,
+            solAmount: parseFloat(buyAmount || state.config.buyAmount),
+            slippageBps: 9900 // Default to 1% slippage
+          };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validateJupSwapInputs, executeJupSwap } = await import('./utils/jupbuy');
+          
+          const validation = validateJupSwapInputs(formattedWallets, swapConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            memoizedCallbacks.setIsRefreshing(false);
+            return;
+          }
+          
+          console.log(`Executing Jupiter Swap (Buy) for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute JupSwap operation
+          const result = await executeJupSwap(formattedWallets, swapConfig);
+          
+          if (result.success) {
+            showToast("Jupiter Buy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`Jupiter Buy failed: ${result.error}`, "error");
+          }
+        } else {
+          // Jupiter Sell flow
+          const sellConfig = {
+            inputMint: state.tokenAddress, // Token to sell
+            outputMint: "So11111111111111111111111111111111111111112", // SOL
+            sellPercent: parseFloat(sellAmount || state.config.sellAmount), // Percentage of tokens to sell
+            slippageBps: 9900 // Default to 1% slippage
+          };
+          
+          // Import the dedicated sell functions from jupsell
+          const { executeJupSell } = await import('./utils/jupsell');
+          
+          console.log(`Executing Jupiter Sell for ${state.tokenAddress} with ${activeWallets.length} wallets (${sellConfig.sellPercent}%)`);
+          
+          // Execute JupSell operation with RPC URL
+          const result = await executeJupSell(formattedWallets, sellConfig);
+          
+          if (result.success) {
+            showToast("Jupiter Sell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`Jupiter Sell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Jupiter ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+  
+    // Raydium implementation
+    if (dex === 'raydium') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for RayBuy/RaySell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // RayBuy flow
+          const tokenConfig = {
+            tokenAddress: state.tokenAddress,
+            solAmount: parseFloat(buyAmount || state.config.buyAmount)
+          };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validateRayBuyInputs, executeRayBuy } = await import('./utils/raybuy');
+          
+          const validation = validateRayBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            memoizedCallbacks.setIsRefreshing(false);
+            return;
+          }
+          
+          console.log(`Executing RayBuy for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute RayBuy operation
+          const result = await executeRayBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("RayBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`RayBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // RaySell flow
+          const tokenConfig = {
+            tokenAddress: state.tokenAddress,
+            sellPercent: parseFloat(sellAmount || state.config.sellAmount)
+          };
+          
+          // Import and execute RaySell
+          const { executeRaySell } = await import('./utils/raysell');
+          
+          console.log(`Executing RaySell for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute RaySell operation
+          const result = await executeRaySell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("RaySell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`RaySell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Raydium ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+    
+    // Launchpad implementation
+    if (dex === 'launchpad') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for LaunchBuy/LaunchSell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // LaunchBuy flow
+          const tokenConfig = {
+            tokenAddress: state.tokenAddress,
+            solAmount: parseFloat(buyAmount || state.config.buyAmount)
+          };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validateLaunchBuyInputs, executeLaunchBuy } = await import('./utils/launchbuy');
+          
+          const validation = validateLaunchBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            memoizedCallbacks.setIsRefreshing(false);
+            return;
+          }
+          
+          console.log(`Executing LaunchBuy for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute LaunchBuy operation
+          const result = await executeLaunchBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("LaunchBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`LaunchBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // LaunchSell flow
+          const tokenConfig = {
+            tokenAddress: state.tokenAddress,
+            sellPercent: parseFloat(sellAmount || state.config.sellAmount)
+          };
+          
+          // Import and execute LaunchSell
+          const { executeLaunchSell } = await import('./utils/launchsell');
+          
+          console.log(`Executing LaunchSell for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute LaunchSell operation
+          const result = await executeLaunchSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("LaunchSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`LaunchSell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Launch ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+    
+    // PumpSwap implementation
+    if (dex === 'pumpswap') {
+      try {
+        // Get active wallets
+        const activeWallets = wallets.filter(wallet => wallet.isActive);
+        
+        if (activeWallets.length === 0) {
+           showToast("Please activate at least one wallet", "error");
+           memoizedCallbacks.setIsRefreshing(false);
+           return;
+         }
+        
+        // Format wallets for SwapBuy/SwapSell
+        const formattedWallets = activeWallets.map(wallet => ({
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }));
+        
+        if (isBuyMode) {
+          // SwapBuy flow
+          const tokenConfig = {
+            tokenAddress: state.tokenAddress,
+            solAmount: parseFloat(buyAmount || state.config.buyAmount)
+          };
+          
+          // Create a balance map for validation
+           const walletBalances = new Map<string, number>();
+           activeWallets.forEach(wallet => {
+             const balance = state.solBalances.get(wallet.address) || 0;
+             walletBalances.set(wallet.address, balance);
+           });
+          
+          // Import and validate inputs before executing
+          const { validateSwapBuyInputs, executeSwapBuy } = await import('./utils/swapbuy');
+          
+          const validation = validateSwapBuyInputs(formattedWallets, tokenConfig, walletBalances);
+          if (!validation.valid) {
+            showToast(`Validation failed: ${validation.error}`, "error");
+            memoizedCallbacks.setIsRefreshing(false);
+            return;
+          }
+          
+          console.log(`Executing SwapBuy for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute SwapBuy operation
+          const result = await executeSwapBuy(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("SwapBuy transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`SwapBuy failed: ${result.error}`, "error");
+          }
+        } else {
+          // SwapSell flow
+          const tokenConfig = {
+            tokenAddress: state.tokenAddress,
+            sellPercent: parseFloat(sellAmount || state.config.sellAmount)
+          };
+          
+          // Import and execute SwapSell
+          const { executeSwapSell } = await import('./utils/swapsell');
+          
+          console.log(`Executing SwapSell for ${state.tokenAddress} with ${activeWallets.length} wallets`);
+          
+          // Execute SwapSell operation
+          const result = await executeSwapSell(formattedWallets, tokenConfig);
+          
+          if (result.success) {
+            showToast("SwapSell transactions submitted successfully", "success");
+            handleRefresh(); // Refresh balances
+          } else {
+            showToast(`SwapSell failed: ${result.error}`, "error");
+          }
+        }
+      } catch (error) {
+        console.error(`Swap ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        showToast(`Error: ${error.message}`, "error");
+      } finally {
+         memoizedCallbacks.setIsRefreshing(false);
+       }
+      return;
+    }
+    
+    // Default case - unsupported DEX
+    showToast(`Unsupported DEX: ${dex}`, "error");
+    memoizedCallbacks.setIsRefreshing(false);
+  };
 
   // Fetch status from API with reduced frequency
   useEffect(() => {
@@ -643,6 +1336,8 @@ const WalletManager: React.FC = () => {
                 setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
                 setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
                 setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
+                onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
+                isFloatingCardOpen={state.floatingCard.isOpen}
               />
             </div>
           </Split>
@@ -700,6 +1395,8 @@ const WalletManager: React.FC = () => {
                 setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
                 setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
                 setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
+                onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
+                isFloatingCardOpen={state.floatingCard.isOpen}
               />
             )
           }}
@@ -789,6 +1486,34 @@ const WalletManager: React.FC = () => {
         handleRefresh={handleRefresh}
         tokenAddress={state.tokenAddress}
         solBalances={state.solBalances} 
+        tokenBalances={state.tokenBalances}
+      />
+      
+      <FloatingTradingCard
+        isOpen={state.floatingCard.isOpen}
+        onClose={() => memoizedCallbacks.setFloatingCardOpen(false)}
+        position={state.floatingCard.position}
+        onPositionChange={memoizedCallbacks.setFloatingCardPosition}
+        isDragging={state.floatingCard.isDragging}
+        onDraggingChange={memoizedCallbacks.setFloatingCardDragging}
+        tokenAddress={state.tokenAddress}
+        wallets={state.wallets}
+        selectedDex={state.config.selectedDex}
+        setSelectedDex={configCallbacks.setSelectedDex}
+        isDropdownOpen={state.config.isDropdownOpen}
+        setIsDropdownOpen={configCallbacks.setIsDropdownOpen}
+        buyAmount={state.config.buyAmount}
+        setBuyAmount={configCallbacks.setBuyAmount}
+        sellAmount={state.config.sellAmount}
+        setSellAmount={configCallbacks.setSellAmount}
+        handleTradeSubmit={handleTradeSubmit}
+        isLoading={state.isRefreshing}
+        dexOptions={dexOptions}
+        validateActiveWallets={validateActiveWallets}
+        getScriptName={getScriptName}
+        countActiveWallets={countActiveWallets}
+        maxWalletsConfig={maxWalletsConfig}
+        currentMarketCap={state.currentMarketCap}
         tokenBalances={state.tokenBalances}
       />
     </div>

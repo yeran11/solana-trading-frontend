@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Users, ArrowDownCircle, ArrowUpCircle, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, Users, ArrowDownCircle, ArrowUpCircle, Loader2, Sparkles, Move } from 'lucide-react';
 import { loadConfigFromCookies } from './Utils';
 
 // Helper function to format numbers with k, M, B suffixes
@@ -77,7 +77,9 @@ const TradingCard = ({
   countActiveWallets,
   maxWalletsConfig,
   currentMarketCap,
-  tokenBalances
+  tokenBalances,
+  onOpenFloating,
+  isFloatingCardOpen
 }) => {
   const [bestDex, setBestDex] = useState(null);
   const [estimatedBuyTokens, setEstimatedBuyTokens] = useState("0");
@@ -293,30 +295,104 @@ const TradingCard = ({
     }
   };
   
-  // Update estimates when amounts change
+  // Update estimates when amounts change (with debounce to prevent excessive API calls)
   useEffect(() => {
-    if (buyAmount && parseFloat(buyAmount) > 0) {
-      fetchEstimatedTokens(buyAmount);
-    } else {
-      setEstimatedBuyTokens("0");
-    }
+    const timeoutId = setTimeout(() => {
+      if (buyAmount && parseFloat(buyAmount) > 0) {
+        fetchEstimatedTokens(buyAmount);
+      } else {
+        setEstimatedBuyTokens("0");
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timeoutId);
   }, [buyAmount, tokenAddress, selectedDex]);
   
   useEffect(() => {
-    if (sellAmount && parseFloat(sellAmount) > 0) {
-      fetchEstimatedSell(sellAmount);
-    } else {
-      setEstimatedSellSol("0");
-    }
+    const timeoutId = setTimeout(() => {
+      if (sellAmount && parseFloat(sellAmount) > 0) {
+        fetchEstimatedSell(sellAmount);
+      } else {
+        setEstimatedSellSol("0");
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timeoutId);
   }, [sellAmount, tokenAddress, selectedDex]);
   
   // Handle trade submission with the best DEX when auto is selected
-  const handleTradeWithBestDex = (wallets, isBuy) => {
-    // If auto is selected and we have a best DEX, use that for the trade
-    // but keep the UI showing "auto"
-    if (selectedDex === 'auto' && bestDex) {
-      // Call the handleTradeSubmit with the best DEX instead of 'auto'
-      handleTradeSubmit(wallets, isBuy, bestDex);
+  const handleTradeWithBestDex = async (wallets, isBuy) => {
+    // If auto is selected, ensure we have a best DEX
+    if (selectedDex === 'auto') {
+      if (bestDex) {
+        // Use the already determined best DEX
+        handleTradeSubmit(wallets, isBuy, bestDex);
+      } else {
+        // Fetch the best DEX immediately if not available
+        try {
+          const activeWallets = wallets.filter(wallet => wallet.isActive);
+          if (activeWallets.length === 0) {
+            handleTradeSubmit(wallets, isBuy); // Fallback to normal flow
+            return;
+          }
+          
+          let amount;
+          if (isBuy) {
+            amount = buyAmount ? (parseFloat(buyAmount) * activeWallets.length).toString() : "0.01";
+          } else {
+            // Calculate sell amount
+            const totalTokenBalance = activeWallets.reduce((sum, wallet) => {
+              const balance = tokenBalances.get(wallet.address) || 0;
+              return sum + balance;
+            }, 0);
+            const sellPercentage = sellAmount ? parseFloat(sellAmount) : 100;
+            const tokenAmount = totalTokenBalance * (sellPercentage / 100);
+            amount = Math.floor(tokenAmount).toString();
+          }
+          
+          const savedConfig = loadConfigFromCookies();
+          const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+          const response = await fetch(`${baseUrl}/api/tokens/route`, {
+            method: 'POST',
+            headers: {
+              'accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              action: isBuy ? "buy" : "sell",
+              tokenMintAddress: tokenAddress,
+              amount: amount,
+              rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            const protocolToDex = {
+              'pumpfun': 'pumpfun',
+              'moonshot': 'moonshot',
+              'pumpswap': 'pumpswap',
+              'raydium': 'raydium',
+              'jupiter': 'jupiter',
+              'launchpad': 'launchpad',
+              'boopfun': 'boopfun'
+            };
+            
+            const determinedDex = protocolToDex[data.protocol.toLowerCase()];
+            if (determinedDex) {
+              setBestDex(determinedDex);
+              handleTradeSubmit(wallets, isBuy, determinedDex);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error determining best DEX for trade:", error);
+        }
+        
+        // Fallback to normal flow if route determination fails
+        handleTradeSubmit(wallets, isBuy);
+      }
     } else {
       // Normal flow with selected DEX
       handleTradeSubmit(wallets, isBuy);
@@ -491,63 +567,191 @@ const TradingCard = ({
     );
   };
 
-  return (
-    <div 
-      className="relative overflow-hidden p-5 rounded-xl cyberpunk-border"
-      style={{
-        background: "linear-gradient(135deg, rgba(9,18,23,0.8) 0%, rgba(5,10,14,0.9) 100%)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid rgba(2,179,109,0.3)"
-      }}
-    >
-      {/* Header - Title & Type selector */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between relative z-20"> 
-          <CustomSelect />
-          <WalletCounter />
-      </div>
-      <br></br>
-      {/* Trading Interface - THINNER & MORE MINIMAL */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
-        {/* Buy Section */}
-        <div className="space-y-2 p-2 rounded-lg border border-[#02b36d20] bg-[#02b36d08]">
-          <div className="flex items-center gap-1">
-            <span className="block text-xs font-medium font-mono uppercase tracking-wider text-[#02b36d]">Buy</span>
-            <div className="text-xs text-[#7ddfbd60] font-mono">[SOL]</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              value={buyAmount}
-              onChange={(e) => handleAmountChange(e, 'buy')}
-              placeholder="0.5"
-              disabled={!tokenAddress}
-            />
-            <TradeButton isBuy={true} amount={buyAmount} />
-          </div>
-          {buyAmount && <EstimateDisplay isBuy={true} amount={buyAmount} />}
-        </div>
 
-        {/* Sell Section */}
-        <div className="space-y-2 p-2 rounded-lg border border-[#ff323220] bg-[#ff323208]">
-          <div className="flex items-center gap-1">
-            <span className="block text-xs font-medium font-mono uppercase tracking-wider text-[#ff3232]">Sell</span>
-            <div className="text-xs text-[#ff323260] font-mono">[%]</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              value={sellAmount}
-              onChange={(e) => handleAmountChange(e, 'sell')}
-              placeholder="20"
-              disabled={!tokenAddress}
-              className="border-[#ff323240] focus:border-[#ff3232] focus:ring-[#ff323240]"
+
+  return (
+    <>
+      <div 
+        className="relative overflow-hidden p-5 rounded-xl cyberpunk-border"
+        style={{
+          background: "linear-gradient(135deg, rgba(9,18,23,0.8) 0%, rgba(5,10,14,0.9) 100%)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(2,179,109,0.3)"
+        }}
+      >
+        {/* Curved corners with subtle glow - all four corners - slimmer and taller */}
+        {/* Top-right corner */}
+        <div
+          onClick={onOpenFloating}
+          className="absolute top-0 right-0 w-6 h-16 cursor-pointer group z-30"
+          title="Open floating trading card"
+        >
+          <div className="absolute top-0 right-0 w-full h-full">
+            <svg
+              width="24"
+              height="64"
+              viewBox="0 0 24 64"
+              className="absolute top-0 right-0"
+            >
+              <path
+                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
+                fill="rgba(2,179,109,0.1)"
+                stroke="rgba(2,179,109,0.4)"
+                strokeWidth="1"
+                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
+              />
+            </svg>
+            <Move 
+              size={10} 
+              className="absolute top-2 right-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
             />
-            <TradeButton isBuy={false} amount={sellAmount} />
           </div>
-          {sellAmount && <EstimateDisplay isBuy={false} amount={sellAmount} />}
         </div>
+        
+        {/* Top-left corner */}
+        <div
+          onClick={onOpenFloating}
+          className="absolute top-0 left-0 w-6 h-16 cursor-pointer group z-30"
+          title="Open floating trading card"
+        >
+          <div className="absolute top-0 left-0 w-full h-full">
+            <svg
+              width="24"
+              height="64"
+              viewBox="0 0 24 64"
+              className="absolute top-0 left-0 transform scale-x-[-1]"
+            >
+              <path
+                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
+                fill="rgba(2,179,109,0.1)"
+                stroke="rgba(2,179,109,0.4)"
+                strokeWidth="1"
+                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
+              />
+            </svg>
+            <Move 
+              size={10} 
+              className="absolute top-2 left-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
+            />
+          </div>
+        </div>
+        
+        {/* Bottom-right corner */}
+        <div
+          onClick={onOpenFloating}
+          className="absolute bottom-0 right-0 w-6 h-16 cursor-pointer group z-30"
+          title="Open floating trading card"
+        >
+          <div className="absolute bottom-0 right-0 w-full h-full">
+            <svg
+              width="24"
+              height="64"
+              viewBox="0 0 24 64"
+              className="absolute bottom-0 right-0 transform scale-y-[-1]"
+            >
+              <path
+                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
+                fill="rgba(2,179,109,0.1)"
+                stroke="rgba(2,179,109,0.4)"
+                strokeWidth="1"
+                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
+              />
+            </svg>
+            <Move 
+              size={10} 
+              className="absolute bottom-2 right-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
+            />
+          </div>
+        </div>
+        
+        {/* Bottom-left corner */}
+        <div
+          onClick={onOpenFloating}
+          className="absolute bottom-0 left-0 w-6 h-16 cursor-pointer group z-30"
+          title="Open floating trading card"
+        >
+          <div className="absolute bottom-0 left-0 w-full h-full">
+            <svg
+              width="24"
+              height="64"
+              viewBox="0 0 24 64"
+              className="absolute bottom-0 left-0 transform scale-x-[-1] scale-y-[-1]"
+            >
+              <path
+                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
+                fill="rgba(2,179,109,0.1)"
+                stroke="rgba(2,179,109,0.4)"
+                strokeWidth="1"
+                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
+              />
+            </svg>
+            <Move 
+              size={10} 
+              className="absolute bottom-2 left-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
+            />
+          </div>
+        </div>
+        
+        {/* Header - Title & Type selector */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between relative z-20"> 
+            <CustomSelect />
+            <WalletCounter />
+        </div>
+        <br></br>
+        {/* Trading Interface - THINNER & MORE MINIMAL */}
+        {!isFloatingCardOpen && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
+            {/* Buy Section */}
+            <div className="space-y-2 p-2 rounded-lg border border-[#02b36d20] bg-[#02b36d08]">
+              <div className="flex items-center gap-1">
+                <span className="block text-xs font-medium font-mono uppercase tracking-wider text-[#02b36d]">Buy</span>
+                <div className="text-xs text-[#7ddfbd60] font-mono">[SOL]</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={buyAmount}
+                  onChange={(e) => handleAmountChange(e, 'buy')}
+                  placeholder="0.5"
+                  disabled={!tokenAddress}
+                />
+                <TradeButton isBuy={true} amount={buyAmount} />
+              </div>
+              {buyAmount && <EstimateDisplay isBuy={true} amount={buyAmount} />}
+            </div>
+
+            {/* Sell Section */}
+            <div className="space-y-2 p-2 rounded-lg border border-[#ff323220] bg-[#ff323208]">
+              <div className="flex items-center gap-1">
+                <span className="block text-xs font-medium font-mono uppercase tracking-wider text-[#ff3232]">Sell</span>
+                <div className="text-xs text-[#ff323260] font-mono">[%]</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={sellAmount}
+                  onChange={(e) => handleAmountChange(e, 'sell')}
+                  placeholder="20"
+                  disabled={!tokenAddress}
+                  className="border-[#ff323240] focus:border-[#ff3232] focus:ring-[#ff323240]"
+                />
+                <TradeButton isBuy={false} amount={sellAmount} />
+              </div>
+              {sellAmount && <EstimateDisplay isBuy={false} amount={sellAmount} />}
+            </div>
+          </div>
+        )}
+        {/* Show message when floating card is open */}
+        {isFloatingCardOpen && (
+          <div className="text-center py-8">
+            <div className="text-[#02b36d] font-mono text-sm">
+              Close the draggable trading view to go back to default view.
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+
+    </>
   );
 };
 

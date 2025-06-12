@@ -14,6 +14,10 @@ export interface ConfigType {
   rpcEndpoint: string;
   transactionFee: string;
   apiKey: string;
+  selectedDex: string;
+  isDropdownOpen: boolean;
+  buyAmount: string;
+  sellAmount: string;
 }
 
 export const toggleWallet = (wallets: WalletType[], id: number): WalletType[] => {
