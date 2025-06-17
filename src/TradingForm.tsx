@@ -326,13 +326,13 @@ const TradingCard = ({
     if (selectedDex === 'auto') {
       if (bestDex) {
         // Use the already determined best DEX
-        handleTradeSubmit(wallets, isBuy, bestDex);
+        handleTradeSubmit(wallets, isBuy, bestDex, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
       } else {
         // Fetch the best DEX immediately if not available
         try {
           const activeWallets = wallets.filter(wallet => wallet.isActive);
           if (activeWallets.length === 0) {
-            handleTradeSubmit(wallets, isBuy); // Fallback to normal flow
+            handleTradeSubmit(wallets, isBuy, undefined, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount); // Fallback to normal flow
             return;
           }
           
@@ -382,7 +382,7 @@ const TradingCard = ({
             const determinedDex = protocolToDex[data.protocol.toLowerCase()];
             if (determinedDex) {
               setBestDex(determinedDex);
-              handleTradeSubmit(wallets, isBuy, determinedDex);
+              handleTradeSubmit(wallets, isBuy, determinedDex, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
               return;
             }
           }
@@ -391,11 +391,11 @@ const TradingCard = ({
         }
         
         // Fallback to normal flow if route determination fails
-        handleTradeSubmit(wallets, isBuy);
+        handleTradeSubmit(wallets, isBuy, undefined, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
       }
     } else {
       // Normal flow with selected DEX
-      handleTradeSubmit(wallets, isBuy);
+      handleTradeSubmit(wallets, isBuy, undefined, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
     }
   };
   
