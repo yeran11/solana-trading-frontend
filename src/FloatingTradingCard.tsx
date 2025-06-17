@@ -447,14 +447,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
   };
   
   // Handle trade submission with the best DEX when auto is selected
-  const handleTradeWithBestDex = async (amount, isBuy) => {
-    // Set the amount in parent state
-    if (isBuy) {
-      setBuyAmount(amount);
-    } else {
-      setSellAmount(amount);
-    }
-    
+  const handleTradeWithBestDex = useCallback(async (amount, isBuy) => {
     let dexToUse = manualProtocol || selectedDex;
     
     if (!manualProtocol && selectedDex === 'auto') {
@@ -546,13 +539,21 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
       }
     }
     
-    // Call the original handleTradeSubmit with the determined DEX and amounts
+    // Set the amount in parent state and call handleTradeSubmit with the correct amount
     if (isBuy) {
-      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
+      setBuyAmount(amount);
+      // Use setTimeout to ensure state update is processed
+      setTimeout(() => {
+        handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
+      }, 0);
     } else {
-      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
+      setSellAmount(amount);
+      // Use setTimeout to ensure state update is processed
+      setTimeout(() => {
+        handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
+      }, 0);
     }
-  };
+  }, [manualProtocol, selectedDex, initialProtocol, wallets, tokenAddress, tokenBalances, setBuyAmount, setSellAmount, handleTradeSubmit]);
   
   // Drag functionality
   const handleMouseDown = (e: React.MouseEvent) => {
