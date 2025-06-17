@@ -539,19 +539,15 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
       }
     }
     
-    // Set the amount in parent state and call handleTradeSubmit with the correct amount
+    // Set the amount in parent state immediately and call handleTradeSubmit
     if (isBuy) {
       setBuyAmount(amount);
-      // Use setTimeout to ensure state update is processed
-      setTimeout(() => {
-        handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
-      }, 0);
+      // Call handleTradeSubmit immediately with the current amount to avoid race conditions
+      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
     } else {
       setSellAmount(amount);
-      // Use setTimeout to ensure state update is processed
-      setTimeout(() => {
-        handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
-      }, 0);
+      // Call handleTradeSubmit immediately with the current amount to avoid race conditions
+      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
     }
   }, [manualProtocol, selectedDex, initialProtocol, wallets, tokenAddress, tokenBalances, setBuyAmount, setSellAmount, handleTradeSubmit]);
   
