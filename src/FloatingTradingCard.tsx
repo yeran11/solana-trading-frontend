@@ -215,7 +215,7 @@ interface FloatingTradingCardProps {
   setBuyAmount: (amount: string) => void;
   sellAmount: string;
   setSellAmount: (amount: string) => void;
-  handleTradeSubmit: (wallets: any[], isBuy: boolean, dex?: string) => void;
+  handleTradeSubmit: (wallets: any[], isBuy: boolean, dex?: string, buyAmount?: string, sellAmount?: string) => void;
   isLoading: boolean;
   dexOptions: any[];
   validateActiveWallets: (wallets: WalletType[], scriptName: ScriptType) => { 
@@ -539,15 +539,15 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
       }
     }
     
-    // Set the amount in parent state immediately and call handleTradeSubmit
+    // Set the amount in parent state and call handleTradeSubmit with the specific amount
     if (isBuy) {
       setBuyAmount(amount);
-      // Call handleTradeSubmit immediately with the current amount to avoid race conditions
-      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
+      // Pass the amount directly to avoid using stale state values
+      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined, amount, undefined);
     } else {
       setSellAmount(amount);
-      // Call handleTradeSubmit immediately with the current amount to avoid race conditions
-      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined);
+      // Pass the amount directly to avoid using stale state values
+      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined, undefined, amount);
     }
   }, [manualProtocol, selectedDex, initialProtocol, wallets, tokenAddress, tokenBalances, setBuyAmount, setSellAmount, handleTradeSubmit]);
   
