@@ -1,6 +1,3 @@
-
-# Solana UI
-
 <div align="center">
 
 
