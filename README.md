@@ -1,6 +1,6 @@
 ## 🚀 One-Click Deployment
 
-You can deploy **Solana UI** instantly using either **Vercel** or **Netlify** with the buttons below:
+You can deploy **Raze.bot** instantly using either **Vercel** or **Netlify** with the buttons below:
 
 <div align="center">
 
