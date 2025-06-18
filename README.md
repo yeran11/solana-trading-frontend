@@ -1,3 +1,9 @@
+<p align="center">
+
+  <img src="https://img.shields.io/badge/Built%20on-Solana-3a0ca3?style=for-the-badge&logo=solana" alt="Built on Solana" />
+  <img src="https://img.shields.io/badge/Open%20Source-Yes-00b386?style=for-the-badge&logo=github" alt="Open Source" />
+</p>
+
 ## 🚀 One-Click Deployment
 
 You can deploy **Raze.bot** instantly using either **Vercel** or **Netlify** with the buttons below:
@@ -8,12 +14,6 @@ You can deploy **Raze.bot** instantly using either **Vercel** or **Netlify** wit
 [![Deploy with Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/furydotbot/raze.bot)
 
 </div>
-
-<p align="center">
-
-  <img src="https://img.shields.io/badge/Built%20on-Solana-3a0ca3?style=for-the-badge&logo=solana" alt="Built on Solana" />
-  <img src="https://img.shields.io/badge/Open%20Source-Yes-00b386?style=for-the-badge&logo=github" alt="Open Source" />
-</p>
 
 ![Raze.bot image](https://i.imgur.com/fDrfNv3.png)
 
