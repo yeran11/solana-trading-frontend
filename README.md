@@ -1,5 +1,8 @@
-<div align="center">
+## 🚀 One-Click Deployment
 
+You can deploy **Solana UI** instantly using either **Vercel** or **Netlify** with the buttons below:
+
+<div align="center">
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/furydotbot/raze.bot)
 [![Deploy with Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/furydotbot/raze.bot)
@@ -12,7 +15,7 @@
   <img src="https://img.shields.io/badge/Open%20Source-Yes-00b386?style=for-the-badge&logo=github" alt="Open Source" />
 </p>
 
-![Solana UI image](https://i.imgur.com/fDrfNv3.png)
+![Raze.bot image](https://i.imgur.com/fDrfNv3.png)
 
 **Solana UI** is a multi-wallet trading platform designed for the Solana blockchain.  
 It provides users with a seamless interface to connect various Solana wallets and execute trades efficiently.
