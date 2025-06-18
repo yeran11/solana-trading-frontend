@@ -404,7 +404,6 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
         const walletAddress = getWalletAddressFromKey(privateKey);
         const amount = parseFloat(walletAmounts[privateKey]);
         
-        showToast(`Processing transaction ${i + 1}/${selectedWallets.length} for ${walletAddress.slice(0, 8)}...`, 'success');
         
         try {
           // 1. Get unsigned transaction
@@ -424,7 +423,6 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
           }]);
           
           successCount++;
-          showToast(`✅ Transaction ${i + 1} successful for ${walletAddress.slice(0, 8)}...`, 'success');
           
         } catch (error) {
           console.error(`Transaction ${i + 1} failed:`, error);
