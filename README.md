@@ -3,7 +3,6 @@
 
 <div align="center">
 
-[![GitHub stars](https://img.shields.io/github/stars/furydotbot/solana-ui?style=social)](https://github.com/furydotbot/solana-ui/stargazers)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/furydotbot/raze.bot)
 [![Deploy with Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/furydotbot/raze.bot)
