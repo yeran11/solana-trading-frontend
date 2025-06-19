@@ -48,7 +48,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     twitter: '',
     website: '',
     createdOn: 'https://bonk.fun',
-    uri: '' // image URL
+    uri: '', // image URL
+    type: 'meme' // default to meme
   });
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -314,7 +315,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       const config: BonkCreateConfig = {
         tokenMetadata: tokenData,
         ownerPublicKey: ownerWallet.address,
-        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.1
+        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.1,
+        type: tokenData.type || 'meme'
       };
       
       console.log(`Starting token creation with ${buyerWallets.length + 1} wallets`);
@@ -372,7 +374,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       twitter: '',
       website: '',
       createdOn: 'https://bonk.fun',
-      uri: ''
+      uri: '',
+      type: 'meme'
     });
     setIsConfirmed(false);
     setCurrentStep(0);
@@ -535,6 +538,36 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     placeholder="DESCRIBE YOUR TOKEN"
                     rows={3}
                   />
+                </div>
+
+                <div className="space-y-2 relative z-10">
+                  <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
+                    <span className="text-[#02b36d]">&#62;</span> Token Type <span className="text-[#02b36d]">*</span> <span className="text-[#02b36d]">&#60;</span>
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTokenData(prev => ({ ...prev, type: 'meme' }))}
+                      className={`flex-1 px-4 py-2.5 rounded-lg font-mono tracking-wider transition-all ${
+                        tokenData.type === 'meme'
+                          ? 'bg-[#02b36d] text-[#091217] border border-[#02b36d] shadow-lg transform -translate-y-0.5'
+                          : 'bg-[#091217] text-[#e4fbf2] border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#0a1419]'
+                      }`}
+                    >
+                      MEME
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTokenData(prev => ({ ...prev, type: 'tech' }))}
+                      className={`flex-1 px-4 py-2.5 rounded-lg font-mono tracking-wider transition-all ${
+                        tokenData.type === 'tech'
+                          ? 'bg-[#02b36d] text-[#091217] border border-[#02b36d] shadow-lg transform -translate-y-0.5'
+                          : 'bg-[#091217] text-[#e4fbf2] border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#0a1419]'
+                      }`}
+                    >
+                      TECH
+                    </button>
+                  </div>
                 </div>
   
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">

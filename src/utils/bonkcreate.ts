@@ -33,12 +33,14 @@ export interface TokenMetadata {
   twitter?: string;
   website?: string;
   createdOn?: string;
+  type?: 'tech' | 'meme';
 }
 
 export interface BonkCreateConfig {
   tokenMetadata: TokenMetadata;
   ownerPublicKey: string;
   initialBuyAmount: number; // SOL amount for initial buy
+  type?: 'tech' | 'meme';
 }
 
 export interface BonkCreateResponse {
@@ -151,7 +153,8 @@ const getPartiallyPreparedBonkTransactions = async (
         tokenMetadata: config.tokenMetadata,
         ownerPublicKey: config.ownerPublicKey,
         buyerWallets: formattedBuyerWallets,
-        initialBuyAmount: config.initialBuyAmount
+        initialBuyAmount: config.initialBuyAmount,
+        type: config.type || config.tokenMetadata.type || 'meme'
       }),
     });
 
