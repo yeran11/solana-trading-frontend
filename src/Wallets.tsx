@@ -45,20 +45,20 @@ export const Tooltip = ({
 
 // Max wallets configuration
 export const maxWalletsConfig = {
-  'raybuy': 120,
-  'raysell': 120,
-  'pumpbuy': 140,
-  'pumpsell': 180,
-  'jupbuy': 120,
-  'swapbuy': 120,
-  'swapsell': 120,
-  'jupsell': 120,
-  'moonbuy': 160,
-  'launchsell': 160,
-  'launchbuy': 160,
-  'moonsell': 160,
-  'boopbuy': 160,
-  'boopsell': 160
+  'raybuy': 1000,
+  'raysell': 1000,
+  'pumpbuy': 1000,
+  'pumpsell': 1000,
+  'jupbuy': 1000,
+  'swapbuy': 1000,
+  'swapsell': 1000,
+  'jupsell': 1000,
+  'moonbuy': 1000,
+  'launchsell': 1000,
+  'launchbuy': 1000,
+  'moonsell': 1000,
+  'boopbuy': 1000,
+  'boopsell': 1000
 } as const;
 
 // Updated toggle function for wallets based on token and SOL conditions
