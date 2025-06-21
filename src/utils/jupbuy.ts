@@ -3,15 +3,6 @@ import bs58 from 'bs58';
 import { loadConfigFromCookies } from '../Utils';
 
 // Constants
-const JITO_ENDPOINT = 'https://mainnet.block-engine.jito.wtf/api/v1/block-engine';
-const MAX_BUNDLES_PER_SECOND = 2;
-
-// Rate limiting state
-const rateLimitState = {
-  count: 0,
-  lastReset: Date.now(),
-  maxBundlesPerSecond: MAX_BUNDLES_PER_SECOND
-};
 
 interface WalletJupSwap {
   address: string;
@@ -40,26 +31,7 @@ interface BundleResult {
   };
 }
 
-/**
- * Check rate limit and wait if necessary
- */
-const checkRateLimit = async (): Promise<void> => {
-  const now = Date.now();
-  
-  if (now - rateLimitState.lastReset >= 1000) {
-    rateLimitState.count = 0;
-    rateLimitState.lastReset = now;
-  }
-  
-  if (rateLimitState.count >= rateLimitState.maxBundlesPerSecond) {
-    const waitTime = 1000 - (now - rateLimitState.lastReset);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-    rateLimitState.count = 0;
-    rateLimitState.lastReset = Date.now();
-  }
-  
-  rateLimitState.count++;
-};
+
 
 /**
  * Fetch Jupiter quote from the public Jupiter API.
@@ -309,8 +281,8 @@ const prepareJupSwapBundles = (signedTransactions: string[]): JupSwapBundle[] =>
 };
 
 /**
- * Execute Jupiter swap operation with multi-bundle support.
- * This function processes multiple wallet batches to handle more than 5 wallets.
+ * Execute Jupiter swap operation for all wallets in one request.
+ * This function processes all wallets at once without batching or rate limiting.
  */
 export const executeJupSwap = async (
   wallets: WalletJupSwap[],
@@ -319,9 +291,6 @@ export const executeJupSwap = async (
 ): Promise<{ success: boolean; result?: any; error?: string }> => {
   try {
     console.log(`Preparing to swap ${swapConfig.inputMint} for ${swapConfig.outputMint} using ${wallets.length} wallets`);
-    
-    // Constants for batching
-    const MAX_WALLETS_PER_REQUEST = 5; // Process wallets in batches
     
     // Create wallet keypairs map for quick lookup
     const walletKeypairsMap = new Map<string, Keypair>();
@@ -332,110 +301,91 @@ export const executeJupSwap = async (
       );
     });
     
-    // Process wallets in batches
+    // Extract all wallet addresses
+    const walletAddresses = wallets.map(wallet => wallet.address);
+    
+    // Get partially prepared transactions from backend for all wallets at once
+    const partiallyPreparedTransactions = await getPartiallyPreparedSwapTransactions(
+      walletAddresses,
+      swapConfig,
+      customAmounts
+    );
+    
+    console.log(`Received ${partiallyPreparedTransactions.length} prepared transactions from backend`);
+    
+    if (partiallyPreparedTransactions.length === 0) {
+      return {
+        success: false,
+        error: 'No transactions returned from backend.'
+      };
+    }
+    
+    // Create keypairs array for all wallets
+    const allKeypairs = wallets
+      .map(wallet => walletKeypairsMap.get(wallet.address))
+      .filter(keypair => keypair !== undefined) as Keypair[];
+    
+    // Sign all transactions
+    const signedTransactions = completeTransactionSigning(
+      partiallyPreparedTransactions,
+      allKeypairs
+    );
+    
+    if (signedTransactions.length === 0) {
+      return {
+        success: false,
+        error: 'No transactions were successfully signed.'
+      };
+    }
+    
+    // Prepare bundles from all signed transactions
+    const jupSwapBundles = prepareJupSwapBundles(signedTransactions);
+    console.log(`Prepared ${jupSwapBundles.length} bundles with ${signedTransactions.length} total transactions`);
+    
+    // Send all bundles without rate limiting or delays
     const allResults: BundleResult[] = [];
     let successfulBundles = 0;
     let failedBundles = 0;
-    let processedWalletCount = 0;
     
-    // Divide wallets into batches for processing
-    for (let batchIndex = 0; processedWalletCount < wallets.length; batchIndex++) {
-      // Select the next batch of wallets
-      const walletBatch = wallets.slice(
-        processedWalletCount, 
-        processedWalletCount + MAX_WALLETS_PER_REQUEST
-      );
-      
-      if (walletBatch.length === 0) break;
-      
-      console.log(`Processing batch ${batchIndex + 1} with ${walletBatch.length} wallets`);
-      
-      // Extract wallet addresses for this batch
-      const walletAddresses = walletBatch.map(wallet => wallet.address);
+    // Send all bundles concurrently
+    const bundlePromises = jupSwapBundles.map(async (bundle, bundleIndex) => {
+      console.log(`Sending bundle ${bundleIndex + 1}/${jupSwapBundles.length} with ${bundle.transactions.length} transactions`);
       
       try {
-        // Get amounts for this batch if custom amounts are provided
-        const batchCustomAmounts = customAmounts ? 
-          customAmounts.slice(
-            processedWalletCount, 
-            processedWalletCount + MAX_WALLETS_PER_REQUEST
-          ) : undefined;
-        
-        // Get partially prepared transactions from backend for this batch
-        const partiallyPreparedTransactions = await getPartiallyPreparedSwapTransactions(
-          walletAddresses,
-          swapConfig,
-          batchCustomAmounts
-        );
-        
-        console.log(`Received ${partiallyPreparedTransactions.length} prepared transactions from backend for batch ${batchIndex + 1}`);
-        
-        if (partiallyPreparedTransactions.length > 0) {
-          // Create a subset of keypairs just for this batch
-          const batchKeypairs = walletBatch
-            .map(wallet => walletKeypairsMap.get(wallet.address))
-            .filter(keypair => keypair !== undefined) as Keypair[];
-          
-          // Sign the transactions for this batch
-          const signedTransactions = completeTransactionSigning(
-            partiallyPreparedTransactions,
-            batchKeypairs
-          );
-          
-          if (signedTransactions.length > 0) {
-            // Prepare bundles from the signed transactions
-            const jupSwapBundles = prepareJupSwapBundles(signedTransactions);
-            console.log(`Prepared ${jupSwapBundles.length} bundles from batch ${batchIndex + 1}`);
-            
-            // Send each bundle
-            for (let bundleIndex = 0; bundleIndex < jupSwapBundles.length; bundleIndex++) {
-              const bundle = jupSwapBundles[bundleIndex];
-              
-              console.log(`Sending bundle ${bundleIndex + 1}/${jupSwapBundles.length} from batch ${batchIndex + 1} with ${bundle.transactions.length} transactions`);
-              
-              // Check rate limit before sending
-              await checkRateLimit();
-              
-              try {
-                const result = await sendBundle(bundle.transactions);
-                allResults.push(result);
-                successfulBundles++;
-                console.log(`Bundle ${bundleIndex + 1} from batch ${batchIndex + 1} sent successfully`);
-              } catch (error) {
-                console.error(`Error sending bundle ${bundleIndex + 1} from batch ${batchIndex + 1}:`, error);
-                failedBundles++;
-                
-                // Specific error handling for duplicate instructions
-                if (error.message?.includes('duplicate instruction') || 
-                    error.message?.includes('-32602') ||
-                    error.message?.includes('identical instructions')) {
-                  console.error('Bundle has duplicate instructions. This is not allowed by Jito.');
-                }
-              }
-              
-              // Add delay between bundles
-              if (jupSwapBundles.length > 1 && bundleIndex < jupSwapBundles.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
-              }
-            }
-          } else {
-            console.log(`No transactions were successfully signed in batch ${batchIndex + 1}`);
-          }
-        } else {
-          console.log(`No transactions returned for batch ${batchIndex + 1}.`);
-        }
+        const result = await sendBundle(bundle.transactions);
+        console.log(`Bundle ${bundleIndex + 1} sent successfully`);
+        return { success: true, result };
       } catch (error) {
-        console.error(`Error processing batch ${batchIndex + 1}:`, error);
+        console.error(`Error sending bundle ${bundleIndex + 1}:`, error);
+        
+        // Specific error handling for duplicate instructions
+        if (error.message?.includes('duplicate instruction') || 
+            error.message?.includes('-32602') ||
+            error.message?.includes('identical instructions')) {
+          console.error('Bundle has duplicate instructions. This is not allowed by Jito.');
+        }
+        
+        return { success: false, error };
       }
-      
-      // Update processed wallet count
-      processedWalletCount += walletBatch.length;
-      
-      // Add delay between batches if there are more to process
-      if (processedWalletCount < wallets.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between batches
+    });
+    
+    // Wait for all bundles to complete
+    const bundleResults = await Promise.allSettled(bundlePromises);
+    
+    // Process results
+    bundleResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (result.value.success) {
+          allResults.push(result.value.result);
+          successfulBundles++;
+        } else {
+          failedBundles++;
+        }
+      } else {
+        console.error(`Bundle ${index + 1} promise rejected:`, result.reason);
+        failedBundles++;
       }
-    }
+    });
     
     // Return result based on success/failure count
     if (successfulBundles > 0) {
@@ -451,15 +401,10 @@ export const executeJupSwap = async (
           result: allResults
         };
       }
-    } else if (failedBundles > 0) {
-      return {
-        success: false,
-        error: `All ${failedBundles} bundles failed. Check for duplicate instructions or other issues.`
-      };
     } else {
       return {
         success: false,
-        error: 'No transactions were created or sent.'
+        error: `All ${failedBundles} bundles failed. Check for duplicate instructions or other issues.`
       };
     }
   } catch (error) {

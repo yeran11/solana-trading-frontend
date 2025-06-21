@@ -4,14 +4,6 @@ import { loadConfigFromCookies } from '../Utils';
 
 // Constants
 const JITO_ENDPOINT = 'https://mainnet.block-engine.jito.wtf/api/v1/block-engine';
-const MAX_BUNDLES_PER_SECOND = 2;
-
-// Rate limiting state
-const rateLimitState = {
-  count: 0,
-  lastReset: Date.now(),
-  maxBundlesPerSecond: MAX_BUNDLES_PER_SECOND
-};
 
 interface WalletJupSell {
   address: string;
@@ -40,26 +32,7 @@ interface BundleResult {
   };
 }
 
-/**
- * Check rate limit and wait if necessary
- */
-const checkRateLimit = async (): Promise<void> => {
-  const now = Date.now();
-  
-  if (now - rateLimitState.lastReset >= 1000) {
-    rateLimitState.count = 0;
-    rateLimitState.lastReset = now;
-  }
-  
-  if (rateLimitState.count >= rateLimitState.maxBundlesPerSecond) {
-    const waitTime = 1000 - (now - rateLimitState.lastReset);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-    rateLimitState.count = 0;
-    rateLimitState.lastReset = Date.now();
-  }
-  
-  rateLimitState.count++;
-};
+
 
 /**
  * Send bundle to Jito block engine through our backend proxy
@@ -309,26 +282,21 @@ export const executeJupSell = async (
     const jupSellBundles = prepareJupSellBundles(fullySignedTransactions);
     console.log(`Prepared ${jupSellBundles.length} Jupiter sell bundles`);
     
-    // Step 5: Send bundles in sequence with rate limiting
+    // Step 5: Send all bundles concurrently without rate limiting
     let results: BundleResult[] = [];
-    let hasSuccessfulBundles = false;
+    let successfulBundles = 0;
     let failedBundles = 0;
     
-    for (let i = 0; i < jupSellBundles.length; i++) {
-      const bundle = jupSellBundles[i];
-      console.log(`Sending bundle ${i+1}/${jupSellBundles.length} with ${bundle.transactions.length} transactions`);
-      
-      await checkRateLimit();
+    // Send all bundles concurrently
+    const bundlePromises = jupSellBundles.map(async (bundle, index) => {
+      console.log(`Sending bundle ${index + 1}/${jupSellBundles.length} with ${bundle.transactions.length} transactions`);
       
       try {
         const result = await sendBundle(bundle.transactions);
-        results.push(result);
-        hasSuccessfulBundles = true;
-        
-        console.log(`Bundle ${i+1} sent successfully`);
+        console.log(`Bundle ${index + 1} sent successfully`);
+        return { success: true, result };
       } catch (error) {
-        console.error(`Error sending bundle ${i+1}:`, error);
-        failedBundles++;
+        console.error(`Error sending bundle ${index + 1}:`, error);
         
         // Specific handling for duplicate instruction errors
         if (error.message?.includes('duplicate instruction') || 
@@ -336,21 +304,36 @@ export const executeJupSell = async (
             error.message?.includes('identical instructions')) {
           console.error('Bundle has duplicate instructions. This is not allowed by Jito.');
         }
+        
+        return { success: false, error };
       }
-      
-      // Add delay between bundles (except after the last one)
-      if (i < jupSellBundles.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+    });
+    
+    // Wait for all bundles to complete
+    const bundleResults = await Promise.allSettled(bundlePromises);
+    
+    // Process results
+    bundleResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (result.value.success) {
+          results.push(result.value.result);
+          successfulBundles++;
+        } else {
+          failedBundles++;
+        }
+      } else {
+        console.error(`Bundle ${index + 1} promise rejected:`, result.reason);
+        failedBundles++;
       }
-    }
+    });
     
     // Return appropriate success status and information
-    if (hasSuccessfulBundles) {
+    if (successfulBundles > 0) {
       if (failedBundles > 0) {
         return {
           success: true,
           result: results,
-          error: `${failedBundles} bundles failed, but some succeeded. Possible duplicate instruction issues.`
+          error: `${failedBundles} bundles failed, but ${successfulBundles} succeeded. Possible duplicate instruction issues.`
         };
       } else {
         return {
@@ -361,7 +344,7 @@ export const executeJupSell = async (
     } else {
       return {
         success: false,
-        error: 'All bundles failed to send. Check for duplicate instructions or other issues.'
+        error: `All ${failedBundles} bundles failed. Check for duplicate instructions or other issues.`
       };
     }
   } catch (error) {
