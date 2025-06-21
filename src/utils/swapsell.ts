@@ -4,6 +4,7 @@ import { loadConfigFromCookies, WalletType } from '../Utils'; // Assuming this i
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;
+const MAX_TRANSACTIONS_PER_BUNDLE = 5; // New constant for max transactions per bundle
 
 // Rate limiting state
 const rateLimitState = {
@@ -175,6 +176,34 @@ const completeBundleSigning = (
 };
 
 /**
+ * Split large bundles into smaller ones with maximum MAX_TRANSACTIONS_PER_BUNDLE transactions
+ * Preserves the original order of transactions across the split bundles
+ */
+const splitLargeBundles = (bundles: SwapSellBundle[]): SwapSellBundle[] => {
+  const result: SwapSellBundle[] = [];
+  
+  for (const bundle of bundles) {
+    if (!bundle.transactions || !Array.isArray(bundle.transactions)) {
+      continue;
+    }
+    
+    // If the bundle is small enough, just add it to the result
+    if (bundle.transactions.length <= MAX_TRANSACTIONS_PER_BUNDLE) {
+      result.push(bundle);
+      continue;
+    }
+    
+    // Split the large bundle into smaller ones while preserving transaction order
+    for (let i = 0; i < bundle.transactions.length; i += MAX_TRANSACTIONS_PER_BUNDLE) {
+      const chunkTransactions = bundle.transactions.slice(i, i + MAX_TRANSACTIONS_PER_BUNDLE);
+      result.push({ transactions: chunkTransactions });
+    }
+  }
+  
+  return result;
+};
+
+/**
  * Execute swap sell operation.
  */
 export const executeSwapSell = async (
@@ -187,9 +216,13 @@ export const executeSwapSell = async (
     // Extract wallet addresses
     const walletAddresses = wallets.map(wallet => wallet.address);
 
-    // Step 1: Get partially prepared transactions (bundles) from backend
+    // Step 1: Get partially prepared bundles from backend
     const partiallyPreparedBundles = await getPartiallyPreparedTransactions(walletAddresses, tokenConfig);
     console.log(`Received ${partiallyPreparedBundles.length} bundles from backend`);
+
+    // Step 1.5: Split large bundles to ensure max transactions per bundle (preserves original transaction order)
+    const splitBundles = splitLargeBundles(partiallyPreparedBundles);
+    console.log(`Split into ${splitBundles.length} bundles with max ${MAX_TRANSACTIONS_PER_BUNDLE} transactions each (original order maintained)`);
 
     // Step 2: Create keypairs from private keys
     const walletKeypairs = wallets.map(wallet =>
@@ -197,7 +230,7 @@ export const executeSwapSell = async (
     );
 
     // Step 3: Complete transaction signing for each bundle
-    const signedBundles = partiallyPreparedBundles.map(bundle =>
+    const signedBundles = splitBundles.map(bundle =>
       completeBundleSigning(bundle, walletKeypairs)
     );
     console.log(`Completed signing for ${signedBundles.length} bundles`);
