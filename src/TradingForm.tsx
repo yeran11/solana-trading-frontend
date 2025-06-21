@@ -511,7 +511,6 @@ const TradingCard = ({
             <span className={`font-medium ${isBuyValid && isSellValid ? 'text-[#02b36d]' : 'text-[#ff3232]'}`}>
               {activeWallets}
             </span>
-            <span className="text-[#7ddfbd60]">/{Math.max(buyLimit, sellLimit) >= 1000 ? '∞' : Math.max(buyLimit, sellLimit)}</span>
           </div>
         </div>
       </Tooltip>
