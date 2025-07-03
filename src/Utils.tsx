@@ -55,6 +55,7 @@ request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
 };
 const WALLET_COOKIE_KEY = 'wallets';
 const CONFIG_COOKIE_KEY = 'config';
+const QUICK_BUY_COOKIE_KEY = 'quickBuyPreferences';
 
 export const createNewWallet = async (): Promise<WalletType> => {
   const keypair = Keypair.generate();
@@ -319,4 +320,29 @@ export const downloadAllWallets = (wallets: WalletType[]) => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+};
+
+export interface QuickBuyPreferences {
+  quickBuyEnabled: boolean;
+  quickBuyAmount: number;
+  quickBuyMinAmount: number;
+  quickBuyMaxAmount: number;
+  useQuickBuyRange: boolean;
+}
+
+export const saveQuickBuyPreferencesToCookies = (preferences: QuickBuyPreferences) => {
+  Cookies.set(QUICK_BUY_COOKIE_KEY, JSON.stringify(preferences), { expires: 30 });
+};
+
+export const loadQuickBuyPreferencesFromCookies = (): QuickBuyPreferences | null => {
+  const savedPreferences = Cookies.get(QUICK_BUY_COOKIE_KEY);
+  if (savedPreferences) {
+    try {
+      return JSON.parse(savedPreferences);
+    } catch (error) {
+      console.error('Error parsing saved quick buy preferences:', error);
+      return null;
+    }
+  }
+  return null;
 };

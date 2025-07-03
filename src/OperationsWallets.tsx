@@ -33,6 +33,12 @@ interface WalletOperationsButtonsProps {
   setQuickBuyAmount?: (amount: number) => void;
   quickBuyEnabled?: boolean;
   setQuickBuyEnabled?: (enabled: boolean) => void;
+  quickBuyMinAmount?: number;
+  setQuickBuyMinAmount?: (amount: number) => void;
+  quickBuyMaxAmount?: number;
+  setQuickBuyMaxAmount?: (amount: number) => void;
+  useQuickBuyRange?: boolean;
+  setUseQuickBuyRange?: (enabled: boolean) => void;
 }
 
 type OperationTab = 'distribute' | 'consolidate' | 'transfer' | 'deposit' | 'mixer' | 'fund';
@@ -53,7 +59,13 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   quickBuyAmount = 0.01,
   setQuickBuyAmount,
   quickBuyEnabled = true,
-  setQuickBuyEnabled
+  setQuickBuyEnabled,
+  quickBuyMinAmount = 0.01,
+  setQuickBuyMinAmount,
+  quickBuyMaxAmount = 0.05,
+  setQuickBuyMaxAmount,
+  useQuickBuyRange = false,
+  setUseQuickBuyRange
 }) => {
   // State for active modal
   const [activeModal, setActiveModal] = useState<OperationTab | null>(null);
@@ -68,6 +80,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   const [isQuickBuySettingsOpen, setIsQuickBuySettingsOpen] = useState(false);
   const [tempQuickBuyAmount, setTempQuickBuyAmount] = useState(quickBuyAmount);
   const [tempQuickBuyEnabled, setTempQuickBuyEnabled] = useState(quickBuyEnabled);
+  const [tempQuickBuyMinAmount, setTempQuickBuyMinAmount] = useState(quickBuyMinAmount);
+  const [tempQuickBuyMaxAmount, setTempQuickBuyMaxAmount] = useState(quickBuyMaxAmount);
+  const [tempUseQuickBuyRange, setTempUseQuickBuyRange] = useState(useQuickBuyRange);
   
   // Function to toggle drawer
   const toggleDrawer = () => {
@@ -112,6 +127,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   const openQuickBuySettings = () => {
     setTempQuickBuyAmount(quickBuyAmount);
     setTempQuickBuyEnabled(quickBuyEnabled);
+    setTempQuickBuyMinAmount(quickBuyMinAmount);
+    setTempQuickBuyMaxAmount(quickBuyMaxAmount);
+    setTempUseQuickBuyRange(useQuickBuyRange);
     setIsQuickBuySettingsOpen(true);
     setIsDrawerOpen(false);
   };
@@ -123,6 +141,15 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
     }
     if (setQuickBuyEnabled) {
       setQuickBuyEnabled(tempQuickBuyEnabled);
+    }
+    if (setQuickBuyMinAmount && tempQuickBuyMinAmount > 0) {
+      setQuickBuyMinAmount(tempQuickBuyMinAmount);
+    }
+    if (setQuickBuyMaxAmount && tempQuickBuyMaxAmount > 0) {
+      setQuickBuyMaxAmount(tempQuickBuyMaxAmount);
+    }
+    if (setUseQuickBuyRange !== undefined) {
+      setUseQuickBuyRange(tempUseQuickBuyRange);
     }
     setIsQuickBuySettingsOpen(false);
   };
@@ -403,25 +430,117 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                 </div>
                 
                 <div className={tempQuickBuyEnabled ? '' : 'opacity-50'}>
-                  <label className="block text-sm font-mono text-[#02b36d] mb-2">
-                    SOL Amount per Quick Buy
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0.001"
-                    max="10"
-                    value={tempQuickBuyAmount}
-                    onChange={(e) => setTempQuickBuyAmount(parseFloat(e.target.value) || 0.001)}
-                    disabled={!tempQuickBuyEnabled}
-                    className="w-full px-3 py-2 bg-[#071015] border border-[#02b36d30] rounded-md
-                             text-[#e4fbf2] font-mono text-sm focus:border-[#02b36d] focus:outline-none
-                             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="0.01"
-                  />
-                  <p className="text-xs text-[#02b36d80] mt-1">
-                    Amount of SOL to spend when clicking quick buy buttons
-                  </p>
+                  {/* Range Toggle */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <span className="text-sm font-mono text-[#02b36d] block mb-1">
+                        Random Amount Range
+                      </span>
+                      <p className="text-xs text-[#02b36d80]">
+                        Use random amounts between min and max
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => setTempUseQuickBuyRange(!tempUseQuickBuyRange)}
+                      disabled={!tempQuickBuyEnabled}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#02b36d] focus:ring-offset-2 focus:ring-offset-[#071015] disabled:opacity-50 disabled:cursor-not-allowed ${
+                        tempUseQuickBuyRange && tempQuickBuyEnabled
+                          ? 'bg-gradient-to-r from-[#02b36d] to-[#02c377]' 
+                          : 'bg-[#1a1f2e] border border-[#02b36d30]'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3 w-3 transform rounded-full transition-transform duration-200 ${
+                          tempUseQuickBuyRange && tempQuickBuyEnabled
+                            ? 'translate-x-5 bg-[#051014] shadow-lg' 
+                            : 'translate-x-1 bg-[#02b36d60]'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Amount Inputs */}
+                  {tempUseQuickBuyRange ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-mono text-[#02b36d] mb-2">
+                          Minimum SOL Amount
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          max="10"
+                          value={tempQuickBuyMinAmount}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || 0.001;
+                            setTempQuickBuyMinAmount(value);
+                            if (value >= tempQuickBuyMaxAmount) {
+                              setTempQuickBuyMaxAmount(value + 0.01);
+                            }
+                          }}
+                          disabled={!tempQuickBuyEnabled}
+                          className="w-full px-3 py-2 bg-[#071015] border border-[#02b36d30] rounded-md
+                                   text-[#e4fbf2] font-mono text-sm focus:border-[#02b36d] focus:outline-none
+                                   transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          placeholder="0.01"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-mono text-[#02b36d] mb-2">
+                          Maximum SOL Amount
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min={tempQuickBuyMinAmount + 0.001}
+                          max="10"
+                          value={tempQuickBuyMaxAmount}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || tempQuickBuyMinAmount + 0.001;
+                            if (value > tempQuickBuyMinAmount) {
+                              setTempQuickBuyMaxAmount(value);
+                            }
+                          }}
+                          disabled={!tempQuickBuyEnabled}
+                          className="w-full px-3 py-2 bg-[#071015] border border-[#02b36d30] rounded-md
+                                   text-[#e4fbf2] font-mono text-sm focus:border-[#02b36d] focus:outline-none
+                                   transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          placeholder="0.05"
+                        />
+                      </div>
+                      
+                      <div className="bg-[#02b36d10] border border-[#02b36d20] rounded-md p-3">
+                        <p className="text-xs text-[#02b36d80]">
+                          Each quick buy will use a random amount between {tempQuickBuyMinAmount.toFixed(3)} and {tempQuickBuyMaxAmount.toFixed(3)} SOL
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-mono text-[#02b36d] mb-2">
+                        Fixed SOL Amount
+                      </label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min="0.001"
+                        max="10"
+                        value={tempQuickBuyAmount}
+                        onChange={(e) => setTempQuickBuyAmount(parseFloat(e.target.value) || 0.001)}
+                        disabled={!tempQuickBuyEnabled}
+                        className="w-full px-3 py-2 bg-[#071015] border border-[#02b36d30] rounded-md
+                                 text-[#e4fbf2] font-mono text-sm focus:border-[#02b36d] focus:outline-none
+                                 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        placeholder="0.01"
+                      />
+                      <p className="text-xs text-[#02b36d80] mt-1">
+                        Fixed amount of SOL to spend when clicking quick buy buttons
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex gap-3 pt-4">
@@ -442,7 +561,11 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     whileHover="hover"
                     whileTap="tap"
                     onClick={saveQuickBuySettings}
-                    disabled={tempQuickBuyEnabled && tempQuickBuyAmount <= 0}
+                    disabled={tempQuickBuyEnabled && (
+                      tempUseQuickBuyRange 
+                        ? (tempQuickBuyMinAmount <= 0 || tempQuickBuyMaxAmount <= 0 || tempQuickBuyMinAmount >= tempQuickBuyMaxAmount)
+                        : tempQuickBuyAmount <= 0
+                    )}
                     className="flex-1 py-2 px-4 rounded-md bg-[#02b36d] text-[#051014]
                              hover:bg-[#02c377] disabled:opacity-50 disabled:cursor-not-allowed
                              transition-colors duration-200 font-mono"
@@ -513,7 +636,15 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                 }`}
               >
                 <Zap size={12} />
-                <span>{quickBuyEnabled ? `${quickBuyAmount} SOL` : 'OFF'}</span>
+                <span>
+                  {quickBuyEnabled 
+                    ? (useQuickBuyRange 
+                        ? `${quickBuyMinAmount?.toFixed(3)}-${quickBuyMaxAmount?.toFixed(3)} SOL` 
+                        : `${quickBuyAmount} SOL`
+                      ) 
+                    : 'OFF'
+                  }
+                </span>
               </motion.button>
             )}
             

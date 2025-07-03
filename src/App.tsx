@@ -1,25 +1,18 @@
-import React, { useState, useEffect, useRef, lazy, useCallback, useReducer, useMemo } from 'react';
-import { X, Plus, Settings, Download, Upload, FileUp, Trash2, Copy } from 'lucide-react';
+import React, { useEffect, lazy, useCallback, useReducer, useMemo } from 'react';
+import { X, Settings } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import ServiceSelector from './Menu.tsx';
 import { WalletTooltip, initStyles } from './Styles';
 import { 
-  createNewWallet,
-  importWallet,
-  refreshWalletBalance,
   saveWalletsToCookies,
   loadWalletsFromCookies,
   saveConfigToCookies,
   loadConfigFromCookies,
-  downloadPrivateKey,
-  downloadAllWallets, 
+  loadQuickBuyPreferencesFromCookies,
+  saveQuickBuyPreferencesToCookies,
   deleteWallet, 
   WalletType, 
-  formatAddress,
-  copyToClipboard,
   ConfigType,
-  fetchSolBalance,
-  fetchTokenBalance,
 } from './Utils';
 import Split from 'react-split';
 import { useToast } from "./Notifications";
@@ -27,8 +20,6 @@ import {
   fetchSolBalances,
   fetchTokenBalances,
   fetchAmmKey,
-  handleMarketCapUpdate,
-  handleCleanupWallets,
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
@@ -98,6 +89,10 @@ const WalletManager: React.FC = () => {
       isDragging: boolean;
     };
     quickBuyEnabled: boolean;
+    quickBuyAmount: number;
+    quickBuyMinAmount: number;
+    quickBuyMaxAmount: number;
+    useQuickBuyRange: boolean;
   }
 
   type AppAction = 
@@ -124,7 +119,11 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_FLOATING_CARD_OPEN'; payload: boolean }
     | { type: 'SET_FLOATING_CARD_POSITION'; payload: { x: number; y: number } }
     | { type: 'SET_FLOATING_CARD_DRAGGING'; payload: boolean }
-    | { type: 'SET_QUICK_BUY_ENABLED'; payload: boolean };
+    | { type: 'SET_QUICK_BUY_ENABLED'; payload: boolean }
+    | { type: 'SET_QUICK_BUY_AMOUNT'; payload: number }
+    | { type: 'SET_QUICK_BUY_MIN_AMOUNT'; payload: number }
+    | { type: 'SET_QUICK_BUY_MAX_AMOUNT'; payload: number }
+    | { type: 'SET_USE_QUICK_BUY_RANGE'; payload: boolean };
 
   const initialState: AppState = {
     copiedAddress: null,
@@ -168,7 +167,11 @@ const WalletManager: React.FC = () => {
       position: { x: 100, y: 100 },
       isDragging: false
     },
-    quickBuyEnabled: true
+    quickBuyEnabled: true,
+    quickBuyAmount: 0.01,
+    quickBuyMinAmount: 0.01,
+    quickBuyMaxAmount: 0.05,
+    useQuickBuyRange: false
   };
 
   const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -254,6 +257,14 @@ const WalletManager: React.FC = () => {
         };
       case 'SET_QUICK_BUY_ENABLED':
         return { ...state, quickBuyEnabled: action.payload };
+      case 'SET_QUICK_BUY_AMOUNT':
+        return { ...state, quickBuyAmount: action.payload };
+      case 'SET_QUICK_BUY_MIN_AMOUNT':
+        return { ...state, quickBuyMinAmount: action.payload };
+      case 'SET_QUICK_BUY_MAX_AMOUNT':
+        return { ...state, quickBuyMaxAmount: action.payload };
+      case 'SET_USE_QUICK_BUY_RANGE':
+        return { ...state, useQuickBuyRange: action.payload };
       default:
         return state;
     }
@@ -303,7 +314,11 @@ const WalletManager: React.FC = () => {
     setFloatingCardOpen: (open: boolean) => dispatch({ type: 'SET_FLOATING_CARD_OPEN', payload: open }),
     setFloatingCardPosition: (position: { x: number; y: number }) => dispatch({ type: 'SET_FLOATING_CARD_POSITION', payload: position }),
     setFloatingCardDragging: (dragging: boolean) => dispatch({ type: 'SET_FLOATING_CARD_DRAGGING', payload: dragging }),
-    setQuickBuyEnabled: (enabled: boolean) => dispatch({ type: 'SET_QUICK_BUY_ENABLED', payload: enabled })
+    setQuickBuyEnabled: (enabled: boolean) => dispatch({ type: 'SET_QUICK_BUY_ENABLED', payload: enabled }),
+    setQuickBuyAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_AMOUNT', payload: amount }),
+    setQuickBuyMinAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MIN_AMOUNT', payload: amount }),
+    setQuickBuyMaxAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MAX_AMOUNT', payload: amount }),
+    setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange })
   }), [state.status]);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
@@ -1041,6 +1056,16 @@ const WalletManager: React.FC = () => {
       if (savedWallets && savedWallets.length > 0) {
         memoizedCallbacks.setWallets(savedWallets);
       }
+      
+      // Load saved quick buy preferences
+      const savedQuickBuyPreferences = loadQuickBuyPreferencesFromCookies();
+      if (savedQuickBuyPreferences) {
+        memoizedCallbacks.setQuickBuyEnabled(savedQuickBuyPreferences.quickBuyEnabled);
+        memoizedCallbacks.setQuickBuyAmount(savedQuickBuyPreferences.quickBuyAmount);
+        memoizedCallbacks.setQuickBuyMinAmount(savedQuickBuyPreferences.quickBuyMinAmount);
+        memoizedCallbacks.setQuickBuyMaxAmount(savedQuickBuyPreferences.quickBuyMaxAmount);
+        memoizedCallbacks.setUseQuickBuyRange(savedQuickBuyPreferences.useQuickBuyRange);
+      }
     };
 
     initializeApp();
@@ -1052,6 +1077,18 @@ const WalletManager: React.FC = () => {
       saveWalletsToCookies(state.wallets);
     }
   }, [state.wallets]);
+
+  // Save quick buy preferences when they change
+  useEffect(() => {
+    const preferences = {
+      quickBuyEnabled: state.quickBuyEnabled,
+      quickBuyAmount: state.quickBuyAmount,
+      quickBuyMinAmount: state.quickBuyMinAmount,
+      quickBuyMaxAmount: state.quickBuyMaxAmount,
+      useQuickBuyRange: state.useQuickBuyRange
+    };
+    saveQuickBuyPreferencesToCookies(preferences);
+  }, [state.quickBuyEnabled, state.quickBuyAmount, state.quickBuyMinAmount, state.quickBuyMaxAmount, state.useQuickBuyRange]);
 
   // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
@@ -1314,6 +1351,14 @@ const WalletManager: React.FC = () => {
                   tokenBalances={state.tokenBalances}
                   quickBuyEnabled={state.quickBuyEnabled}
                   setQuickBuyEnabled={memoizedCallbacks.setQuickBuyEnabled}
+                  quickBuyAmount={state.quickBuyAmount}
+                  setQuickBuyAmount={memoizedCallbacks.setQuickBuyAmount}
+                  quickBuyMinAmount={state.quickBuyMinAmount}
+                  setQuickBuyMinAmount={memoizedCallbacks.setQuickBuyMinAmount}
+                  quickBuyMaxAmount={state.quickBuyMaxAmount}
+                  setQuickBuyMaxAmount={memoizedCallbacks.setQuickBuyMaxAmount}
+                  useQuickBuyRange={state.useQuickBuyRange}
+                  setUseQuickBuyRange={memoizedCallbacks.setUseQuickBuyRange}
                 />
               )}
             </div>
@@ -1372,6 +1417,14 @@ const WalletManager: React.FC = () => {
                   tokenBalances={state.tokenBalances}
                   quickBuyEnabled={state.quickBuyEnabled}
                   setQuickBuyEnabled={memoizedCallbacks.setQuickBuyEnabled}
+                  quickBuyAmount={state.quickBuyAmount}
+                  setQuickBuyAmount={memoizedCallbacks.setQuickBuyAmount}
+                  quickBuyMinAmount={state.quickBuyMinAmount}
+                  setQuickBuyMinAmount={memoizedCallbacks.setQuickBuyMinAmount}
+                  quickBuyMaxAmount={state.quickBuyMaxAmount}
+                  setQuickBuyMaxAmount={memoizedCallbacks.setQuickBuyMaxAmount}
+                  useQuickBuyRange={state.useQuickBuyRange}
+                  setUseQuickBuyRange={memoizedCallbacks.setUseQuickBuyRange}
                 />
               ) : (
                 <div className="p-4 text-center text-[#7ddfbd]">

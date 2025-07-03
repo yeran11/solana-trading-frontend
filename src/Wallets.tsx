@@ -201,6 +201,14 @@ interface WalletsPageProps {
   setActiveTokens?: (active: number) => void;
   quickBuyEnabled?: boolean;
   setQuickBuyEnabled?: (enabled: boolean) => void;
+  quickBuyAmount?: number;
+  setQuickBuyAmount?: (amount: number) => void;
+  quickBuyMinAmount?: number;
+  setQuickBuyMinAmount?: (amount: number) => void;
+  quickBuyMaxAmount?: number;
+  setQuickBuyMaxAmount?: (amount: number) => void;
+  useQuickBuyRange?: boolean;
+  setUseQuickBuyRange?: (enabled: boolean) => void;
 }
 export const WalletsPage: React.FC<WalletsPageProps> = ({
   wallets,
@@ -227,13 +235,20 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   activeTokens: externalActiveTokens,
   setActiveTokens: setExternalActiveTokens,
   quickBuyEnabled = true,
-  setQuickBuyEnabled
+  setQuickBuyEnabled,
+  quickBuyAmount = 0.01,
+  setQuickBuyAmount,
+  quickBuyMinAmount = 0.01,
+  setQuickBuyMinAmount,
+  quickBuyMaxAmount = 0.05,
+  setQuickBuyMaxAmount,
+  useQuickBuyRange = false,
+  setUseQuickBuyRange
 }) => {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const [buyingWalletId, setBuyingWalletId] = useState<number | null>(null);
-  const [quickBuyAmount, setQuickBuyAmount] = useState<number>(0.01);
   
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
@@ -340,11 +355,21 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
     setBuyingWalletId(wallet.id);
     
     try {
-      // Quick buy configuration with user-defined amount
+      // Calculate the SOL amount to use
+      let solAmountToUse = quickBuyAmount;
+      
+      if (useQuickBuyRange && quickBuyMinAmount && quickBuyMaxAmount) {
+        // Generate random amount between min and max
+        solAmountToUse = Math.random() * (quickBuyMaxAmount - quickBuyMinAmount) + quickBuyMinAmount;
+        // Round to 3 decimal places
+        solAmountToUse = Math.round(solAmountToUse * 1000) / 1000;
+      }
+      
+      // Quick buy configuration with calculated amount
       const swapConfig = {
         inputMint: 'So11111111111111111111111111111111111111112', // SOL
         outputMint: tokenAddress,
-        solAmount: quickBuyAmount, // User-configurable SOL amount
+        solAmount: solAmountToUse, // Random or fixed amount
         slippageBps: 300 // 3% slippage
       };
 
@@ -355,8 +380,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
 
       // Check if wallet has sufficient SOL balance
       const walletBalance = solBalances.get(wallet.address) || 0;
-      if (walletBalance < quickBuyAmount) {
-        showToast(`Insufficient SOL balance. Need ${quickBuyAmount} SOL, have ${walletBalance.toFixed(3)} SOL`, 'error');
+      if (walletBalance < solAmountToUse) {
+        showToast(`Insufficient SOL balance. Need ${solAmountToUse.toFixed(3)} SOL, have ${walletBalance.toFixed(3)} SOL`, 'error');
         return;
       }
       
@@ -412,6 +437,12 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             setQuickBuyAmount={setQuickBuyAmount}
             quickBuyEnabled={quickBuyEnabled}
             setQuickBuyEnabled={setQuickBuyEnabled}
+            quickBuyMinAmount={quickBuyMinAmount}
+            setQuickBuyMinAmount={setQuickBuyMinAmount}
+            quickBuyMaxAmount={quickBuyMaxAmount}
+            setQuickBuyMaxAmount={setQuickBuyMaxAmount}
+            useQuickBuyRange={useQuickBuyRange}
+            setUseQuickBuyRange={setUseQuickBuyRange}
           />
         </div>
         
@@ -467,7 +498,14 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   {/* Quick Buy Button or Indicator */}
                   <td className="py-2.5 pl-3 pr-1 w-8">
                     {quickBuyEnabled ? (
-                      <Tooltip content={tokenAddress ? `Quick buy ${quickBuyAmount} SOL` : "No token selected"} position="right">
+                      <Tooltip content={
+                        tokenAddress 
+                          ? (useQuickBuyRange 
+                              ? `Quick buy random ${quickBuyMinAmount?.toFixed(3)}-${quickBuyMaxAmount?.toFixed(3)} SOL` 
+                              : `Quick buy ${quickBuyAmount} SOL`
+                            )
+                          : "No token selected"
+                      } position="right">
                         <button
                           onClick={(e) => handleQuickBuy(wallet, e)}
                           disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
