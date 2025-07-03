@@ -229,6 +229,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const [buyingWalletId, setBuyingWalletId] = useState<number | null>(null);
+  const [quickBuyAmount, setQuickBuyAmount] = useState<number>(0.01);
   
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
@@ -335,11 +336,11 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
     setBuyingWalletId(wallet.id);
     
     try {
-      // Default quick buy configuration
+      // Quick buy configuration with user-defined amount
       const swapConfig = {
         inputMint: 'So11111111111111111111111111111111111111112', // SOL
         outputMint: tokenAddress,
-        solAmount: 0.01, // Default 0.01 SOL per wallet
+        solAmount: quickBuyAmount, // User-configurable SOL amount
         slippageBps: 300 // 3% slippage
       };
 
@@ -348,6 +349,13 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         privateKey: wallet.privateKey
       };
 
+      // Check if wallet has sufficient SOL balance
+      const walletBalance = solBalances.get(wallet.address) || 0;
+      if (walletBalance < quickBuyAmount) {
+        showToast(`Insufficient SOL balance. Need ${quickBuyAmount} SOL, have ${walletBalance.toFixed(3)} SOL`, 'error');
+        return;
+      }
+      
       // Validate inputs
       const validation = validateJupSwapInputs([walletForSwap], swapConfig, solBalances);
       if (!validation.valid) {
@@ -396,6 +404,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             sortDirection={sortDirection}
             handleSortWallets={handleSortWallets}
             setIsModalOpen={setIsModalOpen}
+            quickBuyAmount={quickBuyAmount}
+            setQuickBuyAmount={setQuickBuyAmount}
           />
         </div>
         
@@ -450,10 +460,10 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                 >
                   {/* Quick Buy Button */}
                   <td className="py-2.5 pl-3 pr-1 w-8">
-                    <Tooltip content={tokenAddress ? "Quick buy 0.01 SOL" : "No token selected"} position="right">
+                    <Tooltip content={tokenAddress ? `Quick buy ${quickBuyAmount} SOL` : "No token selected"} position="right">
                       <button
                         onClick={(e) => handleQuickBuy(wallet, e)}
-                        disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < 0.01}
+                        disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
                         className={`
                           w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
                           ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
@@ -468,7 +478,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                           <RefreshCw size={10} className="text-[#02b36d] animate-spin" />
                         ) : (
                           <ShoppingCart size={10} className={`
-                            ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
+                            ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
                               ? 'text-[#02b36d40]'
                               : 'text-[#02b36d]'
                             }

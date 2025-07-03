@@ -5,7 +5,7 @@ import {
   RefreshCw, Coins, CheckSquare, Square, ArrowDownAZ, ArrowUpAZ, 
   Wallet, Share2, Network, Send, HandCoins, DollarSign, 
   Menu, X, ChevronUp, ChevronDown, ChevronRight,
-  Share
+  Share, ShoppingCart, Settings
 } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { WalletType, saveWalletsToCookies } from './Utils';
@@ -29,6 +29,8 @@ interface WalletOperationsButtonsProps {
   sortDirection: string;
   handleSortWallets: () => void;
   setIsModalOpen: (open: boolean) => void;
+  quickBuyAmount?: number;
+  setQuickBuyAmount?: (amount: number) => void;
 }
 
 type OperationTab = 'distribute' | 'consolidate' | 'transfer' | 'deposit' | 'mixer' | 'fund';
@@ -45,7 +47,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   setWallets,
   sortDirection,
   handleSortWallets,
-  setIsModalOpen
+  setIsModalOpen,
+  quickBuyAmount = 0.01,
+  setQuickBuyAmount
 }) => {
   // State for active modal
   const [activeModal, setActiveModal] = useState<OperationTab | null>(null);
@@ -55,6 +59,10 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   
   // State for operations drawer
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  
+  // State for quick buy settings modal
+  const [isQuickBuySettingsOpen, setIsQuickBuySettingsOpen] = useState(false);
+  const [tempQuickBuyAmount, setTempQuickBuyAmount] = useState(quickBuyAmount);
   
   // Function to toggle drawer
   const toggleDrawer = () => {
@@ -93,6 +101,21 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   const openMixerFromFund = () => {
     setIsFundModalOpen(false);
     setActiveModal('mixer');
+  };
+  
+  // Function to open quick buy settings
+  const openQuickBuySettings = () => {
+    setTempQuickBuyAmount(quickBuyAmount);
+    setIsQuickBuySettingsOpen(true);
+    setIsDrawerOpen(false);
+  };
+  
+  // Function to save quick buy amount
+  const saveQuickBuyAmount = () => {
+    if (setQuickBuyAmount && tempQuickBuyAmount > 0) {
+      setQuickBuyAmount(tempQuickBuyAmount);
+    }
+    setIsQuickBuySettingsOpen(false);
   };
 
   // Check if all wallets are active
@@ -305,6 +328,88 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
         </AnimatePresence>,
         document.body
       )}
+      
+      {/* Quick Buy Settings Modal */}
+      {isQuickBuySettingsOpen && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={() => setIsQuickBuySettingsOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#05080a] border border-[#02b36d30] rounded-lg p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-mono text-[#02b36d] tracking-wider">Quick Buy Settings</h2>
+                <button
+                  onClick={() => setIsQuickBuySettingsOpen(false)}
+                  className="text-[#02b36d] hover:text-[#7ddfbd] transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-mono text-[#02b36d] mb-2">
+                    SOL Amount per Quick Buy
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    max="10"
+                    value={tempQuickBuyAmount}
+                    onChange={(e) => setTempQuickBuyAmount(parseFloat(e.target.value) || 0.001)}
+                    className="w-full px-3 py-2 bg-[#071015] border border-[#02b36d30] rounded-md
+                             text-[#e4fbf2] font-mono text-sm focus:border-[#02b36d] focus:outline-none
+                             transition-colors duration-200"
+                    placeholder="0.01"
+                  />
+                  <p className="text-xs text-[#02b36d80] mt-1">
+                    Amount of SOL to spend when clicking quick buy buttons
+                  </p>
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <motion.button
+                    variants={buttonVariants}
+                    initial="rest"
+                    whileHover="hover"
+                    whileTap="tap"
+                    onClick={() => setIsQuickBuySettingsOpen(false)}
+                    className="flex-1 py-2 px-4 rounded-md border border-[#02b36d30]
+                             text-[#02b36d] hover:text-[#7ddfbd] transition-colors duration-200"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    variants={buttonVariants}
+                    initial="rest"
+                    whileHover="hover"
+                    whileTap="tap"
+                    onClick={saveQuickBuyAmount}
+                    disabled={tempQuickBuyAmount <= 0}
+                    className="flex-1 py-2 px-4 rounded-md bg-[#02b36d] text-[#051014]
+                             hover:bg-[#02c377] disabled:opacity-50 disabled:cursor-not-allowed
+                             transition-colors duration-200 font-mono"
+                  >
+                    Save
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Main controls bar - slimmer and more minimal */}
       <div className="w-full mb-1 bg-[#05080a95] backdrop-blur-sm rounded-md p-0.5 
@@ -345,20 +450,39 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             )}
           </div>
           
-          {/* Menu toggle button */}
-          <motion.button
-            variants={buttonVariants}
-            initial="rest"
-            whileHover="hover"
-            whileTap="tap"
-            onClick={toggleDrawer}
-            className="ml-0.5 p-1.5 flex items-center justify-center rounded
-                     bg-gradient-to-r from-[#02b36d] to-[#018a54] 
-                     text-[#051014] hover:from-[#02c377] hover:to-[#01a35f]
-                     transition-colors duration-200"
-          >
-            {isDrawerOpen ? <X size={14} /> : <Menu size={14} />}
-          </motion.button>
+          {/* Quick Buy Settings and Menu toggle buttons */}
+          <div className="flex items-center gap-0.5">
+            {wallets.length > 0 && (
+              <motion.button
+                variants={buttonVariants}
+                initial="rest"
+                whileHover="hover"
+                whileTap="tap"
+                onClick={openQuickBuySettings}
+                className="flex items-center gap-1 px-2 py-1.5 text-xs font-mono tracking-wider
+                         text-[#02b36d] hover:text-[#7ddfbd] bg-[#071015] border 
+                         border-[#02b36d20] hover:border-[#02b36d40] rounded 
+                         transition-colors duration-200"
+              >
+                <ShoppingCart size={12} />
+                <span>{quickBuyAmount} SOL</span>
+              </motion.button>
+            )}
+            
+            <motion.button
+              variants={buttonVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap="tap"
+              onClick={toggleDrawer}
+              className="ml-0.5 p-1.5 flex items-center justify-center rounded
+                       bg-gradient-to-r from-[#02b36d] to-[#018a54] 
+                       text-[#051014] hover:from-[#02c377] hover:to-[#01a35f]
+                       transition-colors duration-200"
+            >
+              {isDrawerOpen ? <X size={14} /> : <Menu size={14} />}
+            </motion.button>
+          </div>
         </div>
       </div>
 
