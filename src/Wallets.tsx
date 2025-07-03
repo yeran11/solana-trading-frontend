@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon } from 'lucide-react';
+import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, ShoppingCart } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
 import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
+import { executeJupSwap, validateJupSwapInputs } from './utils/jupbuy';
 
 // Tooltip Component with cyberpunk styling
 export const Tooltip = ({ 
@@ -227,6 +228,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
+  const [buyingWalletId, setBuyingWalletId] = useState<number | null>(null);
   
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
@@ -320,6 +322,58 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
     await fetchSolBalances();
   };
 
+  const handleQuickBuy = async (wallet: WalletType, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!tokenAddress) {
+      showToast('No token address specified', 'error');
+      return;
+    }
+
+    if (buyingWalletId === wallet.id) return; // Prevent double clicks
+    
+    setBuyingWalletId(wallet.id);
+    
+    try {
+      // Default quick buy configuration
+      const swapConfig = {
+        inputMint: 'So11111111111111111111111111111111111111112', // SOL
+        outputMint: tokenAddress,
+        solAmount: 0.01, // Default 0.01 SOL per wallet
+        slippageBps: 300 // 3% slippage
+      };
+
+      const walletForSwap = {
+        address: wallet.address,
+        privateKey: wallet.privateKey
+      };
+
+      // Validate inputs
+      const validation = validateJupSwapInputs([walletForSwap], swapConfig, solBalances);
+      if (!validation.valid) {
+        showToast(validation.error || 'Validation failed', 'error');
+        return;
+      }
+      
+      const result = await executeJupSwap([walletForSwap], swapConfig);
+      
+      if (result.success) {
+        showToast('Quick buy executed successfully!', 'success');
+        // Refresh balances after successful buy
+        setTimeout(() => {
+          handleRefreshAll();
+        }, 2000);
+      } else {
+        showToast(result.error || 'Quick buy failed', 'error');
+      }
+    } catch (error) {
+      console.error('Quick buy error:', error);
+      showToast('Quick buy failed: ' + (error.message || 'Unknown error'), 'error');
+    } finally {
+      setBuyingWalletId(null);
+    }
+  };
+
   return (
     <div className="flex-1 bg-[#050a0e] relative cyberpunk-bg">
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
@@ -394,17 +448,34 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
                   `}
                 >
-                  {/* Indicator dot */}
-                  <td className="py-2.5 pl-3 pr-1 w-6">
-                    <div 
-                      className={`
-                        w-3 h-3 rounded-full transition-all duration-200
-                        ${wallet.isActive 
-                          ? 'bg-[#02b36d] shadow-sm shadow-[#02b36d40]' 
-                          : 'bg-[#091217] border border-[#02b36d40]'
-                        }
-                      `} 
-                    />
+                  {/* Quick Buy Button */}
+                  <td className="py-2.5 pl-3 pr-1 w-8">
+                    <Tooltip content={tokenAddress ? "Quick buy 0.01 SOL" : "No token selected"} position="right">
+                      <button
+                        onClick={(e) => handleQuickBuy(wallet, e)}
+                        disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < 0.01}
+                        className={`
+                          w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
+                          ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
+                            ? 'bg-[#091217] border border-[#02b36d20] cursor-not-allowed'
+                            : buyingWalletId === wallet.id
+                            ? 'bg-[#02b36d40] border border-[#02b36d]'
+                            : 'bg-[#02b36d20] border border-[#02b36d60] hover:bg-[#02b36d30] hover:border-[#02b36d] cursor-pointer'
+                          }
+                        `}
+                      >
+                        {buyingWalletId === wallet.id ? (
+                          <RefreshCw size={10} className="text-[#02b36d] animate-spin" />
+                        ) : (
+                          <ShoppingCart size={10} className={`
+                            ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
+                              ? 'text-[#02b36d40]'
+                              : 'text-[#02b36d]'
+                            }
+                          `} />
+                        )}
+                      </button>
+                    </Tooltip>
                   </td>
                   
                   {/* Address with proper sizing */}
