@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   RefreshCw, Coins, CheckSquare, Square, ArrowDownAZ, ArrowUpAZ, 
   Wallet, Share2, Network, Send, HandCoins, DollarSign, 
-  Menu, X, ChevronUp, ChevronDown, ChevronRight,
-  Share, ShoppingCart, Settings
+  Menu, X, ChevronRight,
+  Share, Zap
 } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { WalletType, saveWalletsToCookies } from './Utils';
@@ -464,7 +464,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                          border-[#02b36d20] hover:border-[#02b36d40] rounded 
                          transition-colors duration-200"
               >
-                <ShoppingCart size={12} />
+                <Zap size={12} />
                 <span>{quickBuyAmount} SOL</span>
               </motion.button>
             )}

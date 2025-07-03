@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, ShoppingCart } from 'lucide-react';
+import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, Zap } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
@@ -477,7 +477,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         {buyingWalletId === wallet.id ? (
                           <RefreshCw size={10} className="text-[#02b36d] animate-spin" />
                         ) : (
-                          <ShoppingCart size={10} className={`
+                          <Zap size={10} className={`
                             ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
                               ? 'text-[#02b36d40]'
                               : 'text-[#02b36d]'
