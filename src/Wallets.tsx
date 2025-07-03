@@ -495,7 +495,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
                       )}
                       <span 
-                        className="text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide"
+                        className={`text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide ${
+                          wallet.isActive ? 'text-[#00ff88]' : 'text-[#e4fbf2]'
+                        }`}
                         onClick={async (e) => {
                           e.stopPropagation();
                           const success = await copyToClipboard(wallet.address, showToast);
