@@ -97,6 +97,7 @@ const WalletManager: React.FC = () => {
       position: { x: number; y: number };
       isDragging: boolean;
     };
+    quickBuyEnabled: boolean;
   }
 
   type AppAction = 
@@ -122,7 +123,8 @@ const WalletManager: React.FC = () => {
     | { type: 'UPDATE_BALANCE'; payload: { address: string; solBalance?: number; tokenBalance?: number } }
     | { type: 'SET_FLOATING_CARD_OPEN'; payload: boolean }
     | { type: 'SET_FLOATING_CARD_POSITION'; payload: { x: number; y: number } }
-    | { type: 'SET_FLOATING_CARD_DRAGGING'; payload: boolean };
+    | { type: 'SET_FLOATING_CARD_DRAGGING'; payload: boolean }
+    | { type: 'SET_QUICK_BUY_ENABLED'; payload: boolean };
 
   const initialState: AppState = {
     copiedAddress: null,
@@ -165,7 +167,8 @@ const WalletManager: React.FC = () => {
       isOpen: false,
       position: { x: 100, y: 100 },
       isDragging: false
-    }
+    },
+    quickBuyEnabled: true
   };
 
   const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -249,6 +252,8 @@ const WalletManager: React.FC = () => {
             isDragging: action.payload
           }
         };
+      case 'SET_QUICK_BUY_ENABLED':
+        return { ...state, quickBuyEnabled: action.payload };
       default:
         return state;
     }
@@ -297,7 +302,8 @@ const WalletManager: React.FC = () => {
     setIsStatusVisible: (visible: boolean) => dispatch({ type: 'SET_STATUS', payload: { message: state.status.message, isVisible: visible } }),
     setFloatingCardOpen: (open: boolean) => dispatch({ type: 'SET_FLOATING_CARD_OPEN', payload: open }),
     setFloatingCardPosition: (position: { x: number; y: number }) => dispatch({ type: 'SET_FLOATING_CARD_POSITION', payload: position }),
-    setFloatingCardDragging: (dragging: boolean) => dispatch({ type: 'SET_FLOATING_CARD_DRAGGING', payload: dragging })
+    setFloatingCardDragging: (dragging: boolean) => dispatch({ type: 'SET_FLOATING_CARD_DRAGGING', payload: dragging }),
+    setQuickBuyEnabled: (enabled: boolean) => dispatch({ type: 'SET_QUICK_BUY_ENABLED', payload: enabled })
   }), [state.status]);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
@@ -1306,6 +1312,8 @@ const WalletManager: React.FC = () => {
                   connection={state.connection}
                   solBalances={state.solBalances}
                   tokenBalances={state.tokenBalances}
+                  quickBuyEnabled={state.quickBuyEnabled}
+                  setQuickBuyEnabled={memoizedCallbacks.setQuickBuyEnabled}
                 />
               )}
             </div>
@@ -1362,6 +1370,8 @@ const WalletManager: React.FC = () => {
                   connection={state.connection}
                   solBalances={state.solBalances}
                   tokenBalances={state.tokenBalances}
+                  quickBuyEnabled={state.quickBuyEnabled}
+                  setQuickBuyEnabled={memoizedCallbacks.setQuickBuyEnabled}
                 />
               ) : (
                 <div className="p-4 text-center text-[#7ddfbd]">

@@ -199,6 +199,8 @@ interface WalletsPageProps {
   setTotalTokens?: (total: number) => void;
   activeTokens?: number;
   setActiveTokens?: (active: number) => void;
+  quickBuyEnabled?: boolean;
+  setQuickBuyEnabled?: (enabled: boolean) => void;
 }
 export const WalletsPage: React.FC<WalletsPageProps> = ({
   wallets,
@@ -223,7 +225,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   totalTokens: externalTotalTokens,
   setTotalTokens: setExternalTotalTokens,
   activeTokens: externalActiveTokens,
-  setActiveTokens: setExternalActiveTokens
+  setActiveTokens: setExternalActiveTokens,
+  quickBuyEnabled = true,
+  setQuickBuyEnabled
 }) => {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
@@ -406,6 +410,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             setIsModalOpen={setIsModalOpen}
             quickBuyAmount={quickBuyAmount}
             setQuickBuyAmount={setQuickBuyAmount}
+            quickBuyEnabled={quickBuyEnabled}
+            setQuickBuyEnabled={setQuickBuyEnabled}
           />
         </div>
         
@@ -458,34 +464,43 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
                   `}
                 >
-                  {/* Quick Buy Button */}
+                  {/* Quick Buy Button or Indicator */}
                   <td className="py-2.5 pl-3 pr-1 w-8">
-                    <Tooltip content={tokenAddress ? `Quick buy ${quickBuyAmount} SOL` : "No token selected"} position="right">
-                      <button
-                        onClick={(e) => handleQuickBuy(wallet, e)}
-                        disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
-                        className={`
-                          w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
-                          ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
-                            ? 'bg-[#091217] border border-[#02b36d20] cursor-not-allowed'
-                            : buyingWalletId === wallet.id
-                            ? 'bg-[#02b36d40] border border-[#02b36d]'
-                            : 'bg-[#02b36d20] border border-[#02b36d60] hover:bg-[#02b36d30] hover:border-[#02b36d] cursor-pointer'
-                          }
-                        `}
-                      >
-                        {buyingWalletId === wallet.id ? (
-                          <RefreshCw size={10} className="text-[#02b36d] animate-spin" />
-                        ) : (
-                          <Zap size={10} className={`
-                            ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
-                              ? 'text-[#02b36d40]'
-                              : 'text-[#02b36d]'
+                    {quickBuyEnabled ? (
+                      <Tooltip content={tokenAddress ? `Quick buy ${quickBuyAmount} SOL` : "No token selected"} position="right">
+                        <button
+                          onClick={(e) => handleQuickBuy(wallet, e)}
+                          disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
+                          className={`
+                            w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
+                            ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
+                              ? 'bg-[#091217] border border-[#02b36d20] cursor-not-allowed'
+                              : buyingWalletId === wallet.id
+                              ? 'bg-[#02b36d40] border border-[#02b36d]'
+                              : 'bg-[#02b36d20] border border-[#02b36d60] hover:bg-[#02b36d30] hover:border-[#02b36d] cursor-pointer'
                             }
-                          `} />
-                        )}
-                      </button>
-                    </Tooltip>
+                          `}
+                        >
+                          {buyingWalletId === wallet.id ? (
+                            <RefreshCw size={10} className="text-[#02b36d] animate-spin" />
+                          ) : (
+                            <Zap size={10} className={`
+                              ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
+                                ? 'text-[#02b36d40]'
+                                : 'text-[#02b36d]'
+                              }
+                            `} />
+                          )}
+                        </button>
+                      </Tooltip>
+                    ) : (
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <div className={`
+                          w-2 h-2 rounded-full transition-all duration-200
+                          ${wallet.isActive ? 'bg-[#02b36d]' : 'bg-[#02b36d40]'}
+                        `} />
+                      </div>
+                    )}
                   </td>
                   
                   {/* Address with proper sizing */}

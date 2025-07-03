@@ -31,6 +31,8 @@ interface WalletOperationsButtonsProps {
   setIsModalOpen: (open: boolean) => void;
   quickBuyAmount?: number;
   setQuickBuyAmount?: (amount: number) => void;
+  quickBuyEnabled?: boolean;
+  setQuickBuyEnabled?: (enabled: boolean) => void;
 }
 
 type OperationTab = 'distribute' | 'consolidate' | 'transfer' | 'deposit' | 'mixer' | 'fund';
@@ -49,7 +51,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   handleSortWallets,
   setIsModalOpen,
   quickBuyAmount = 0.01,
-  setQuickBuyAmount
+  setQuickBuyAmount,
+  quickBuyEnabled = true,
+  setQuickBuyEnabled
 }) => {
   // State for active modal
   const [activeModal, setActiveModal] = useState<OperationTab | null>(null);
@@ -63,6 +67,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   // State for quick buy settings modal
   const [isQuickBuySettingsOpen, setIsQuickBuySettingsOpen] = useState(false);
   const [tempQuickBuyAmount, setTempQuickBuyAmount] = useState(quickBuyAmount);
+  const [tempQuickBuyEnabled, setTempQuickBuyEnabled] = useState(quickBuyEnabled);
   
   // Function to toggle drawer
   const toggleDrawer = () => {
@@ -106,14 +111,18 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   // Function to open quick buy settings
   const openQuickBuySettings = () => {
     setTempQuickBuyAmount(quickBuyAmount);
+    setTempQuickBuyEnabled(quickBuyEnabled);
     setIsQuickBuySettingsOpen(true);
     setIsDrawerOpen(false);
   };
   
-  // Function to save quick buy amount
-  const saveQuickBuyAmount = () => {
+  // Function to save quick buy settings
+  const saveQuickBuySettings = () => {
     if (setQuickBuyAmount && tempQuickBuyAmount > 0) {
       setQuickBuyAmount(tempQuickBuyAmount);
+    }
+    if (setQuickBuyEnabled) {
+      setQuickBuyEnabled(tempQuickBuyEnabled);
     }
     setIsQuickBuySettingsOpen(false);
   };
@@ -358,6 +367,42 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
               
               <div className="space-y-4">
                 <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <span className="text-sm font-mono text-[#02b36d] block mb-1">
+                        Quick Buy Feature
+                      </span>
+                      <p className="text-xs text-[#02b36d80]">
+                        Show quick buy buttons in wallet rows
+                      </p>
+                    </div>
+                    
+                    {/* Custom Toggle Switch */}
+                    <button
+                      onClick={() => setTempQuickBuyEnabled(!tempQuickBuyEnabled)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#02b36d] focus:ring-offset-2 focus:ring-offset-[#071015] ${
+                        tempQuickBuyEnabled 
+                          ? 'bg-gradient-to-r from-[#02b36d] to-[#02c377]' 
+                          : 'bg-[#1a1f2e] border border-[#02b36d30]'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full transition-transform duration-200 ${
+                          tempQuickBuyEnabled 
+                            ? 'translate-x-6 bg-[#051014] shadow-lg' 
+                            : 'translate-x-1 bg-[#02b36d60]'
+                        }`}
+                      />
+                      {/* Glow effect when enabled */}
+                      {tempQuickBuyEnabled && (
+                        <div className="absolute inset-0 rounded-full bg-[#02b36d] opacity-20 blur-sm" />
+                      )}
+                    </button>
+                  </div>
+                  
+                </div>
+                
+                <div className={tempQuickBuyEnabled ? '' : 'opacity-50'}>
                   <label className="block text-sm font-mono text-[#02b36d] mb-2">
                     SOL Amount per Quick Buy
                   </label>
@@ -368,9 +413,10 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     max="10"
                     value={tempQuickBuyAmount}
                     onChange={(e) => setTempQuickBuyAmount(parseFloat(e.target.value) || 0.001)}
+                    disabled={!tempQuickBuyEnabled}
                     className="w-full px-3 py-2 bg-[#071015] border border-[#02b36d30] rounded-md
                              text-[#e4fbf2] font-mono text-sm focus:border-[#02b36d] focus:outline-none
-                             transition-colors duration-200"
+                             transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="0.01"
                   />
                   <p className="text-xs text-[#02b36d80] mt-1">
@@ -395,8 +441,8 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     initial="rest"
                     whileHover="hover"
                     whileTap="tap"
-                    onClick={saveQuickBuyAmount}
-                    disabled={tempQuickBuyAmount <= 0}
+                    onClick={saveQuickBuySettings}
+                    disabled={tempQuickBuyEnabled && tempQuickBuyAmount <= 0}
                     className="flex-1 py-2 px-4 rounded-md bg-[#02b36d] text-[#051014]
                              hover:bg-[#02c377] disabled:opacity-50 disabled:cursor-not-allowed
                              transition-colors duration-200 font-mono"
@@ -459,13 +505,15 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                 whileHover="hover"
                 whileTap="tap"
                 onClick={openQuickBuySettings}
-                className="flex items-center gap-1 px-2 py-1.5 text-xs font-mono tracking-wider
-                         text-[#02b36d] hover:text-[#7ddfbd] bg-[#071015] border 
-                         border-[#02b36d20] hover:border-[#02b36d40] rounded 
-                         transition-colors duration-200"
+                className={`flex items-center gap-1 px-2 py-1.5 text-xs font-mono tracking-wider
+                         bg-[#071015] border rounded transition-colors duration-200 ${
+                  quickBuyEnabled 
+                    ? 'text-[#02b36d] hover:text-[#7ddfbd] border-[#02b36d20] hover:border-[#02b36d40]'
+                    : 'text-[#02b36d50] border-[#02b36d10] opacity-60'
+                }`}
               >
                 <Zap size={12} />
-                <span>{quickBuyAmount} SOL</span>
+                <span>{quickBuyEnabled ? `${quickBuyAmount} SOL` : 'OFF'}</span>
               </motion.button>
             )}
             
