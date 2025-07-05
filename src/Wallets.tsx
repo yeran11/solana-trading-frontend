@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, Zap } from 'lucide-react';
-import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance } from './Utils';
+import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance, getWalletDisplayName } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
 import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
@@ -547,26 +547,31 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                       {refreshingWalletId === wallet.id && (
                         <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
                       )}
-                      <span 
-                        className={`text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide ${
-                          wallet.isActive ? 'text-[#00ff88]' : 'text-[#e4fbf2]'
-                        }`}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const success = await copyToClipboard(wallet.address, showToast);
-                          if (success) {
-                            setCopiedAddress(wallet.address);
-                            setTimeout(() => setCopiedAddress(null), 2000);
-                          }
-                        }}
+                      <Tooltip 
+                        content={wallet.label ? `${wallet.label} (${formatAddress(wallet.address)})` : `Click to copy: ${wallet.address}`}
+                        position="top"
                       >
-                        {formatAddress(wallet.address)}
-                        {copiedAddress === wallet.address && (
-                          <span className="ml-1 text-xs text-[#02b36d] animate-pulse">
-                            ✓
-                          </span>
-                        )}
-                      </span>
+                        <span 
+                          className={`text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide ${
+                            wallet.isActive ? 'text-[#00ff88]' : 'text-[#e4fbf2]'
+                          }`}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const success = await copyToClipboard(wallet.address, showToast);
+                            if (success) {
+                              setCopiedAddress(wallet.address);
+                              setTimeout(() => setCopiedAddress(null), 2000);
+                            }
+                          }}
+                        >
+                          {getWalletDisplayName(wallet)}
+                          {copiedAddress === wallet.address && (
+                            <span className="ml-1 text-xs text-[#02b36d] animate-pulse">
+                              ✓
+                            </span>
+                          )}
+                        </span>
+                      </Tooltip>
                     </div>
                   </td>
                   

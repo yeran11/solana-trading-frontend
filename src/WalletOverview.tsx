@@ -14,7 +14,10 @@ import {
   MoreVertical,
   Wallet,
   Settings,
-  X
+  X,
+  Edit3,
+  Check,
+  XCircle
 } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { WalletTooltip } from './Styles';
@@ -24,7 +27,8 @@ import {
   copyToClipboard, 
   downloadPrivateKey,
   deleteWallet,
-  saveWalletsToCookies
+  saveWalletsToCookies,
+  getWalletDisplayName
 } from './Utils';
 import { handleCleanupWallets, handleSortWallets } from './Manager';
 
@@ -67,6 +71,8 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
   const [selectedWallets, setSelectedWallets] = useState<Set<number>>(new Set());
   const [showPrivateKeys, setShowPrivateKeys] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'withSOL' | 'withTokens' | 'empty'>('all');
+  const [editingLabel, setEditingLabel] = useState<number | null>(null);
+  const [editLabelValue, setEditLabelValue] = useState<string>('');
 
   // Filter and sort wallets - useMemo must also be called before conditional return
   const filteredAndSortedWallets = useMemo(() => {
@@ -155,6 +161,38 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
 
   const clearSelection = () => {
     setSelectedWallets(new Set());
+  };
+
+  // Label editing functions
+  const startEditingLabel = (wallet: WalletType) => {
+    setEditingLabel(wallet.id);
+    setEditLabelValue(wallet.label || '');
+  };
+
+  const saveLabel = (walletId: number) => {
+    const updatedWallets = wallets.map(wallet => 
+      wallet.id === walletId 
+        ? { ...wallet, label: editLabelValue.trim() || undefined }
+        : wallet
+    );
+    saveWalletsToCookies(updatedWallets);
+    setWallets(updatedWallets);
+    setEditingLabel(null);
+    setEditLabelValue('');
+    showToast('Label updated', 'success');
+  };
+
+  const cancelEditingLabel = () => {
+    setEditingLabel(null);
+    setEditLabelValue('');
+  };
+
+  const handleLabelKeyPress = (e: React.KeyboardEvent, walletId: number) => {
+    if (e.key === 'Enter') {
+      saveLabel(walletId);
+    } else if (e.key === 'Escape') {
+      cancelEditingLabel();
+    }
   };
 
   // Bulk operations
@@ -327,6 +365,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                       }
                     </button>
                   </th>
+                  <th className="p-3 text-left text-[#7ddfbd]">LABEL</th>
                   <th className="p-3 text-left">
                     <button
                       onClick={() => handleSort('address')}
@@ -382,6 +421,45 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                         >
                           {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                         </button>
+                      </td>
+                      <td className="p-3">
+                        {editingLabel === wallet.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editLabelValue}
+                              onChange={(e) => setEditLabelValue(e.target.value)}
+                              onKeyDown={(e) => handleLabelKeyPress(e, wallet.id)}
+                              className="bg-[#0a1419] border border-[#02b36d40] rounded px-2 py-1 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none font-mono flex-1"
+                              placeholder="Enter label..."
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => saveLabel(wallet.id)}
+                              className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300"
+                            >
+                              <Check size={14} className="text-[#02b36d]" />
+                            </button>
+                            <button
+                              onClick={cancelEditingLabel}
+                              className="p-1 hover:bg-[#ff224420] rounded transition-all duration-300"
+                            >
+                              <XCircle size={14} className="text-[#ff2244]" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#e4fbf2] font-mono text-sm">
+                              {wallet.label || 'No label'}
+                            </span>
+                            <button
+                              onClick={() => startEditingLabel(wallet)}
+                              className="p-1 hover:bg-[#02b36d20] rounded transition-all duration-300 opacity-60 hover:opacity-100"
+                            >
+                              <Edit3 size={12} className="text-[#02b36d]" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td className="p-3">
                         <WalletTooltip content="Click to copy address" position="top">

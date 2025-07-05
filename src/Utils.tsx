@@ -8,6 +8,7 @@ export interface WalletType {
   privateKey: string;
   isActive: boolean;
   tokenBalance?: number;
+  label?: string;
 }
 
 export interface ConfigType {
@@ -113,6 +114,10 @@ export const importWallet = async (
 export const formatAddress = (address: string) => {
   if (address.length < 8) return address;
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
+};
+
+export const getWalletDisplayName = (wallet: WalletType): string => {
+  return wallet.label && wallet.label.trim() ? wallet.label : formatAddress(wallet.address);
 };
 
 export const copyToClipboard = async (text: string, showToast: (message: string, type: 'success' | 'error') => void): Promise<boolean> => {

@@ -10,8 +10,12 @@ import {
   loadConfigFromCookies,
   loadQuickBuyPreferencesFromCookies,
   saveQuickBuyPreferencesToCookies,
+  downloadPrivateKey,
+  downloadAllWallets, 
   deleteWallet, 
   WalletType, 
+  formatAddress,
+  copyToClipboard,
   ConfigType,
 } from './Utils';
 import Split from 'react-split';
