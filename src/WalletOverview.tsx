@@ -489,7 +489,7 @@ const EnhancedWalletOverview: React.FC<EnhancedWalletOverviewProps> = ({
                             onClick={() => copyToClipboard(wallet.privateKey, showToast)}
                             className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors font-mono text-xs"
                           >
-                            {wallet.privateKey.substring(0, 12)}...
+                            {wallet.privateKey.substring(0, 16)}...
                           </button>
                         </WalletTooltip>
                       </td>
