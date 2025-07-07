@@ -85,3 +85,30 @@
 iframe::-webkit-scrollbar {
   display: none;
 }
+
+/* Mobile iframe fixes */
+@media (max-width: 768px) {
+  iframe {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+    will-change: transform;
+  }
+  
+  /* Ensure iframe containers have proper height on mobile */
+  .iframe-container {
+    min-height: calc(100vh - 4rem);
+    height: calc(100vh - 4rem);
+  }
+  
+  /* Fix for iOS Safari iframe rendering */
+  @supports (-webkit-touch-callout: none) {
+    iframe {
+      -webkit-overflow-scrolling: touch;
+      overflow: auto;
+    }
+  }
+}

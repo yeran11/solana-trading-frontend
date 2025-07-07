@@ -1,12 +1,63 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { Search, AlertCircle, BarChart, List, GripHorizontal } from 'lucide-react';
+import { Search, AlertCircle, BarChart } from 'lucide-react';
+import { WalletType, getWalletDisplayName } from './Utils';
 
 interface ChartPageProps {
   isLoadingChart: boolean;
   tokenAddress: string;
   ammKey: string | null;
-  walletAddresses: string[];
+  wallets: WalletType[];
+}
+
+// Iframe communication types
+interface Wallet {
+  address: string;
+  label?: string;
+}
+
+type IframeMessage = 
+  | AddWalletsMessage
+  | ClearWalletsMessage
+  | GetWalletsMessage;
+
+interface AddWalletsMessage {
+  type: 'ADD_WALLETS';
+  wallets: (string | Wallet)[];
+}
+
+interface ClearWalletsMessage {
+  type: 'CLEAR_WALLETS';
+}
+
+interface GetWalletsMessage {
+  type: 'GET_WALLETS';
+}
+
+type IframeResponse = 
+  | IframeReadyResponse
+  | WalletsAddedResponse
+  | WalletsClearedResponse
+  | CurrentWalletsResponse;
+
+interface IframeReadyResponse {
+  type: 'IFRAME_READY';
+}
+
+interface WalletsAddedResponse {
+  type: 'WALLETS_ADDED';
+  success: boolean;
+  count: number;
+}
+
+interface WalletsClearedResponse {
+  type: 'WALLETS_CLEARED';
+  success: boolean;
+}
+
+interface CurrentWalletsResponse {
+  type: 'CURRENT_WALLETS';
+  wallets: any[];
 }
 
 // Button component with animation
@@ -39,97 +90,93 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   isLoadingChart,
   tokenAddress,
   ammKey,
-  walletAddresses
+  wallets
 }) => {
   const [frameLoading, setFrameLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
-  const [showGMGN, setShowGMGN] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileView, setMobileView] = useState<'chart' | 'transactions'>('chart');
-  const [chartHeight, setChartHeight] = useState(70); // Percentage height for chart
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isIframeReady, setIsIframeReady] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const messageQueue = useRef<IframeMessage[]>([]);
 
-  // Mobile detection
+
+  
+  // Setup iframe message listener
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
+    const handleMessage = (event: MessageEvent<IframeResponse>) => {
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      
+      switch (event.data.type) {
+        case 'IFRAME_READY':
+          setIsIframeReady(true);
+          // Process queued messages
+          messageQueue.current.forEach(message => {
+            sendMessageToIframe(message);
+          });
+          messageQueue.current = [];
+          break;
+        
+        case 'WALLETS_ADDED':
+          console.log(`Successfully added ${event.data.count} wallets to iframe`);
+          break;
+        
+        case 'WALLETS_CLEARED':
+          console.log('Cleared all iframe wallets');
+          break;
+        
+        case 'CURRENT_WALLETS':
+          console.log('Current wallets in iframe:', event.data.wallets);
+          break;
+      }
     };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Toggle between chart and transactions on mobile
-  const toggleMobileView = () => {
-    setMobileView(prev => prev === 'chart' ? 'transactions' : 'chart');
+  // Send message to iframe
+  const sendMessageToIframe = (message: IframeMessage): void => {
+    if (!isIframeReady || !iframeRef.current) {
+      messageQueue.current.push(message);
+      return;
+    }
+
+    iframeRef.current.contentWindow?.postMessage(message, '*');
   };
 
-  // Handle resizer drag
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const newHeight = ((e.clientY - containerRect.top) / containerRect.height) * 100;
-    
-    // Constrain between 20% and 80%
-    const constrainedHeight = Math.min(Math.max(newHeight, 20), 80);
-    setChartHeight(constrainedHeight);
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Add global mouse event listeners
+  // Send wallets to iframe when they change
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
+    if (wallets && wallets.length > 0) {
+      const iframeWallets: Wallet[] = wallets.map((wallet) => ({
+        address: wallet.address,
+        label: getWalletDisplayName(wallet)
+      }));
       
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
+      sendMessageToIframe({
+        type: 'ADD_WALLETS',
+        wallets: iframeWallets
+      });
+    } else {
+      // Clear wallets if no addresses provided
+      sendMessageToIframe({
+        type: 'CLEAR_WALLETS'
+      });
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [wallets, isIframeReady]);
   
   // Reset loading state when token changes
   useEffect(() => {
     if (tokenAddress) {
       setFrameLoading(true);
+      setIsIframeReady(false);
     }
-  }, [tokenAddress, ammKey, showGMGN]);
+  }, [tokenAddress, ammKey]);
   
   // Handle iframe load completion
   const handleFrameLoad = () => {
     setFrameLoading(false);
   };
 
-  // Toggle between frame.fury.bot and GMGN graph
-  const toggleGraphSource = () => {
-    setFrameLoading(true);
-    setShowGMGN(prev => !prev);
-    setIframeKey(Date.now()); // Change key to force iframe reload
-  };
 
-  // Format wallet addresses to first 5 characters each
-  const formatWalletAddresses = (addresses: string[]) => {
-    return addresses
-      .map(address => address.substring(0, 5)) // Take first 5 characters
-      .join(','); // Join with commas
-  };
   
   // Animation variants
   const containerVariants: Variants = {
@@ -182,33 +229,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     }
   };
   
-  // Render controls
-  const renderControls = () => (
-    <motion.div 
-      className="absolute top-3 right-6 z-30 flex items-center space-x-2"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.7 }}
-      whileHover={{ opacity: 1 }}
-      transition={{ duration: 0.2 }}
-    >
-      {isMobile && (
-          <IconButton
-            icon={mobileView === 'chart' ? <List className="h-4 w-4" /> : <BarChart className="h-4 w-4" />}
-            onClick={toggleMobileView}
-            title={mobileView === 'chart' ? "Switch to Transactions" : "Switch to Chart"}
-            variant="solid"
-          />
-        )}
-      {!isMobile && (
-        <IconButton
-          icon={<BarChart className="h-4 w-4" />}
-          onClick={toggleGraphSource}
-          title={showGMGN ? "Switch to Raze graph" : "Switch to GMGN graph"}
-          variant="primary"
-        />
-      )}
-    </motion.div>
-  );
+
   
   // Render loader
   const renderLoader = (loading: boolean) => (
@@ -231,111 +252,32 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     </AnimatePresence>
   );
   
-  // Render iframe based on selected source
+  // Render iframe with single frame
   const renderFrame = () => {
-    const walletParams = walletAddresses && walletAddresses.length > 0 
-      ? `&wallets=${formatWalletAddresses(walletAddresses)}` 
-      : '';
-    
-    if (1==1) {
-      // GMGN graph with transactions iframe below
-      const transactionsSrc = `https://frame.fury.bot/?token=${tokenAddress}${walletParams}&view=transactions`;
-      
-      return (
-        <div ref={containerRef} className="relative flex-1 overflow-hidden flex flex-col">
-          {renderLoader(frameLoading || isLoadingChart)}
-          
-          <div className="absolute inset-0 overflow-hidden flex flex-col">
-            {isMobile ? (
-              // Mobile: Show only one view at a time
-              <div className="h-full relative">
-                {mobileView === 'chart' ? (
-                  <iframe 
-                    key={`gmgn-${iframeKey}`}
-                    src={`https://www.gmgn.cc/kline/sol/${tokenAddress}`}
-                    className="absolute inset-0 w-full h-full"
-                    style={{ 
-                      WebkitOverflowScrolling: 'touch'
-                    }}
-                    title="GMGN Chart"
-                    loading="lazy"
-                    onLoad={handleFrameLoad}
-                  />
-                ) : (
-                  <iframe 
-                    key={`transactions-${iframeKey}`}
-                    src={transactionsSrc}
-                    className="absolute inset-0 w-full h-full"
-                    style={{
-                      WebkitOverflowScrolling: 'touch'
-                    }}
-                    title="Transactions"
-                    loading="lazy"
-                  />
-                )}
-              </div>
-            ) : (
-              // Desktop: Show both views split with resizable divider
-              <>
-                {/* GMGN Chart - Dynamic height based on chartHeight state */}
-                <div 
-                  className="relative transition-all duration-150 ease-out"
-                  style={{ height: `${chartHeight}%` }}
-                >
-                  <iframe 
-                    key={`gmgn-${iframeKey}`}
-                    src={`https://www.gmgn.cc/kline/sol/${tokenAddress}`}
-                    className="absolute inset-0 w-full h-[calc(100%+35px)]"
-                    style={{ 
-                      marginBottom: '-35px',
-                      WebkitOverflowScrolling: 'touch'
-                    }}
-                    title="GMGN Chart"
-                    loading="lazy"
-                    onLoad={handleFrameLoad}
-                  />
-                </div>
-                
-                {/* Resizable divider */}
-                <div 
-                  className={`relative h-1 bg-[#222222] hover:bg-[#87D693]/30 transition-colors cursor-ns-resize group ${
-                    isDragging ? 'bg-[#87D693]/50' : ''
-                  }`}
-                  onMouseDown={handleMouseDown}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div 
-                      className="flex items-center justify-center w-12 h-4 rounded-full bg-[#333333] group-hover:bg-[#87D693]/20 transition-colors"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <GripHorizontal className="h-3 w-3 text-gray-400 group-hover:text-[#87D693] transition-colors" />
-                    </motion.div>
-                  </div>
-                </div>
-                
-                {/* Transactions list - Dynamic height based on remaining space */}
-                <div 
-                  className="relative transition-all duration-150 ease-out"
-                  style={{ height: `${100 - chartHeight}%` }}
-                >
-                  <iframe 
-                    key={`transactions-${iframeKey}`}
-                    src={transactionsSrc}
-                    className="absolute inset-0 w-full h-full"
-                    style={{
-                      WebkitOverflowScrolling: 'touch'
-                    }}
-                    title="Transactions"
-                    loading="lazy"
-                  />
-                </div>
-              </>
-            )}
-          </div>
+    return (
+      <div className="relative flex-1 overflow-hidden iframe-container">
+        {renderLoader(frameLoading || isLoadingChart)}
+        
+        <div className="absolute inset-0 overflow-hidden">
+          <iframe 
+            ref={iframeRef}
+            key={`frame-${iframeKey}`}
+            src={`https://frame.fury.bot/?tokenMint=${tokenAddress}&theme=green`}
+            className="absolute inset-0 w-full h-full border-0"
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+              minHeight: '100%'
+            }}
+            title="BetterSkill Frame"
+            loading="eager"
+            onLoad={handleFrameLoad}
+            allow="fullscreen"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
-      );
-    }
+      </div>
+    );
   };
   
   // Render placeholder when no token is selected
@@ -386,9 +328,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className={`relative w-full rounded-lg overflow-hidden ${
-        isMobile ? 'h-[100dvh]' : 'h-full'
-      }`}
+      className="relative w-full rounded-lg overflow-hidden h-full md:h-full min-h-[calc(100vh-4rem)] md:min-h-full"
       style={{
         background: "linear-gradient(145deg, #0f0f0f 0%, #141414 100%)",
         touchAction: 'manipulation',
@@ -398,7 +338,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a]/10 to-transparent pointer-events-none" />
       
-      {renderControls()}
+
       
       <AnimatePresence mode="wait">
         {isLoadingChart ? (
