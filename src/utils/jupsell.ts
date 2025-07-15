@@ -87,7 +87,7 @@ const getPartiallyPreparedSellTransactions = async (
       body: JSON.stringify({
         walletAddresses,
         tokenAddress: sellConfig.inputMint,
-        protocol: "jupiter",
+        protocol: "auto",
         percentage: sellConfig.sellPercent,
         jitoTipLamports: feeInLamports  // Now a number in lamports
       }),
@@ -316,7 +316,7 @@ export const executeJupSell = async (
     bundleResults.forEach((result, index) => {
       if (result.status === 'fulfilled') {
         if (result.value.success) {
-          results.push(result.value.result);
+          if (result.value.result) results.push(result.value.result);
           successfulBundles++;
         } else {
           failedBundles++;

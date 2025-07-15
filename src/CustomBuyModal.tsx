@@ -54,15 +54,14 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const [bulkAmount, setBulkAmount] = useState('0.1');
   const [currentTransactionIndex, setCurrentTransactionIndex] = useState(0);
   const [transactionResults, setTransactionResults] = useState<any[]>([]);
-  const [selectedProtocol, setSelectedProtocol] = useState<string>('jupiter'); // Default to jupiter
-  const [isLoadingBestProtocol, setIsLoadingBestProtocol] = useState<boolean>(false);
+  const [selectedProtocol, setSelectedProtocol] = useState<string>('auto'); // Default to auto
 
   const wallets = getWallets();
   const { showToast } = useToast();
 
   // DEX/Protocol options (removed auto option)
   const protocolOptions = [
-    { value: 'jupiter', label: 'Jupiter' },
+    { value: 'auto', label: '⭐ Auto', icon: '⭐' },
     { value: 'raydium', label: 'Raydium' },
     { value: 'pumpfun', label: 'Pump.fun' },
     { value: 'moonshot', label: 'Moonshot' },
@@ -140,68 +139,10 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     if (isOpen) {
       resetForm();
       handleRefresh();
-      // Auto-select best protocol when modal opens
-      autoSelectBestProtocol();
     }
   }, [isOpen, tokenAddress]);
 
-  // Auto-select the best protocol based on routing API
-  const autoSelectBestProtocol = async () => {
-    if (!tokenAddress) return;
-    
-    setIsLoadingBestProtocol(true);
-    try {
-      const savedConfig = loadConfigFromCookies();
-      const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-      const response = await fetch(`${baseUrl}/api/tokens/route`, {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: 'buy',
-          tokenMintAddress: tokenAddress,
-          amount: '0.1', // Use default amount for routing
-          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-        })
-      });
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Map protocol to our supported protocols
-        const protocolMapping = {
-          'pumpfun': 'pumpfun',
-          'moonshot': 'moonshot',
-          'pumpswap': 'pumpswap',
-          'raydium': 'raydium',
-          'jupiter': 'jupiter',
-          'launchpad': 'launchpad',
-          'boopfun': 'boopfun'
-        };
-
-        const bestProtocol = protocolMapping[data.protocol.toLowerCase()];
-        
-        if (bestProtocol && protocolOptions.find(p => p.value === bestProtocol)) {
-          setSelectedProtocol(bestProtocol);
-          const protocolLabel = protocolOptions.find(p => p.value === bestProtocol)?.label;
-          showToast(`🎯 Auto-selected ${protocolLabel} for optimal trading`, 'success');
-        } else {
-          console.warn(`Unknown protocol: ${data.protocol}. Keeping Jupiter as default.`);
-          showToast(`⚠️ Unknown protocol returned, using Jupiter as default`, 'error');
-        }
-      } else {
-        console.error('Auto-routing failed:', data.error);
-        showToast(`⚠️ Auto-routing failed, using Jupiter: ${data.error}`, 'error');
-      }
-    } catch (error) {
-      console.error('Error auto-selecting protocol:', error);
-      showToast(`⚠️ Auto-selection failed, using Jupiter: ${error.message}`, 'error');
-    } finally {
-      setIsLoadingBestProtocol(false);
-    }
-  };
 
   // Initialize wallet amounts when wallets are selected/deselected
   useEffect(() => {
@@ -228,8 +169,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     setSelectedWallets([]);
     setWalletAmounts({});
     setTransactionDelay('1');
-    setSelectedProtocol('jupiter');
-    setIsLoadingBestProtocol(false);
+    setSelectedProtocol('auto');
     setIsConfirmed(false);
     setCurrentStep(0);
     setSearchTerm('');
@@ -937,6 +877,12 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    {selectedProtocol === 'auto' && (
+                      <span className="ml-2 text-yellow-400 animate-pulse" style={{
+                        filter: 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))',
+                        textShadow: '0 0 10px rgba(255, 215, 0, 0.8)'
+                      }}>⭐</span>
+                    )}
                   </div>
                 </div>
                 

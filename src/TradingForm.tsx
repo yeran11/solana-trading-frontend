@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, Users, ArrowDownCircle, ArrowUpCircle, Loader2, Sparkles, Move } from 'lucide-react';
-import { loadConfigFromCookies } from './Utils';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, Loader2, Move, Edit3, Check, ClipboardList } from 'lucide-react';
 
 // Helper function to format numbers with k, M, B suffixes
 const formatNumber = (num) => {
@@ -18,45 +17,165 @@ const formatNumber = (num) => {
   } else if (absNum >= 1) {
     return number.toFixed(2).replace(/\.?0+$/, '');
   } else {
-    // For very small numbers, show more decimal places
     return number.toFixed(6).replace(/\.?0+$/, '');
   }
 };
 
-// Cyberpunk Tooltip component (simplified)
-const Tooltip = ({ children, content, position = 'top' }) => {
-  const positionClasses = {
-    top: 'bottom-full mb-2 left-1/2 -translate-x-1/2',
-    bottom: 'top-full mt-2 left-1/2 -translate-x-1/2',
-    left: 'right-full mr-2 top-1/2 -translate-y-1/2',
-    right: 'left-full ml-2 top-1/2 -translate-y-1/2'
+// Preset Button component
+const PresetButton = ({ 
+  value, 
+  onExecute, 
+  onChange,
+  isLoading, 
+  variant = 'buy',
+  isEditMode,
+  index 
+}) => {
+  const [editValue, setEditValue] = useState(value);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditMode && inputRef.current) {
+      (inputRef.current as HTMLInputElement)?.focus();
+    }
+  }, [isEditMode]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const newValue = parseFloat(editValue);
+      if (!isNaN(newValue) && newValue > 0) {
+        onChange(newValue.toString());
+      }
+    } else if (e.key === 'Escape') {
+      setEditValue(value);
+    }
   };
 
-  return (
-    <div className="relative group">
-      {children}
-      <div className={`absolute hidden group-hover:block px-3 py-1.5 text-xs font-mono tracking-wide
-                    bg-[#050a0e] text-[#02b36d] rounded-lg backdrop-blur-md
-                    border border-[#02b36d40] shadow-lg shadow-[#00000080]
-                    ${positionClasses[position]}`}>
-        <div className="relative z-10">{content}</div>
+  const handleBlur = () => {
+    const newValue = parseFloat(editValue);
+    if (!isNaN(newValue) && newValue > 0) {
+      onChange(newValue.toString());
+    } else {
+      setEditValue(value);
+    }
+  };
+
+  if (isEditMode) {
+    return (
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value.replace(/[^0-9.]/g, ''))}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          className="w-full h-8 px-2 text-xs font-mono rounded border text-center
+                   bg-[#050a0e] text-[#e4fbf2] border-[#02b36d]
+                   focus:outline-none focus:ring-1 focus:ring-[#02b36d40]"
+        />
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => onExecute(value)}
+      disabled={isLoading}
+      className={`relative group px-2 py-1.5 text-xs font-mono rounded border transition-all duration-200
+                min-w-[48px] h-8 flex items-center justify-center
+                disabled:opacity-50 disabled:cursor-not-allowed
+                ${variant === 'buy' 
+                  ? 'bg-[#050a0e60] border-[#02b36d40] text-[#02b36d] hover:bg-[#02b36d20] hover:border-[#02b36d]' 
+                  : 'bg-[#050a0e60] border-[#ff323240] text-[#ff3232] hover:bg-[#ff323220] hover:border-[#ff3232]'
+                }`}
+    >
+      {isLoading ? (
+        <div className="flex items-center gap-1">
+          <Loader2 size={10} className="animate-spin" />
+          <span>{value}</span>
+        </div>
+      ) : (
+        value
+      )}
+    </button>
   );
 };
 
-// Cyberpunk Input component (unchanged)
-const Input = ({ className = '', ...props }) => (
-  <input
-    className={`w-full px-2 py-1.5 bg-[#050a0e80] rounded-lg
-              text-[#e4fbf2] placeholder-[#7ddfbd60] font-mono tracking-wide text-sm
-              border border-[#02b36d40] 
-              focus:outline-none focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d40]
-              transition-all duration-300 shadow-inner shadow-[#00000080]
-              disabled:opacity-50 disabled:cursor-not-allowed cyberpunk-input ${className}`}
-    {...props}
-  />
-);
+// Tab Button component
+const TabButton = ({ label, isActive, onClick, onEdit, isEditMode }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(label);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      (inputRef.current as HTMLInputElement).focus();
+      (inputRef.current as HTMLInputElement).select();
+    }
+  }, [isEditing]);
+
+  const handleClick = () => {
+    if (isEditMode) {
+      setIsEditing(true);
+      setEditValue(label);
+    } else {
+      onClick();
+    }
+  };
+
+  const handleSave = () => {
+    if (editValue.trim()) {
+      onEdit(editValue.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditValue(label);
+      setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex-1">
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="w-full px-2 py-1 text-xs font-mono rounded
+                   bg-[#050a0e] text-[#e4fbf2] border border-[#02b36d]
+                   focus:outline-none focus:ring-1 focus:ring-[#02b36d40]"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`flex-1 px-3 py-1.5 text-xs font-mono rounded transition-all duration-200
+                ${isActive 
+                  ? 'bg-[#02b36d20] border border-[#02b36d] text-[#02b36d]' 
+                  : 'bg-[#050a0e60] border border-[#02b36d20] text-[#7ddfbd60] hover:border-[#02b36d40] hover:text-[#7ddfbd]'
+                }
+                ${isEditMode ? 'cursor-text' : 'cursor-pointer'}`}
+    >
+      {label}
+    </button>
+  );
+};
 
 const TradingCard = ({ 
   tokenAddress, 
@@ -81,676 +200,585 @@ const TradingCard = ({
   onOpenFloating,
   isFloatingCardOpen
 }) => {
-  const [bestDex, setBestDex] = useState(null);
-  const [estimatedBuyTokens, setEstimatedBuyTokens] = useState("0");
-  const [estimatedSellSol, setEstimatedSellSol] = useState("0");
-  const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState('trading'); // 'orders' or 'trading'
+  const [activeTradeType, setActiveTradeType] = useState('buy');
+  const [orderType, setOrderType] = useState('market');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // Cache for route fetching with 10 sec expiry
-  const [routeCache, setRouteCache] = useState(new Map());
-  const CACHE_DURATION = 10000; // 10 sec in milliseconds
-  
-  // Helper function to generate cache key
-  const generateCacheKey = (action, tokenAddress, amount) => {
-    return `${action}-${tokenAddress}-${amount}`;
-  };
-  
-  // Helper function to check if cache is valid
-  const isCacheValid = (timestamp) => {
-    return Date.now() - timestamp < CACHE_DURATION;
-  };
-  
-  const handleAmountChange = (e, type) => {
-    const value = e.target.value.replace(/[^0-9.]/g, '');
-    if (type === 'buy') setBuyAmount(value);
-    else setSellAmount(value);
-  };
-  
-  // Fetch real estimated tokens from API
-  const fetchEstimatedTokens = async (amount) => {
-    if (!amount || isNaN(parseFloat(amount)) || !tokenAddress) return "0";
-    
-    // Count active wallets
-    const activeWallets = wallets.filter(wallet => wallet.isActive).length;
-    if (activeWallets === 0) return "0";
-    
-    // Multiply amount by number of active wallets
-    const totalAmount = (parseFloat(amount) * activeWallets).toString();
-    console.log(`Buy estimate: ${amount} SOL × ${activeWallets} wallets = ${totalAmount} SOL total`);
-    
-    // Check cache first
-    const cacheKey = generateCacheKey("buy", tokenAddress, totalAmount);
-    const cachedData = routeCache.get(cacheKey);
-    
-    if (cachedData && isCacheValid(cachedData.timestamp)) {
-      console.log("Using cached buy estimate");
-      setEstimatedBuyTokens(cachedData.tokenAmount);
-      if (cachedData.bestDex && selectedDex === 'auto') {
-        setBestDex(cachedData.bestDex);
-      }
-      return cachedData.tokenAmount;
+  // Default preset tabs
+  const defaultPresetTabs = [
+    {
+      id: 'degen',
+      label: 'DEGEN',
+      buyPresets: ['0.01', '0.05', '0.1', '0.5'],
+      sellPresets: ['25', '50', '75', '100']
+    },
+    {
+      id: 'diamond',
+      label: 'DIAMOND',
+      buyPresets: ['0.001', '0.01', '0.05', '0.1'],
+      sellPresets: ['10', '25', '50', '75']
+    },
+    {
+      id: 'yolo',
+      label: 'YOLO',
+      buyPresets: ['0.1', '0.5', '1', '5'],
+      sellPresets: ['50', '75', '90', '100']
     }
-    
+  ];
+
+  // Load presets from cookies
+  const loadPresetsFromCookies = () => {
     try {
-      setIsLoadingEstimate(true);
-      const savedConfig = loadConfigFromCookies();
-      const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-      const response = await fetch(`${baseUrl}/api/tokens/route`, {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: "buy",
-          tokenMintAddress: tokenAddress,
-          amount: totalAmount,
-          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-        })
-      });
+      const savedPresets = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('tradingPresets='))
+        ?.split('=')[1];
       
-      const data = await response.json();
-      
-      let matchedDex = null;
-      if (data.success && selectedDex === 'auto') {
-        // Set best DEX based on protocol returned
-        const protocolToDex = {
-          'pumpfun': 'pumpfun',
-          'moonshot': 'moonshot',
-          'pumpswap': 'pumpswap',
-          'raydium': 'raydium',
-          'jupiter': 'jupiter',
-          'launchpad': 'launchpad',
-          'boopfun': 'boopfun'
+      if (savedPresets) {
+        const decoded = decodeURIComponent(savedPresets);
+        const parsed = JSON.parse(decoded);
+        return {
+          tabs: Array.isArray(parsed.tabs) ? parsed.tabs : defaultPresetTabs,
+          activeTabId: parsed.activeTabId || 'degen'
         };
-        
-        matchedDex = protocolToDex[data.protocol.toLowerCase()];
-        if (matchedDex) {
-          setBestDex(matchedDex);
-        }
       }
-      
-      // Convert from raw token amount to readable format (assume 9 decimals for most SOL tokens)
-      const tokenAmount = data.success ? 
-        (parseFloat(data.outputAmount)).toFixed(2) : 
-        "0";
-      
-      // Cache the result
-      const newRouteCache = new Map(routeCache);
-      newRouteCache.set(cacheKey, {
-        tokenAmount,
-        bestDex: matchedDex,
-        timestamp: Date.now()
-      });
-      setRouteCache(newRouteCache);
-        
-      setEstimatedBuyTokens(tokenAmount);
-      return tokenAmount;
     } catch (error) {
-      console.error("Error fetching token estimate:", error);
-      return "0";
-    } finally {
-      setIsLoadingEstimate(false);
+      console.error('Error loading presets from cookies:', error);
     }
+    return {
+      tabs: defaultPresetTabs,
+      activeTabId: 'degen'
+    };
   };
-  
-  // Fetch real estimated SOL from API
-  const fetchEstimatedSell = async (percentage) => {
-    if (!percentage || isNaN(parseFloat(percentage)) || !tokenAddress) return "0";
-    
-    // We need to calculate token amount based on percentage
-    const activeWallets = wallets.filter(wallet => wallet.isActive);
-    if (activeWallets.length === 0) return "0";
-    
-    // Calculate total token balance across all active wallets
-    // Using tokenBalances from the props which is a Map<string, number>
-    const totalTokenBalance = activeWallets.reduce((sum, wallet) => {
-      // Get the token balance from the tokenBalances map
-      const balance = tokenBalances.get(wallet.address) || 0;
-      return sum + balance;
-    }, 0);
-    
-    // Calculate amount to sell based on percentage
-    const sellPercentage = parseFloat(percentage);
-    const tokenAmount = totalTokenBalance * (sellPercentage / 100);
-    
-    if (tokenAmount <= 0) return "0";
-    console.log(`Selling ${sellPercentage}% of ${totalTokenBalance} tokens = ${tokenAmount} tokens (${Math.floor(tokenAmount)} raw)`);
-    
-    // Check cache first
-    const rawTokenAmount = Math.floor(tokenAmount).toString();
-    const cacheKey = generateCacheKey("sell", tokenAddress, rawTokenAmount);
-    const cachedData = routeCache.get(cacheKey);
-    
-    if (cachedData && isCacheValid(cachedData.timestamp)) {
-      console.log("Using cached sell estimate");
-      setEstimatedSellSol(cachedData.solAmount);
-      if (cachedData.bestDex && selectedDex === 'auto') {
-        setBestDex(cachedData.bestDex);
-      }
-      return cachedData.solAmount;
-    }
-    
+
+  // Save presets to cookies
+  const savePresetsToCookies = (tabs, activeTabId) => {
     try {
-      
-      const savedConfig = loadConfigFromCookies();
-      setIsLoadingEstimate(true);
-      const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-      const response = await fetch(`${baseUrl}/api/tokens/route`, {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          action: "sell",
-          tokenMintAddress: tokenAddress,
-          amount: rawTokenAmount, // Convert to raw token amount
-          rpcUrl: savedConfig?.rpcEndpoint ||"https://api.mainnet-beta.solana.com"
-        })
-      });
-      
-      const data = await response.json();
-      
-      let matchedDex = null;
-      if (data.success && selectedDex === 'auto') {
-        // Set best DEX based on protocol returned
-        const protocolToDex = {
-          'pumpfun': 'pumpfun',
-          'moonshot': 'moonshot',
-          'pumpswap': 'pumpswap',
-          'raydium': 'raydium',
-          'jupiter': 'jupiter',
-          'launchpad': 'launchpad',
-          'boopfun': 'boopfun'
-        };
-        
-        matchedDex = protocolToDex[data.protocol.toLowerCase()];
-        if (matchedDex) {
-          setBestDex(matchedDex);
-        }
-      }
-      
-      // Convert from lamports to SOL (divide by 1e9)
-      const solAmount = data.success ? 
-        (parseFloat(data.outputAmount) / 1e9).toFixed(4) : 
-        "0";
-      
-      // Cache the result
-      const newRouteCache = new Map(routeCache);
-      newRouteCache.set(cacheKey, {
-        solAmount,
-        bestDex: matchedDex,
-        timestamp: Date.now()
-      });
-      setRouteCache(newRouteCache);
-        
-      setEstimatedSellSol(solAmount);
-      return solAmount;
+      const presetsData = {
+        tabs,
+        activeTabId
+      };
+      const encoded = encodeURIComponent(JSON.stringify(presetsData));
+      const expires = new Date();
+      expires.setFullYear(expires.getFullYear() + 1); // 1 year expiry
+      document.cookie = `tradingPresets=${encoded}; expires=${expires.toUTCString()}; path=/`;
     } catch (error) {
-      console.error("Error fetching sell estimate:", error);
-      return "0";
-    } finally {
-      setIsLoadingEstimate(false);
+      console.error('Error saving presets to cookies:', error);
     }
   };
+
+  // Initialize presets from cookies
+  const initialPresets = loadPresetsFromCookies();
+  const [presetTabs, setPresetTabs] = useState(initialPresets.tabs);
+  const [activeTabId, setActiveTabId] = useState(initialPresets.activeTabId);
+  const activeTab = presetTabs.find(tab => tab.id === activeTabId) || presetTabs[0];
   
-  // Update estimates when amounts change (with debounce to prevent excessive API calls)
+  // Save presets to cookies whenever they change
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (buyAmount && parseFloat(buyAmount) > 0) {
-        fetchEstimatedTokens(buyAmount);
-      } else {
-        setEstimatedBuyTokens("0");
-      }
-    }, 500); // 500ms debounce
-    
-    return () => clearTimeout(timeoutId);
-  }, [buyAmount, tokenAddress, selectedDex]);
+    savePresetsToCookies(presetTabs, activeTabId);
+  }, [presetTabs, activeTabId]);
   
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (sellAmount && parseFloat(sellAmount) > 0) {
-        fetchEstimatedSell(sellAmount);
-      } else {
-        setEstimatedSellSol("0");
-      }
-    }, 500); // 500ms debounce
-    
-    return () => clearTimeout(timeoutId);
-  }, [sellAmount, tokenAddress, selectedDex]);
+  // Handle tab switching with cookie save
+  const handleTabSwitch = (tabId) => {
+    setActiveTabId(tabId);
+  };
   
-  // Handle trade submission with the best DEX when auto is selected
-  const handleTradeWithBestDex = async (wallets, isBuy) => {
-    // If auto is selected, ensure we have a best DEX
-    if (selectedDex === 'auto') {
-      if (bestDex) {
-        // Use the already determined best DEX
-        handleTradeSubmit(wallets, isBuy, bestDex, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
-      } else {
-        // Fetch the best DEX immediately if not available
-        try {
-          const activeWallets = wallets.filter(wallet => wallet.isActive);
-          if (activeWallets.length === 0) {
-            handleTradeSubmit(wallets, isBuy, undefined, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount); // Fallback to normal flow
-            return;
+  // Edit preset handlers
+  const handleEditBuyPreset = (index, newValue) => {
+    setPresetTabs(tabs => tabs.map(tab => 
+      tab.id === activeTabId 
+        ? {
+            ...tab,
+            buyPresets: tab.buyPresets.map((preset, i) => i === index ? newValue : preset)
           }
-          
-          let amount;
-          if (isBuy) {
-            amount = buyAmount ? (parseFloat(buyAmount) * activeWallets.length).toString() : "0.01";
-          } else {
-            // Calculate sell amount
-            const totalTokenBalance = activeWallets.reduce((sum, wallet) => {
-              const balance = tokenBalances.get(wallet.address) || 0;
-              return sum + balance;
-            }, 0);
-            const sellPercentage = sellAmount ? parseFloat(sellAmount) : 100;
-            const tokenAmount = totalTokenBalance * (sellPercentage / 100);
-            amount = Math.floor(tokenAmount).toString();
+        : tab
+    ));
+  };
+  
+  const handleEditSellPreset = (index, newValue) => {
+    setPresetTabs(tabs => tabs.map(tab => 
+      tab.id === activeTabId 
+        ? {
+            ...tab,
+            sellPresets: tab.sellPresets.map((preset, i) => i === index ? newValue : preset)
           }
-          
-          const savedConfig = loadConfigFromCookies();
-          const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-          const response = await fetch(`${baseUrl}/api/tokens/route`, {
-            method: 'POST',
-            headers: {
-              'accept': 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              action: isBuy ? "buy" : "sell",
-              tokenMintAddress: tokenAddress,
-              amount: amount,
-              rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-            })
-          });
-          
-          const data = await response.json();
-          
-          if (data.success) {
-            const protocolToDex = {
-              'pumpfun': 'pumpfun',
-              'moonshot': 'moonshot',
-              'pumpswap': 'pumpswap',
-              'raydium': 'raydium',
-              'jupiter': 'jupiter',
-              'launchpad': 'launchpad',
-              'boopfun': 'boopfun'
-            };
-            
-            const determinedDex = protocolToDex[data.protocol.toLowerCase()];
-            if (determinedDex) {
-              setBestDex(determinedDex);
-              handleTradeSubmit(wallets, isBuy, determinedDex, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("Error determining best DEX for trade:", error);
-        }
-        
-        // Fallback to normal flow if route determination fails
-        handleTradeSubmit(wallets, isBuy, undefined, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
-      }
+        : tab
+    ));
+  };
+  
+  // Edit tab label
+  const handleEditTabLabel = (tabId, newLabel) => {
+    setPresetTabs(tabs => tabs.map(tab => 
+      tab.id === tabId ? { ...tab, label: newLabel } : tab
+    ));
+  };
+  
+  // Handle trade execution
+  const handleTradeExecution = (amount, isBuy) => {
+    if (isBuy) {
+      setBuyAmount(amount);
+      handleTradeSubmit(wallets, isBuy, selectedDex, amount, undefined);
     } else {
-      // Normal flow with selected DEX
-      handleTradeSubmit(wallets, isBuy, undefined, isBuy ? buyAmount : undefined, isBuy ? undefined : sellAmount);
+      setSellAmount(amount);
+      handleTradeSubmit(wallets, isBuy, selectedDex, undefined, amount);
     }
   };
   
-  // Reference to track if we're clicking inside the dropdown
-  const dropdownRef = React.useRef(null);
-  
-  // Cyberpunk-themed custom select component (simplified)
+  // Custom DEX select component
   const CustomSelect = () => {
-    // Function to handle DEX selection
     const handleDexSelect = (dexValue, e) => {
-      // Prevent event propagation
       e.stopPropagation();
-      
-      // Log the selection for debugging
-      console.log("Selected DEX:", dexValue);
-      
-      // Update the selected DEX
       setSelectedDex(dexValue);
-      
-      // Reset best DEX if manually selecting something other than auto
-      if (dexValue !== 'auto') {
-        setBestDex(null);
-      }
-      
-      // Close the dropdown
       setIsDropdownOpen(false);
     };
     
     return (
-    <div className="relative w-full sm:max-w-xs" ref={dropdownRef}>
-      <button
-        onClick={(e) => {
-          e.stopPropagation(); // Prevent event from bubbling up
-          setIsDropdownOpen(!isDropdownOpen);
-        }}
-        className={`w-full flex items-center justify-between px-3 py-2 rounded-md
-                 bg-[#091217] text-[#b3f0d7] border border-[#02b36d40]
-                 hover:bg-[#0a1c23] hover:border-[#02b36d80]
-                 transition-all duration-300 focus:outline-none text-sm font-mono
-                 ${isDropdownOpen ? 'shadow-[0_0_10px_rgba(2,179,109,0.3)]' : ''}`}
-      >
-        <span className="truncate flex items-center">
-          {selectedDex === 'auto' && bestDex && (
-            <>
-              <Sparkles size={14} className="text-[#02b36d] mr-1" />
-              <span>Auto • {dexOptions.find(d => d.value === bestDex)?.label || 'Best DEX'}</span>
-            </>
-          ) || dexOptions.find(d => d.value === selectedDex)?.label || 'Select DEX'}
-        </span>
-        <div className={`transform transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}>
-          <ChevronDown size={14} className="text-[#02b36d]" />
-        </div>
-      </button>
-
-      {isDropdownOpen && (
-        <div 
-          className="absolute z-50 w-64 mt-1 rounded-md bg-[#050a0e]
-                    border border-[#02b36d40] shadow-lg shadow-[#00000080]"
-          onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDropdownOpen(!isDropdownOpen);
+          }}
+          className={`flex items-center justify-between px-1.5 py-0.5 rounded
+                   bg-[#050a0e60] text-[#b3f0d7] border border-[#02b36d40]
+                   hover:bg-[#02b36d20] hover:border-[#02b36d80]
+                   transition-all duration-300 text-[10px] font-mono min-w-[60px]
+                   ${isDropdownOpen ? 'shadow-[0_0_10px_rgba(2,179,109,0.3)]' : ''}`}
         >
-          {/* Auto option at the top */}
-          <button
-            key="auto"
-            className={`w-full px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono
-                   hover:bg-[#02b36d20] transition-colors duration-200 flex items-center
-                   ${selectedDex === 'auto' ? 'bg-[#02b36d15] border-l-2 border-[#02b36d]' : ''}`}
-            onClick={(e) => handleDexSelect('auto', e)}
+          <span className="truncate flex items-center">
+            {selectedDex === 'auto' ? (
+              <span className="flex items-center gap-1">
+                <span className="text-yellow-400 animate-pulse text-xs">⭐</span>
+                <span>AUTO</span>
+              </span>
+            ) : (
+              dexOptions.find(d => d.value === selectedDex)?.label?.toUpperCase() || 'SELECT DEX'
+            )}
+          </span>
+          <div className={`transform transition-transform duration-300 ml-0.5 ${isDropdownOpen ? 'rotate-180' : ''}`}>
+            <ChevronDown size={10} className="text-[#02b36d]" />
+          </div>
+        </button>
+
+        {isDropdownOpen && (
+          <div 
+            className="fixed z-[9999] w-32 mt-1 rounded-md bg-[#050a0e]
+                      border border-[#02b36d40] shadow-lg shadow-[#00000080]"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Sparkles size={12} className="text-[#02b36d] mr-1" />
-            <span>Auto</span>
+            <div className="py-0.5">
+              {dexOptions.map((dex) => (
+                <button
+                  key={dex.value}
+                  className="w-full px-2 py-1 text-left text-[#b3f0d7] text-[10px] font-mono
+                         hover:bg-[#02b36d20] transition-colors duration-200 flex items-center gap-1"
+                  onClick={(e) => handleDexSelect(dex.value, e)}
+                >
+                  {dex.value === 'auto' ? (
+                    <>
+                      <span className="text-yellow-400 animate-pulse text-xs">⭐</span>
+                      <span>AUTO</span>
+                    </>
+                  ) : (
+                    dex.label.toUpperCase()
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Handle amount change
+  const handleAmountChange = (e) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '');
+    if (activeTradeType === 'buy') {
+      setBuyAmount(value);
+    } else {
+      setSellAmount(value);
+    }
+  };
+
+  // Handle preset click
+  const handlePresetClick = (preset) => {
+    if (activeTradeType === 'buy') {
+      setBuyAmount(preset);
+      handleTradeSubmit(wallets, true, selectedDex, preset, undefined);
+    } else {
+      setSellAmount(preset);
+      handleTradeSubmit(wallets, false, selectedDex, undefined, preset);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div 
+      className="relative overflow-hidden rounded-xl shadow-xl"
+      style={{
+        background: "linear-gradient(135deg, rgba(9,18,23,0.8) 0%, rgba(5,10,14,0.9) 100%)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(2,179,109,0.3)"
+      }}
+    >
+      {/* Cyberpunk corner accents */}
+      <div className="absolute top-0 left-0 w-24 h-24 pointer-events-none">
+        <div className="absolute top-0 left-0 w-px h-8 bg-gradient-to-b from-[#02b36d] to-transparent"></div>
+        <div className="absolute top-0 left-0 w-8 h-px bg-gradient-to-r from-[#02b36d] to-transparent"></div>
+      </div>
+      <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none">
+        <div className="absolute top-0 right-0 w-px h-8 bg-gradient-to-b from-[#02b36d] to-transparent"></div>
+        <div className="absolute top-0 right-0 w-8 h-px bg-gradient-to-l from-[#02b36d] to-transparent"></div>
+      </div>
+      <div className="absolute bottom-0 left-0 w-24 h-24 pointer-events-none">
+        <div className="absolute bottom-0 left-0 w-px h-8 bg-gradient-to-t from-[#02b36d] to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-8 h-px bg-gradient-to-r from-[#02b36d] to-transparent"></div>
+      </div>
+      <div className="absolute bottom-0 right-0 w-24 h-24 pointer-events-none">
+        <div className="absolute bottom-0 right-0 w-px h-8 bg-gradient-to-t from-[#02b36d] to-transparent"></div>
+        <div className="absolute bottom-0 right-0 w-8 h-px bg-gradient-to-l from-[#02b36d] to-transparent"></div>
+      </div>
+
+      {/* Main Tabs - Orders and Trading */}
+      {!isFloatingCardOpen && (
+        <div className="flex bg-[#050a0e60] border-b border-[#02b36d20]">
+          {/* Orders Tab - Smaller */}
+          <button
+            onClick={() => setActiveMainTab('orders')}
+            className={`px-3 py-2 text-xs font-mono tracking-wider transition-all duration-200 ${
+              activeMainTab === 'orders'
+                ? 'bg-[#02b36d40] text-[#02b36d] border-r border-[#02b36d60]'
+                : 'bg-transparent text-[#7ddfbd40] hover:text-[#7ddfbd60] border-r border-[#02b36d20]'
+            }`}
+          >
+            <ClipboardList size={14} />
           </button>
           
-          {/* Thin separator */}
-          <div className="border-t border-[#02b36d20]"></div>
+          {/* Buy/Sell Toggle - Takes remaining space */}
+          <div className="flex flex-1">
+            <button
+              onClick={() => {
+                setActiveMainTab('trading');
+                setActiveTradeType('buy');
+              }}
+              className={`flex-1 py-3 px-4 text-sm font-mono tracking-wider transition-all duration-200 ${
+                activeMainTab === 'trading' && activeTradeType === 'buy'
+                  ? 'bg-[#02b36d] text-black font-medium'
+                  : 'bg-transparent text-[#7ddfbd60] hover:text-[#7ddfbd]'
+              }`}
+            >
+              BUY
+            </button>
+            <button
+              onClick={() => {
+                setActiveMainTab('trading');
+                setActiveTradeType('sell');
+              }}
+              className={`flex-1 py-3 px-4 text-sm font-mono tracking-wider transition-all duration-200 ${
+                activeMainTab === 'trading' && activeTradeType === 'sell'
+                  ? 'bg-[#ff3232] text-white font-medium'
+                  : 'bg-transparent text-[#ff323260] hover:text-[#ff3232]'
+              }`}
+            >
+              SELL
+            </button>
+          </div>
           
-          {/* Other DEX options in 3 columns */}
-          <div className="grid grid-cols-3 gap-0">
-            {dexOptions.filter(dex => dex.value !== 'auto').map((dex) => (
-              <button
-                key={dex.value}
-                className={`px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono truncate
-                       hover:bg-[#02b36d20] transition-colors duration-200
-                       ${selectedDex === dex.value ? 'bg-[#02b36d15] border-l border-[#02b36d]' : ''}`}
-                onClick={(e) => handleDexSelect(dex.value, e)}
+          {/* Wallet Counter */}
+          <div className="flex items-center px-3 py-2 border-l border-[#02b36d20]">
+            <div className="flex items-center gap-1 text-xs font-mono text-[#7ddfbd60]">
+              <span className="text-[#02b36d]">{countActiveWallets(wallets)}</span>
+              <svg 
+                width="12" 
+                height="12" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                className="text-[#02b36d]"
               >
-                {dex.label.replace('', '')}
-              </button>
-            ))}
+                <path 
+                  d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2h18zM3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8H3zm13 4h2v2h-2v-2z" 
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Order Type Tabs - Only show for trading tab */}
+      {!isFloatingCardOpen && activeMainTab === 'trading' && (
+        <div className="flex items-center justify-between px-4 py-2 bg-[#050a0e40] border-b border-[#02b36d10]">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setOrderType('market')}
+              className={`text-xs font-mono tracking-wider transition-all duration-200 ${
+                orderType === 'market'
+                  ? 'text-[#02b36d] border-b-2 border-[#02b36d] pb-1'
+                  : 'text-[#7ddfbd60] hover:text-[#7ddfbd] pb-1'
+              }`}
+            >
+              MARKET
+            </button>
+            <button
+              onClick={() => setOrderType('limit')}
+              className={`text-xs font-mono tracking-wider transition-all duration-200 ${
+                orderType === 'limit'
+                  ? 'text-[#02b36d] border-b-2 border-[#02b36d] pb-1'
+                  : 'text-[#7ddfbd60] hover:text-[#7ddfbd] pb-1'
+              }`}
+            >
+              LIMIT
+            </button>
+          </div>
+          
+          {/* Action Icons - Hidden for limit orders */}
+          {orderType !== 'limit' && (
+            <div className="flex items-center gap-2">
+              <CustomSelect />
+              <button
+                onClick={onOpenFloating}
+                className="p-1.5 rounded hover:bg-[#02b36d20] text-[#7ddfbd60] hover:text-[#02b36d] transition-all duration-200"
+                title="Detach"
+              >
+                <Move size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Orders Tab Header - Only show for orders tab */}
+      {!isFloatingCardOpen && activeMainTab === 'orders' && (
+        <div className="flex items-center justify-between px-4 py-2 bg-[#050a0e40] border-b border-[#02b36d10]">
+          <div className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">
+            ACTIVE ORDERS
+          </div>
+          
+          {/* Action Icons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenFloating}
+              className="p-1.5 rounded hover:bg-[#02b36d20] text-[#7ddfbd60] hover:text-[#02b36d] transition-all duration-200"
+              title="Detach"
+            >
+              <Move size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      {!isFloatingCardOpen ? (
+        <div className="p-3 space-y-2">
+          {activeMainTab === 'orders' ? (
+            /* Orders Content */
+            <div className="space-y-3">
+              <div className="text-center py-8">
+                <div className="text-[#7ddfbd60] text-sm font-mono mb-2">No active orders</div>
+                <div className="text-[#7ddfbd40] text-xs font-mono">Your limit orders will appear here</div>
+              </div>
+            </div>
+          ) : (
+            /* Trading Content */
+            <>
+              {/* Amount Input and Submit Button Row - Hidden for limit orders */}
+          {orderType !== 'limit' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">
+                  AMOUNT
+                </label>
+                <span className="text-xs text-[#7ddfbd60] font-mono">
+                  {activeTradeType === 'buy' ? 'SOL/WALLET' : '% TOKENS'}
+                </span>
+              </div>
+              
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={activeTradeType === 'buy' ? buyAmount : sellAmount}
+                    onChange={handleAmountChange}
+                    placeholder="0.0"
+                    disabled={!tokenAddress || isLoading}
+                    className="w-full px-2 py-2 bg-[#050a0e80] border border-[#02b36d40] rounded-lg 
+                             text-[#e4fbf2] placeholder-[#7ddfbd60] font-mono text-sm 
+                             focus:outline-none focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d40] 
+                             transition-all duration-300 shadow-inner shadow-[#00000080]
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {isLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 size={16} className="animate-spin text-[#02b36d]" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Submit Button */}
+                <button
+                  onClick={() => handleTradeSubmit(wallets, activeTradeType === 'buy', selectedDex, activeTradeType === 'buy' ? buyAmount : undefined, activeTradeType === 'sell' ? sellAmount : undefined)}
+                  disabled={!selectedDex || (!buyAmount && !sellAmount) || isLoading || !tokenAddress}
+                  className={`px-4 py-2 text-sm font-mono tracking-wider rounded-lg 
+                           transition-all duration-300 relative overflow-hidden whitespace-nowrap
+                           disabled:opacity-50 disabled:cursor-not-allowed ${
+                    activeTradeType === 'buy'
+                      ? 'bg-gradient-to-r from-[#02b36d] to-[#01a35f] hover:from-[#01a35f] hover:to-[#029359] text-black font-medium shadow-md shadow-[#02b36d40] hover:shadow-[#02b36d60] disabled:from-[#02b36d40] disabled:to-[#02b36d40] disabled:shadow-none'
+                      : 'bg-gradient-to-r from-[#ff3232] to-[#e62929] hover:from-[#e62929] hover:to-[#cc2020] text-white font-medium shadow-md shadow-[#ff323240] hover:shadow-[#ff323260] disabled:from-[#ff323240] disabled:to-[#ff323240] disabled:shadow-none'
+                  }`}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      PROCESSING...
+                    </span>
+                  ) : (
+                    `${activeTradeType === 'buy' ? 'BUY' : 'SELL'}`
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preset tabs - Hidden for limit orders */}
+          {orderType !== 'limit' && (
+            <div className="flex gap-1 mb-2">
+              {presetTabs.map((tab) => (
+                <TabButton
+                  key={tab.id}
+                  label={tab.label}
+                  isActive={tab.id === activeTabId}
+                  isEditMode={isEditMode}
+                  onClick={() => handleTabSwitch(tab.id)}
+                  onEdit={(newLabel) => handleEditTabLabel(tab.id, newLabel)}
+                />
+              ))}
+              <button
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  isEditMode 
+                    ? 'bg-[#02b36d] hover:bg-[#01a35f] text-black' 
+                    : 'bg-[#050a0e60] border border-[#02b36d40] text-[#02b36d] hover:bg-[#02b36d20]'
+                }`}
+                title={isEditMode ? 'Save changes' : 'Edit presets'}
+              >
+                {isEditMode ? <Check size={12} /> : <Edit3 size={12} />}
+              </button>
+            </div>
+          )}
+
+          {/* Preset Buttons - Hidden for limit orders */}
+          {orderType !== 'limit' && (
+            <div className="grid grid-cols-4 gap-1">
+              {(activeTradeType === 'buy' ? activeTab.buyPresets : activeTab.sellPresets).map((preset, index) => (
+                <PresetButton
+                  key={`${activeTradeType}-${index}`}
+                  value={preset}
+                  onExecute={() => handlePresetClick(preset)}
+                  onChange={(newValue) => {
+                    if (activeTradeType === 'buy') {
+                      handleEditBuyPreset(index, newValue);
+                    } else {
+                      handleEditSellPreset(index, newValue);
+                    }
+                  }}
+                  isLoading={isLoading}
+                  variant={activeTradeType}
+                  isEditMode={isEditMode}
+                  index={index}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Limit Order Inputs - Work in Progress */}
+          {orderType === 'limit' && (
+            <div className="space-y-3 border-[#02b36d20] relative">
+              {/* Work in Progress Banner */}
+              <div className="bg-[#ff323220] border border-[#ff323240] rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 bg-[#ff3232] rounded-full animate-pulse"></div>
+                  <span className="text-xs font-mono tracking-wider text-[#ff3232] uppercase font-medium">
+                    WORK IN PROGRESS
+                  </span>
+                </div>
+                <p className="text-xs font-mono text-[#ff323280] leading-relaxed">
+                  Limit orders are currently under development. This feature will be available in a future update.
+                </p>
+              </div>
+              
+              {/* Labels Row */}
+              <div className="flex gap-2 opacity-50">
+                <div className="flex-1">
+                  <label className="text-xs font-mono tracking-wider text-[#7ddfbd60] uppercase">
+                    SOL AMOUNT
+                  </label>
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-mono tracking-wider text-[#7ddfbd60] uppercase">
+                    TOKEN AMOUNT
+                  </label>
+                </div>
+              </div>
+              
+              {/* Inputs Row - Disabled */}
+              <div className="flex gap-2 opacity-50">
+                <input
+                  type="text"
+                  placeholder="0.0"
+                  disabled
+                  className="flex-1 min-w-0 px-2 py-2 bg-[#050a0e40] border border-[#02b36d20] rounded-lg 
+                           text-[#7ddfbd40] placeholder-[#7ddfbd40] font-mono text-sm 
+                           cursor-not-allowed"
+                />
+                <input
+                  type="text"
+                  placeholder="0.0"
+                  disabled
+                  className="flex-1 min-w-0 px-2 py-2 bg-[#050a0e40] border border-[#02b36d20] rounded-lg 
+                           text-[#7ddfbd40] placeholder-[#7ddfbd40] font-mono text-sm 
+                           cursor-not-allowed"
+                />
+              </div>
+              
+              {/* Create Order Button - Disabled */}
+              <button
+                disabled
+                className="w-full px-4 py-2 text-sm font-mono tracking-wider rounded-lg 
+                         bg-[#02b36d20] text-[#7ddfbd40] 
+                         transition-all duration-300 relative overflow-hidden
+                         opacity-50 cursor-not-allowed"
+              >
+                CREATE ORDER (COMING SOON)
+              </button>
+            </div>
+          )}
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="p-8 text-center">
+          <p className="text-[#7ddfbd60] text-sm font-mono tracking-wider">
+            TRADING INTERFACE IS OPEN IN FLOATING MODE
+          </p>
+        </div>
+      )}
     </div>
-  );
-
-  };
-  
-  // Cyberpunk-themed wallet counter (simplified)
-  const WalletCounter = () => {
-    const isBuyValid = validateActiveWallets(wallets, getScriptName(selectedDex, true)).isValid;
-    const isSellValid = validateActiveWallets(wallets, getScriptName(selectedDex, false)).isValid;
-    const buyLimit = maxWalletsConfig[getScriptName(selectedDex, true)];
-    const sellLimit = maxWalletsConfig[getScriptName(selectedDex, false)];
-    const activeWallets = countActiveWallets(wallets);
-
-    return (
-      <Tooltip content="WALLETS ACTIVE" position="top">
-        <div 
-          className="flex items-center gap-2 px-3 py-2 rounded-lg
-                     bg-[#091217] border border-[#02b36d40]"
-        >
-          <Users size={14} className={`${isBuyValid && isSellValid ? 'text-[#02b36d]' : 'text-[#ff3232]'}`} />
-          <div className="text-sm font-mono">
-            <span className={`font-medium ${isBuyValid && isSellValid ? 'text-[#02b36d]' : 'text-[#ff3232]'}`}>
-              {activeWallets}
-            </span>
-          </div>
-        </div>
-      </Tooltip>
-    );
-  };
-
-  // Cyberpunk-themed trade button (simplified)
-  const TradeButton = ({ isBuy, amount }) => (
-    <Tooltip content={isBuy ? "BUY SOL" : "SELL TOKENS"} position="top">
-      <button
-        onClick={() => handleTradeWithBestDex(wallets, isBuy)}
-        disabled={!selectedDex || !amount || isLoading || !tokenAddress}
-        className={`p-2 rounded-lg border
-                  transition-all duration-300
-                  disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[#091217]
-                  disabled:border-[#02b36d20]
-                  ${isBuy 
-                    ? 'bg-[#091217] hover:bg-[#02b36d20] border-[#02b36d] text-[#02b36d]' 
-                    : 'bg-[#091217] hover:bg-[#ff323220] border-[#ff3232] text-[#ff3232]'}`}
-      >
-        {isLoading ? (
-          <Loader2 size={16} className="animate-spin text-[#7ddfbd]" />
-        ) : isBuy ? (
-          <ArrowUpCircle size={16} />
-        ) : (
-          <ArrowDownCircle size={16} />
-        )}
-      </button>
-    </Tooltip>
-  );
-
-  // Estimate display component with formatted numbers
-  const EstimateDisplay = ({ isBuy, amount }) => {
-    // Use real estimated values from API
-    const estimatedValue = isBuy 
-      ? estimatedBuyTokens
-      : estimatedSellSol;
-    
-    // Format the number with k, M, B suffixes
-    const formattedValue = formatNumber(estimatedValue);
-      
-    return (
-      <div 
-        className={`flex items-center justify-center gap-1 text-xs font-mono w-full px-2 py-1 rounded
-                   ${isBuy 
-                     ? 'text-[#02b36d80] bg-[#02b36d08] border border-[#02b36d20]' 
-                     : 'text-[#ff323280] bg-[#ff323208] border border-[#ff323220]'}`}
-      >
-        <span className={`font-bold ${isBuy ? 'text-[#02b36d]' : 'text-[#ff3232]'}`}>
-          {formattedValue}
-        </span>
-      </div>
-    );
-  };
-
-
-
-  return (
-    <>
-      <div 
-        className="relative overflow-hidden p-5 rounded-xl cyberpunk-border"
-        style={{
-          background: "linear-gradient(135deg, rgba(9,18,23,0.8) 0%, rgba(5,10,14,0.9) 100%)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(2,179,109,0.3)"
-        }}
-      >
-        {/* Curved corners with subtle glow - all four corners - slimmer and taller */}
-        {/* Top-right corner */}
-        <div
-          onClick={onOpenFloating}
-          className="absolute top-0 right-0 w-6 h-16 cursor-pointer group z-30"
-          title="Open floating trading card"
-        >
-          <div className="absolute top-0 right-0 w-full h-full">
-            <svg
-              width="24"
-              height="64"
-              viewBox="0 0 24 64"
-              className="absolute top-0 right-0"
-            >
-              <path
-                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
-                fill="rgba(2,179,109,0.1)"
-                stroke="rgba(2,179,109,0.4)"
-                strokeWidth="1"
-                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
-              />
-            </svg>
-            <Move 
-              size={10} 
-              className="absolute top-2 right-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
-            />
-          </div>
-        </div>
-        
-        {/* Top-left corner */}
-        <div
-          onClick={onOpenFloating}
-          className="absolute top-0 left-0 w-6 h-16 cursor-pointer group z-30"
-          title="Open floating trading card"
-        >
-          <div className="absolute top-0 left-0 w-full h-full">
-            <svg
-              width="24"
-              height="64"
-              viewBox="0 0 24 64"
-              className="absolute top-0 left-0 transform scale-x-[-1]"
-            >
-              <path
-                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
-                fill="rgba(2,179,109,0.1)"
-                stroke="rgba(2,179,109,0.4)"
-                strokeWidth="1"
-                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
-              />
-            </svg>
-            <Move 
-              size={10} 
-              className="absolute top-2 left-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
-            />
-          </div>
-        </div>
-        
-        {/* Bottom-right corner */}
-        <div
-          onClick={onOpenFloating}
-          className="absolute bottom-0 right-0 w-6 h-16 cursor-pointer group z-30"
-          title="Open floating trading card"
-        >
-          <div className="absolute bottom-0 right-0 w-full h-full">
-            <svg
-              width="24"
-              height="64"
-              viewBox="0 0 24 64"
-              className="absolute bottom-0 right-0 transform scale-y-[-1]"
-            >
-              <path
-                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
-                fill="rgba(2,179,109,0.1)"
-                stroke="rgba(2,179,109,0.4)"
-                strokeWidth="1"
-                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
-              />
-            </svg>
-            <Move 
-              size={10} 
-              className="absolute bottom-2 right-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
-            />
-          </div>
-        </div>
-        
-        {/* Bottom-left corner */}
-        <div
-          onClick={onOpenFloating}
-          className="absolute bottom-0 left-0 w-6 h-16 cursor-pointer group z-30"
-          title="Open floating trading card"
-        >
-          <div className="absolute bottom-0 left-0 w-full h-full">
-            <svg
-              width="24"
-              height="64"
-              viewBox="0 0 24 64"
-              className="absolute bottom-0 left-0 transform scale-x-[-1] scale-y-[-1]"
-            >
-              <path
-                d="M 0 0 L 24 0 L 24 64 Q 24 32 12 32 Q 0 32 0 0 Z"
-                fill="rgba(2,179,109,0.1)"
-                stroke="rgba(2,179,109,0.4)"
-                strokeWidth="1"
-                className="transition-all duration-300 group-hover:fill-[rgba(2,179,109,0.2)] group-hover:stroke-[rgba(2,179,109,0.6)]"
-              />
-            </svg>
-            <Move 
-              size={10} 
-              className="absolute bottom-2 left-1 text-[#02b36d80] group-hover:text-[#02b36d] transition-all duration-300" 
-            />
-          </div>
-        </div>
-        
-        {/* Header - Title & Type selector */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between relative z-20"> 
-            <CustomSelect />
-            <WalletCounter />
-        </div>
-        <br></br>
-        {/* Trading Interface - THINNER & MORE MINIMAL */}
-        {!isFloatingCardOpen && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
-            {/* Buy Section */}
-            <div className="space-y-2 p-2 rounded-lg border border-[#02b36d20] bg-[#02b36d08]">
-              <div className="flex items-center gap-1">
-                <span className="block text-xs font-medium font-mono uppercase tracking-wider text-[#02b36d]">Buy</span>
-                <div className="text-xs text-[#7ddfbd60] font-mono">[SOL]</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  value={buyAmount}
-                  onChange={(e) => handleAmountChange(e, 'buy')}
-                  placeholder="0.5"
-                  disabled={!tokenAddress}
-                />
-                <TradeButton isBuy={true} amount={buyAmount} />
-              </div>
-              {buyAmount && <EstimateDisplay isBuy={true} amount={buyAmount} />}
-            </div>
-
-            {/* Sell Section */}
-            <div className="space-y-2 p-2 rounded-lg border border-[#ff323220] bg-[#ff323208]">
-              <div className="flex items-center gap-1">
-                <span className="block text-xs font-medium font-mono uppercase tracking-wider text-[#ff3232]">Sell</span>
-                <div className="text-xs text-[#ff323260] font-mono">[%]</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  value={sellAmount}
-                  onChange={(e) => handleAmountChange(e, 'sell')}
-                  placeholder="20"
-                  disabled={!tokenAddress}
-                  className="border-[#ff323240] focus:border-[#ff3232] focus:ring-[#ff323240]"
-                />
-                <TradeButton isBuy={false} amount={sellAmount} />
-              </div>
-              {sellAmount && <EstimateDisplay isBuy={false} amount={sellAmount} />}
-            </div>
-          </div>
-        )}
-        {/* Show message when floating card is open */}
-        {isFloatingCardOpen && (
-          <div className="text-center py-8">
-            <div className="text-[#02b36d] font-mono text-sm">
-              Close the draggable trading view to go back to default view.
-            </div>
-          </div>
-        )}
-      </div>
-
-    </>
   );
 };
 

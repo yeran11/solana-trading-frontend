@@ -259,7 +259,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
   currentMarketCap,
   tokenBalances
 }) => {
-  const [bestDex, setBestDex] = useState(null);
+
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isEditMode, setIsEditMode] = useState(false);
   const [manualProtocol, setManualProtocol] = useState(null);
@@ -346,69 +346,12 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
   
   // Fetch route when component opens
   useEffect(() => {
-    const fetchInitialRoute = async () => {
-      if (!isOpen || !tokenAddress || selectedDex !== 'auto') {
-        // Reset protocol when component closes or conditions not met
-        if (!isOpen) {
-          setInitialProtocol(null);
-          setBestDex(null);
-        }
-        return;
-      }
-      
-      try {
-        const savedConfig = loadConfigFromCookies();
-        const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-        
-        // Use a small default amount for route discovery
-        const requestBody = {
-          action: "buy",
-          tokenMintAddress: tokenAddress,
-          amount: "0.01", // Small amount for route discovery
-          rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-        };
-        
-        const response = await fetch(`${baseUrl}/api/tokens/route`, {
-          method: 'POST',
-          headers: {
-            'accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.protocol) {
-          setInitialProtocol(data.protocol.toLowerCase());
-          
-          const protocolToDex = {
-            'pumpfun': 'pumpfun',
-            'moonshot': 'moonshot',
-            'pumpswap': 'pumpswap',
-            'raydium': 'raydium',
-            'jupiter': 'jupiter',
-            'launchpad': 'launchpad',
-            'boopfun': 'boopfun'
-          };
-          
-          const matchedDex = protocolToDex[data.protocol.toLowerCase()];
-          if (matchedDex) {
-            setBestDex(matchedDex);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching initial route:", error);
-      }
-    };
-    
-    fetchInitialRoute();
+  
   }, [isOpen, tokenAddress, selectedDex]);
   
   // Reset protocol when token address changes
   useEffect(() => {
     setInitialProtocol(null);
-    setBestDex(null);
   }, [tokenAddress]);
   
   // Handle tab switching with cookie save
@@ -446,110 +389,21 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
     ));
   };
   
-  // Handle trade submission with the best DEX when auto is selected
-  const handleTradeWithBestDex = useCallback(async (amount, isBuy) => {
-    let dexToUse = manualProtocol || selectedDex;
-    
-    if (!manualProtocol && selectedDex === 'auto') {
-      if (!amount || parseFloat(amount) <= 0) return;
-      
-      // Use the initial protocol if available, otherwise fetch route
-      if (initialProtocol) {
-        const protocolToDex = {
-          'pumpfun': 'pumpfun',
-          'moonshot': 'moonshot',
-          'pumpswap': 'pumpswap',
-          'raydium': 'raydium',
-          'jupiter': 'jupiter',
-          'launchpad': 'launchpad',
-          'boopfun': 'boopfun'
-        };
-        
-        const matchedDex = protocolToDex[initialProtocol];
-        if (matchedDex) {
-          dexToUse = matchedDex;
-          setBestDex(matchedDex);
-        }
-      } else {
-        // Fallback to fetching route if initial protocol not available
-        try {
-          const savedConfig = loadConfigFromCookies();
-          const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-          
-          let requestBody;
-          if (isBuy) {
-            const activeWallets = wallets.filter(wallet => wallet.isActive).length;
-            const totalAmount = (parseFloat(amount) * activeWallets).toString();
-            requestBody = {
-              action: "buy",
-              tokenMintAddress: tokenAddress,
-              amount: totalAmount,
-              rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-            };
-          } else {
-            const activeWallets = wallets.filter(wallet => wallet.isActive);
-            const totalTokenBalance = activeWallets.reduce((sum, wallet) => {
-              const balance = tokenBalances.get(wallet.address) || 0;
-              return sum + balance;
-            }, 0);
-            const sellPercentage = parseFloat(amount);
-            const tokenAmount = totalTokenBalance * (sellPercentage / 100);
-            const rawTokenAmount = Math.floor(tokenAmount).toString();
-            
-            requestBody = {
-              action: "sell",
-              tokenMintAddress: tokenAddress,
-              amount: rawTokenAmount,
-              rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-            };
-          }
-          
-          const response = await fetch(`${baseUrl}/api/tokens/route`, {
-            method: 'POST',
-            headers: {
-              'accept': 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-          });
-          
-          const data = await response.json();
-          
-          if (data.success) {
-            const protocolToDex = {
-              'pumpfun': 'pumpfun',
-              'moonshot': 'moonshot',
-              'pumpswap': 'pumpswap',
-              'raydium': 'raydium',
-              'jupiter': 'jupiter',
-              'launchpad': 'launchpad',
-              'boopfun': 'boopfun'
-            };
-            
-            const matchedDex = protocolToDex[data.protocol.toLowerCase()];
-            if (matchedDex) {
-              dexToUse = matchedDex;
-              setBestDex(matchedDex);
-              setInitialProtocol(data.protocol.toLowerCase());
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching best route:", error);
-        }
-      }
-    }
+  // Handle trade submission
+  const handleTrade = useCallback(async (amount, isBuy) => {
+    const dexToUse = manualProtocol || selectedDex;
     
     // Set the amount in parent state and call handleTradeSubmit with the specific amount
     if (isBuy) {
       setBuyAmount(amount);
       // Pass the amount directly to avoid using stale state values
-      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined, amount, undefined);
+      handleTradeSubmit(wallets, isBuy, dexToUse, amount, undefined);
     } else {
       setSellAmount(amount);
       // Pass the amount directly to avoid using stale state values
-      handleTradeSubmit(wallets, isBuy, dexToUse !== 'auto' ? dexToUse : undefined, undefined, amount);
+      handleTradeSubmit(wallets, isBuy, dexToUse, undefined, amount);
     }
-  }, [manualProtocol, selectedDex, initialProtocol, wallets, tokenAddress, tokenBalances, setBuyAmount, setSellAmount, handleTradeSubmit]);
+  }, [manualProtocol, selectedDex, wallets, setBuyAmount, setSellAmount, handleTradeSubmit]);
   
   // Drag functionality
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -651,13 +505,13 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
                          transition-all duration-300 focus:outline-none"
               >
                 <span className="flex items-center">
-                  {(manualProtocol || selectedDex) === 'auto' && bestDex ? (
-                    <>
-                      <Sparkles size={10} className="text-[#02b36d] mr-1" />
-                      <span>Auto • {dexOptions.find(d => d.value === bestDex)?.label || 'Best'}</span>
-                    </>
+                  {(manualProtocol || selectedDex) === 'auto' ? (
+                    <span className="flex items-center gap-1">
+                      <span className="text-yellow-400 animate-pulse text-xs">⭐</span>
+                      <span>Auto</span>
+                    </span>
                   ) : (
-                    dexOptions.find(d => d.value === (manualProtocol || selectedDex))?.label || 'DEX'
+                    dexOptions.find(d => d.value === (manualProtocol || selectedDex))?.label?.replace('⭐ ', '') || 'DEX'
                   )}
                 </span>
                 <ChevronDown size={10} className={`text-[#02b36d] transition-transform duration-300 ${isProtocolDropdownOpen ? 'rotate-180' : ''}`} />
@@ -669,31 +523,12 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
                             border border-[#02b36d40] shadow-lg shadow-[#00000080] left-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Auto option at the top */}
-                  <button
-                    className={`w-full px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono
-                               hover:bg-[#02b36d20] transition-colors duration-200 flex items-center
-                               ${(manualProtocol || selectedDex) === 'auto' ? 'bg-[#02b36d15] border-l-2 border-[#02b36d]' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setManualProtocol(null);
-                      setSelectedDex('auto');
-                      setIsProtocolDropdownOpen(false);
-                    }}
-                  >
-                    <Sparkles size={10} className="text-[#02b36d] mr-1" />
-                    <span>Auto</span>
-                  </button>
-                  
-                  {/* Thin separator */}
-                  <div className="border-t border-[#02b36d20]"></div>
-                  
-                  {/* Other DEX options */}
+                  {/* DEX options */}
                   <div className="max-h-32 overflow-y-auto">
-                    {dexOptions.filter(dex => dex.value !== 'auto').map((dex) => (
+                    {dexOptions.map((dex) => (
                       <button
                         key={dex.value}
-                        className={`w-full px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono
+                        className={`w-full px-2 py-1 text-left text-[#b3f0d7] text-xs font-mono flex items-center gap-1
                                    hover:bg-[#02b36d20] transition-colors duration-200
                                    ${(manualProtocol || selectedDex) === dex.value ? 'bg-[#02b36d15] border-l-2 border-[#02b36d]' : ''}`}
                         onClick={(e) => {
@@ -703,7 +538,14 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
                           setIsProtocolDropdownOpen(false);
                         }}
                       >
-                        {dex.label}
+                        {dex.value === 'auto' ? (
+                          <>
+                            <span className="text-yellow-400 animate-pulse text-xs">⭐</span>
+                            <span>Auto</span>
+                          </>
+                        ) : (
+                          dex.label
+                        )}
                       </button>
                     ))}
                   </div>
@@ -761,7 +603,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
                 <PresetButton
                   key={index}
                   value={preset}
-                  onExecute={(amount) => handleTradeWithBestDex(amount, true)}
+                  onExecute={(amount) => handleTrade(amount, true)}
                   onChange={(newValue) => handleEditBuyPreset(index, newValue)}
                   isLoading={isLoading}
                   variant="buy"
@@ -784,7 +626,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
                 <PresetButton
                   key={index}
                   value={preset}
-                  onExecute={(amount) => handleTradeWithBestDex(amount, false)}
+                  onExecute={(amount) => handleTrade(amount, false)}
                   onChange={(newValue) => handleEditSellPreset(index, newValue)}
                   isLoading={isLoading}
                   variant="sell"

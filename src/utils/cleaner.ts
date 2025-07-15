@@ -79,56 +79,10 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
 };
 
 /**
- * Fetch the best protocol/DEX for a given token
+ * Get default protocol for trading
  */
-const fetchTokenProtocol = async (tokenAddress: string): Promise<string> => {
-  try {
-    
-    const savedConfig = loadConfigFromCookies();
-    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-    const response = await fetch(`${baseUrl}/api/tokens/route`, {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        action: "sell",
-        tokenMintAddress: tokenAddress,
-        amount: "1000000000", // 1 token for protocol detection
-        rpcUrl: savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com"
-      })
-    });
-    
-    if (!response.ok) {
-      console.warn(`Protocol detection API error: ${response.status}, falling back to pumpfun`);
-      return 'pumpfun';
-    }
-    
-    const data = await response.json();
-    
-    if (data.success && data.protocol) {
-      // Map protocol to DEX
-      const protocolToDex = {
-        'pumpfun': 'pumpfun',
-        'moonshot': 'moonshot',
-        'pumpswap': 'pumpswap',
-        'raydium': 'raydium',
-        'jupiter': 'jupiter',
-        'launchpad': 'launchpad',
-        'boopfun': 'boopfun'
-      };
-      
-      const bestDex = protocolToDex[data.protocol.toLowerCase()];
-      return bestDex || 'pumpfun'; // Fallback to pumpfun if protocol not mapped
-    }
-    
-    console.warn('Protocol detection failed, falling back to pumpfun');
-    return 'pumpfun';
-  } catch (error) {
-    console.warn('Error fetching token protocol:', error, ', falling back to pumpfun');
-    return 'pumpfun';
-  }
+const getDefaultProtocol = (): string => {
+  return 'auto'; // Default protocol, no auto-routing
 };
 
 /**
@@ -355,10 +309,9 @@ export const executeCleanerOperation = async (
     const sellerKeypair = Keypair.fromSecretKey(bs58.decode(sellerWallet.privateKey));
     const buyerKeypair = Keypair.fromSecretKey(bs58.decode(buyerWallet.privateKey));
     
-    // Step 0: Fetch the best protocol for this token (always needed for buy transactions)
-    console.log('Fetching best protocol for token...');
-    const protocol = await fetchTokenProtocol(tokenAddress);
-    console.log(`Using protocol: ${protocol}`);
+    // Step 0: Use default protocol for trading
+    const protocol = getDefaultProtocol();
+    console.log(`Using default protocol: ${protocol}`);
     
     // Determine if this is a sell operation or distribution-only operation
     const shouldSell = sellPercentage > 0;

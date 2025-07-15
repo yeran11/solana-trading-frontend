@@ -158,7 +158,7 @@ export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptTy
   switch(selectedDex) {
     case 'raydium':
       return isBuyMode ? 'raybuy' : 'raysell';
-    case 'jupiter':
+    case 'auto':
       return isBuyMode ? 'jupbuy' : 'jupsell';
     case 'pumpfun':
       return isBuyMode ? 'pumpbuy' : 'pumpsell';

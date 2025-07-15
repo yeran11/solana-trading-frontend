@@ -123,6 +123,8 @@ export default defineConfig({
   // Development server configuration
   server: {
     port: 3000,
-    host: true
+    host: true,
+    
+    allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.app']
   }
 });

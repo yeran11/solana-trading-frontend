@@ -111,7 +111,7 @@ const getPartiallyPreparedSwapTransactions = async (
         walletAddresses,
         tokenAddress: swapConfig.outputMint,
         solAmount: swapConfig.solAmount,
-        protocol: "jupiter",
+        protocol: "auto",
         amounts: customAmounts, // Optional custom amounts per wallet
         jitoTipLamports: feeInLamports  // Now a number in lamports
       }),
@@ -376,7 +376,9 @@ export const executeJupSwap = async (
     bundleResults.forEach((result, index) => {
       if (result.status === 'fulfilled') {
         if (result.value.success) {
-          allResults.push(result.value.result);
+          if (result.value.result) {
+            allResults.push(result.value.result);
+          }
           successfulBundles++;
         } else {
           failedBundles++;

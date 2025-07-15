@@ -322,7 +322,7 @@ export const executeTrade = async (
       return await executePumpFunTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'raydium':
       return await executeRaydiumTrade(formattedWallets, config, isBuyMode, walletBalances);
-    case 'jupiter':
+    case 'auto':
       return await executeJupiterTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'launchpad':
       return await executeLaunchpadTrade(formattedWallets, config, isBuyMode, walletBalances);

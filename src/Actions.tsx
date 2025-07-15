@@ -137,12 +137,11 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
 
 
   const dexOptions = [
-    { value: 'auto', label: 'Auto Route' },
+    { value: 'auto', label: '⭐ Auto', icon: '⭐' },
     { value: 'pumpfun', label: 'PumpFun' },
     { value: 'moonshot', label: 'Moonshot' },
     { value: 'pumpswap', label: 'PumpSwap' },
     { value: 'raydium', label: 'Raydium' },
-    { value: 'jupiter', label: 'Jupiter' },
     { value: 'launchpad', label: 'Launchpad' },
     { value: 'boopfun', label: 'BoopFun' },
   ];
@@ -159,14 +158,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     // Use the provided dex parameter if available, otherwise use selectedDex
     const dexToUse = dex || selectedDex;
     
-    // If selected DEX is "auto", use Jupiter as fallback since route determination is handled by FloatingTradingCard
-    if (dexToUse === 'auto') {
-      showToast("Auto mode is optimized for FloatingTradingCard. Using Jupiter as fallback.", "error");
-      await originalHandleTradeSubmit('jupiter', wallets, isBuyMode, buyAmount, sellAmount);
-      return;
-    }
-    
-    // If not auto, use the determined DEX
+    // Use the determined DEX
     await originalHandleTradeSubmit(dexToUse, wallets, isBuyMode, buyAmount, sellAmount);
   };
 
@@ -432,8 +424,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
       return;
     }
     
-    // Special handling for Jupiter operations with client-side transaction signing
-    if (dex === 'jupiter') {
+    // Special handling for Auto operations with client-side transaction signing
+    if (dex === 'auto') {
       try {
         // Get active wallets
         const activeWallets = wallets.filter(wallet => wallet.isActive);
@@ -444,14 +436,14 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           return;
         }
         
-        // Format wallets for Jupiter operations
+        // Format wallets for Auto operations
         const formattedWallets = activeWallets.map(wallet => ({
           address: wallet.address,
           privateKey: wallet.privateKey
         }));
         
         if (isBuyMode) {
-          // Jupiter Buy flow
+          // Auto Buy flow
           const swapConfig = {
             inputMint: "So11111111111111111111111111111111111111112", // SOL
             outputMint: tokenAddress,
@@ -476,19 +468,19 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             return;
           }
           
-          console.log(`Executing Jupiter Swap (Buy) for ${tokenAddress} with ${activeWallets.length} wallets`);
+          console.log(`Executing Auto Swap (Buy) for ${tokenAddress} with ${activeWallets.length} wallets`);
           
           // Execute JupSwap operation
           const result = await executeJupSwap(formattedWallets, swapConfig);
           
           if (result.success) {
-            showToast("Jupiter Buy transactions submitted successfully", "success");
+            showToast("Auto Buy transactions submitted successfully", "success");
             handleRefresh(); // Refresh balances
           } else {
-            showToast(`Jupiter Buy failed: ${result.error}`, "error");
+            showToast(`Auto Buy failed: ${result.error}`, "error");
           }
         } else {
-          // Jupiter Sell flow
+          // Auto Sell flow
           const sellConfig = {
             inputMint: tokenAddress, // Token to sell
             outputMint: "So11111111111111111111111111111111111111112", // SOL
@@ -507,20 +499,20 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           // Import the dedicated sell functions from selljup
           const { validateJupSellInputs, executeJupSell } = await import('./utils/jupsell');
           
-          console.log(`Executing Jupiter Sell for ${tokenAddress} with ${activeWallets.length} wallets (${sellConfig.sellPercent}%)`);
+          console.log(`Executing Auto Sell for ${tokenAddress} with ${activeWallets.length} wallets (${sellConfig.sellPercent}%)`);
           
           // Execute JupSell operation with RPC URL
           const result = await executeJupSell(formattedWallets, sellConfig);
           
           if (result.success) {
-            showToast("Jupiter Sell transactions submitted successfully", "success");
+            showToast("Auto Sell transactions submitted successfully", "success");
             handleRefresh(); // Refresh balances
           } else {
-            showToast(`Jupiter Sell failed: ${result.error}`, "error");
+            showToast(`Auto Sell failed: ${result.error}`, "error");
           }
         }
       } catch (error) {
-        console.error(`Jupiter ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
+        console.error(`Auto ${isBuyMode ? 'Buy' : 'Sell'} error:`, error);
         showToast(`Error: ${error.message}`, "error");
       } finally {
         setIsLoading(false);

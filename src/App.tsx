@@ -363,12 +363,11 @@ const WalletManager: React.FC = () => {
 
   // DEX options for trading
   const dexOptions = [
-    { value: 'auto', label: 'Auto Route' },
+    { value: 'auto', label: '⭐ Auto', icon: '⭐' },
     { value: 'pumpfun', label: 'PumpFun' },
     { value: 'moonshot', label: 'Moonshot' },
     { value: 'pumpswap', label: 'PumpSwap' },
     { value: 'raydium', label: 'Raydium' },
-    { value: 'jupiter', label: 'Jupiter' },
     { value: 'launchpad', label: 'Launchpad' },
     { value: 'boopfun', label: 'BoopFun' },
   ];
@@ -383,22 +382,9 @@ const WalletManager: React.FC = () => {
       return;
     }
     
-    // If selected DEX is "auto", use the dex parameter passed from FloatingTradingCard
-    if (state.config.selectedDex === 'auto') {
-      if (dex && dex !== 'auto') {
-        // Use the DEX determined by FloatingTradingCard
-        showToast(`Using ${dexOptions.find(d => d.value === dex)?.label} for best rate`, "success");
-        await originalHandleTradeSubmit(dex, wallets, isBuyMode, buyAmount, sellAmount);
-      } else {
-        // Fallback to Jupiter if no specific DEX is provided
-        showToast("No optimal route determined. Using Jupiter as fallback.", "error");
-        await originalHandleTradeSubmit('jupiter', wallets, isBuyMode, buyAmount, sellAmount);
-      }
-      return;
-    }
-    
-    // If not auto, use the selected DEX
-     await originalHandleTradeSubmit(state.config.selectedDex, wallets, isBuyMode, buyAmount, sellAmount);
+    // Use the selected DEX or the dex parameter if provided
+    const dexToUse = dex || state.config.selectedDex;
+    await originalHandleTradeSubmit(dexToUse, wallets, isBuyMode, buyAmount, sellAmount);
   };
 
   // Simplified trade submit function using TradingLogic module
