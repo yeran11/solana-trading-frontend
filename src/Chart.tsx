@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { Search, AlertCircle, BarChart, Activity, TrendingUp, Users } from 'lucide-react';
+import { Search, AlertCircle, BarChart } from 'lucide-react';
 import { WalletType, getWalletDisplayName } from './Utils';
 
 interface ChartPageProps {
   isLoadingChart: boolean;
   tokenAddress: string;
   wallets: WalletType[];
+  onDataUpdate?: (data: {
+    tradingStats: any;
+    solPrice: number | null;
+    currentWallets: any[];
+  }) => void;
 }
 
 // Iframe communication types
@@ -110,7 +115,8 @@ const IconButton: React.FC<{
 export const ChartPage: React.FC<ChartPageProps> = ({
   isLoadingChart,
   tokenAddress,
-  wallets
+  wallets,
+  onDataUpdate
 }) => {
   const [frameLoading, setFrameLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
@@ -128,6 +134,17 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   } | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [currentWallets, setCurrentWallets] = useState<any[]>([]);
+
+  // Notify parent component of data updates
+  useEffect(() => {
+    if (onDataUpdate) {
+      onDataUpdate({
+        tradingStats,
+        solPrice,
+        currentWallets
+      });
+    }
+  }, [tradingStats, solPrice, currentWallets, onDataUpdate]);
 
 
   
@@ -294,107 +311,13 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     </AnimatePresence>
   );
   
-  // Render data display box
-  const renderDataBox = () => (
-    <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="absolute top-4 right-4 z-20 bg-[#0f0f0f]/95 backdrop-blur-sm border border-[#87D693]/20 rounded-lg p-4 min-w-[280px] max-w-[320px]"
-      style={{
-        background: "linear-gradient(145deg, #0f0f0f/95 0%, #141414/95 100%)",
-        boxShadow: "0 8px 32px rgba(135, 214, 147, 0.1)"
-      }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Activity className="h-4 w-4 text-[#87D693]" />
-        <h3 className="text-sm font-medium text-[#87D693]">Iframe Data</h3>
-      </div>
-      
-      {/* SOL Price */}
-      {solPrice && (
-        <div className="mb-3 p-2 bg-[#87D693]/10 rounded border border-[#87D693]/20">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-3 w-3 text-[#87D693]" />
-            <span className="text-xs text-gray-400">SOL Price</span>
-          </div>
-          <div className="text-lg font-bold text-[#87D693]">
-            ${solPrice.toFixed(2)}
-          </div>
-        </div>
-      )}
-      
-      {/* Trading Stats */}
-      {tradingStats && (
-        <div className="mb-3 p-2 bg-[#87D693]/5 rounded border border-[#87D693]/10">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart className="h-3 w-3 text-[#87D693]" />
-            <span className="text-xs text-gray-400">Trading Stats</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="text-gray-500">Bought:</span>
-              <div className="text-green-400 font-mono">{tradingStats.bought.toFixed(3)} SOL</div>
-            </div>
-            <div>
-              <span className="text-gray-500">Sold:</span>
-              <div className="text-red-400 font-mono">{tradingStats.sold.toFixed(3)} SOL</div>
-            </div>
-            <div>
-              <span className="text-gray-500">Net:</span>
-              <div className={`font-mono ${tradingStats.net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {tradingStats.net.toFixed(3)} SOL
-              </div>
-            </div>
-            <div>
-              <span className="text-gray-500">Trades:</span>
-              <div className="text-[#87D693] font-mono">{tradingStats.trades}</div>
-            </div>
-          </div>
-          <div className="text-xs text-gray-600 mt-2">
-            Updated: {new Date(tradingStats.timestamp).toLocaleTimeString()}
-          </div>
-        </div>
-      )}
-      
-      {/* Current Wallets */}
-      {currentWallets.length > 0 && (
-        <div className="p-2 bg-[#87D693]/5 rounded border border-[#87D693]/10">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="h-3 w-3 text-[#87D693]" />
-            <span className="text-xs text-gray-400">Wallets ({currentWallets.length})</span>
-          </div>
-          <div className="max-h-24 overflow-y-auto">
-            {currentWallets.slice(0, 3).map((wallet, index) => (
-              <div key={index} className="text-xs text-gray-300 mb-1 font-mono">
-                {wallet.address?.slice(0, 8)}...{wallet.address?.slice(-4)}
-                {wallet.label && <span className="text-gray-500 ml-1">({wallet.label})</span>}
-              </div>
-            ))}
-            {currentWallets.length > 3 && (
-              <div className="text-xs text-gray-500">+{currentWallets.length - 3} more</div>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Status indicator */}
-      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#87D693]/10">
-        <div className={`w-2 h-2 rounded-full ${isIframeReady ? 'bg-green-400' : 'bg-yellow-400'}`} />
-        <span className="text-xs text-gray-500">
-          {isIframeReady ? 'Connected' : 'Connecting...'}
-        </span>
-      </div>
-    </motion.div>
-  );
+
 
   // Render iframe with single frame
   const renderFrame = () => {
     return (
       <div className="relative flex-1 overflow-hidden iframe-container">
         {renderLoader(frameLoading || isLoadingChart)}
-        
-        {/* Data display box overlay */}
-        {tokenAddress && renderDataBox()}
         
         <div className="absolute inset-0 overflow-hidden">
           <iframe 

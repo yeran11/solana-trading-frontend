@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Download, 
-  Settings2,
-  ChevronDown, 
-  Share2,
-  Waypoints,
-  Blocks,
-  Trash2,
-  ChartSpline,
-  Send,
-  Workflow,
-  Sparkles
-} from 'lucide-react';
+import {
+   Download, 
+   Settings2,
+   ChevronDown, 
+   Share2,
+   Waypoints,
+   Blocks,
+   Trash2,
+   ChartSpline,
+   Send,
+   Workflow,
+   Sparkles,
+   Activity,
+   TrendingUp,
+   Users,
+   BarChart
+ } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { WalletType, loadConfigFromCookies } from "./Utils";
 import { useToast } from "./Notifications";
@@ -66,6 +70,11 @@ interface ActionsPageProps {
   setCustomBuyModalOpen: (open: boolean) => void;
   onOpenFloating: () => void;
   isFloatingCardOpen: boolean;
+  iframeData?: {
+    tradingStats: any;
+    solPrice: number | null;
+    currentWallets: any[];
+  } | null;
 }
 
 // Simplified Tooltip component without animations
@@ -107,6 +116,106 @@ export const Tooltip = ({
   );
 };
 
+// Data Box Component
+const DataBox: React.FC<{
+  iframeData?: {
+    tradingStats: any;
+    solPrice: number | null;
+    currentWallets: any[];
+  } | null;
+  tokenAddress: string;
+}> = ({ iframeData, tokenAddress }) => {
+  if (!tokenAddress || !iframeData) return null;
+
+  const { tradingStats, solPrice, currentWallets } = iframeData;
+
+  return (
+    <div className="mb-4">
+      <div className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-4 shadow-xl border border-[#02b36d20] relative overflow-hidden">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
+            <Activity size={16} className="text-[#02b36d]" />
+          </div>
+          <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Live Data</span>
+        </div>
+        
+        {/* Streamlined horizontal layout */}
+        <div className="space-y-3">
+          {/* SOL Price and Trading Stats in one row */}
+          <div className="flex flex-wrap items-center gap-6">
+            {solPrice && (
+              <div className="flex items-center gap-3">
+                <TrendingUp size={16} className="text-[#02b36d]" />
+                <div>
+                  <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">SOL Price</span>
+                  <span className="text-lg font-bold text-[#02b36d] font-mono">${solPrice.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            
+            {tradingStats && (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                  <div>
+                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Bought</span>
+                    <span className="text-sm font-bold text-green-400 font-mono">{tradingStats.bought.toFixed(3)} SOL</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                  <div>
+                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Sold</span>
+                    <span className="text-sm font-bold text-red-400 font-mono">{tradingStats.sold.toFixed(3)} SOL</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${tradingStats.net >= 0 ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                  <div>
+                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Net P&L</span>
+                    <span className={`text-sm font-bold font-mono ${tradingStats.net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {tradingStats.net >= 0 ? '+' : ''}{tradingStats.net.toFixed(3)} SOL
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <BarChart size={16} className="text-[#02b36d]" />
+                  <div>
+                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Trades</span>
+                    <span className="text-sm font-bold text-[#02b36d] font-mono">{tradingStats.trades}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Wallets and timestamp in second row */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[#02b36d20]">
+            {currentWallets && currentWallets.length > 0 && (
+              <div className="flex items-center gap-3">
+                <Users size={16} className="text-[#02b36d]" />
+                <div>
+                  <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Active Wallets</span>
+                  <span className="text-sm font-bold text-[#02b36d] font-mono">{currentWallets.length}</span>
+                </div>
+              </div>
+            )}
+            
+            {tradingStats && (
+              <div className="text-xs text-[#7ddfbd60] font-mono">
+                Last updated: {new Date(tradingStats.timestamp).toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ActionsPage: React.FC<ActionsPageProps> = ({ 
   tokenAddress, 
   transactionFee, 
@@ -121,7 +230,8 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   setCleanerTokensModalOpen,
   setCustomBuyModalOpen,
   onOpenFloating,
-  isFloatingCardOpen
+  isFloatingCardOpen,
+  iframeData
 }) => {
   // State management (no changes)
   const [buyAmount, setBuyAmount] = useState('');
@@ -981,6 +1091,9 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
               </button>
             </div>
           </div>
+          
+          {/* Live Data Box under Token Operations */}
+          <DataBox iframeData={iframeData} tokenAddress={tokenAddress} />
         </div>
       </div>
 

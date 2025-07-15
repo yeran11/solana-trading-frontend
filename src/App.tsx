@@ -94,6 +94,11 @@ const WalletManager: React.FC = () => {
     quickBuyMinAmount: number;
     quickBuyMaxAmount: number;
     useQuickBuyRange: boolean;
+    iframeData: {
+      tradingStats: any;
+      solPrice: number | null;
+      currentWallets: any[];
+    } | null;
   }
 
   type AppAction = 
@@ -124,7 +129,8 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_QUICK_BUY_AMOUNT'; payload: number }
     | { type: 'SET_QUICK_BUY_MIN_AMOUNT'; payload: number }
     | { type: 'SET_QUICK_BUY_MAX_AMOUNT'; payload: number }
-    | { type: 'SET_USE_QUICK_BUY_RANGE'; payload: boolean };
+    | { type: 'SET_USE_QUICK_BUY_RANGE'; payload: boolean }
+    | { type: 'SET_IFRAME_DATA'; payload: { tradingStats: any; solPrice: number | null; currentWallets: any[] } | null };
 
   const initialState: AppState = {
     copiedAddress: null,
@@ -169,7 +175,8 @@ const WalletManager: React.FC = () => {
     quickBuyAmount: 0.01,
     quickBuyMinAmount: 0.01,
     quickBuyMaxAmount: 0.05,
-    useQuickBuyRange: false
+    useQuickBuyRange: false,
+    iframeData: null
   };
 
   const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -261,6 +268,8 @@ const WalletManager: React.FC = () => {
         return { ...state, quickBuyMaxAmount: action.payload };
       case 'SET_USE_QUICK_BUY_RANGE':
         return { ...state, useQuickBuyRange: action.payload };
+      case 'SET_IFRAME_DATA':
+        return { ...state, iframeData: action.payload };
       default:
         return state;
     }
@@ -313,7 +322,8 @@ const WalletManager: React.FC = () => {
     setQuickBuyAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_AMOUNT', payload: amount }),
     setQuickBuyMinAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MIN_AMOUNT', payload: amount }),
     setQuickBuyMaxAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MAX_AMOUNT', payload: amount }),
-    setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange })
+    setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange }),
+    setIframeData: (data: { tradingStats: any; solPrice: number | null; currentWallets: any[] } | null) => dispatch({ type: 'SET_IFRAME_DATA', payload: data })
   }), []);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
@@ -725,6 +735,7 @@ const WalletManager: React.FC = () => {
               isLoadingChart={state.isLoadingChart}
               tokenAddress={state.tokenAddress}
               wallets={state.wallets}
+              onDataUpdate={memoizedCallbacks.setIframeData}
             />
             </div>
 
@@ -745,6 +756,7 @@ const WalletManager: React.FC = () => {
               setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
               onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
               isFloatingCardOpen={state.floatingCard.isOpen}
+              iframeData={state.iframeData}
             />
             </div>
           </Split>
@@ -794,6 +806,7 @@ const WalletManager: React.FC = () => {
                 isLoadingChart={state.isLoadingChart}
                 tokenAddress={state.tokenAddress}
                 wallets={state.wallets}
+                onDataUpdate={memoizedCallbacks.setIframeData}
               />
             ),
             ActionsPage: (
@@ -812,6 +825,7 @@ const WalletManager: React.FC = () => {
                 setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
                 onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
                 isFloatingCardOpen={state.floatingCard.isOpen}
+                iframeData={state.iframeData}
               />
             )
           }}
