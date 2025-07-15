@@ -83,10 +83,7 @@ const WalletManager: React.FC = () => {
     };
     sortDirection: 'asc' | 'desc';
     tickEffect: boolean;
-    status: {
-      message: string;
-      isVisible: boolean;
-    };
+
     floatingCard: {
       isOpen: boolean;
       position: { x: number; y: number };
@@ -118,7 +115,7 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_MODAL'; payload: { modal: keyof AppState['modals']; open: boolean } }
     | { type: 'SET_SORT_DIRECTION'; payload: 'asc' | 'desc' }
     | { type: 'SET_TICK_EFFECT'; payload: boolean }
-    | { type: 'SET_STATUS'; payload: { message: string; isVisible: boolean } }
+
     | { type: 'UPDATE_BALANCE'; payload: { address: string; solBalance?: number; tokenBalance?: number } }
     | { type: 'SET_FLOATING_CARD_OPEN'; payload: boolean }
     | { type: 'SET_FLOATING_CARD_POSITION'; payload: { x: number; y: number } }
@@ -162,10 +159,7 @@ const WalletManager: React.FC = () => {
     },
     sortDirection: 'asc',
     tickEffect: false,
-    status: {
-      message: '',
-      isVisible: false
-    },
+
     floatingCard: {
       isOpen: false,
       position: { x: 100, y: 100 },
@@ -221,8 +215,7 @@ const WalletManager: React.FC = () => {
         return { ...state, sortDirection: action.payload };
       case 'SET_TICK_EFFECT':
         return { ...state, tickEffect: action.payload };
-      case 'SET_STATUS':
-        return { ...state, status: action.payload };
+
       case 'UPDATE_BALANCE':
         const newState = { ...state };
         if (action.payload.solBalance !== undefined) {
@@ -312,8 +305,7 @@ const WalletManager: React.FC = () => {
     setCustomBuyModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'customBuyModalOpen', open } }),
     setSortDirection: (direction: 'asc' | 'desc') => dispatch({ type: 'SET_SORT_DIRECTION', payload: direction }),
     setTickEffect: (effect: boolean) => dispatch({ type: 'SET_TICK_EFFECT', payload: effect }),
-    setStatusMessage: (message: string) => dispatch({ type: 'SET_STATUS', payload: { message, isVisible: state.status.isVisible } }),
-    setIsStatusVisible: (visible: boolean) => dispatch({ type: 'SET_STATUS', payload: { message: state.status.message, isVisible: visible } }),
+
     setFloatingCardOpen: (open: boolean) => dispatch({ type: 'SET_FLOATING_CARD_OPEN', payload: open }),
     setFloatingCardPosition: (position: { x: number; y: number }) => dispatch({ type: 'SET_FLOATING_CARD_POSITION', payload: position }),
     setFloatingCardDragging: (dragging: boolean) => dispatch({ type: 'SET_FLOATING_CARD_DRAGGING', payload: dragging }),
@@ -322,7 +314,7 @@ const WalletManager: React.FC = () => {
     setQuickBuyMinAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MIN_AMOUNT', payload: amount }),
     setQuickBuyMaxAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MAX_AMOUNT', payload: amount }),
     setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange })
-  }), [state.status]);
+  }), []);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
   const configCallbacks = useMemo(() => ({
@@ -332,31 +324,7 @@ const WalletManager: React.FC = () => {
     setIsDropdownOpen: (open: boolean) => dispatch({ type: 'SET_CONFIG', payload: { ...state.config, isDropdownOpen: open } })
   }), [state.config]);
 
-  // Debounced status fetching to reduce API calls
-  const debouncedStatusFetch = useMemo(() => {
-    let timeoutId: NodeJS.Timeout;
-    return () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        try {
-          const response = await fetch('https://raze.bot/status.txt');
-          const data = await response.json();
-          const statusText = data.status || '';
-          const trimmedText = statusText.trim();
-          
-          if (trimmedText && trimmedText !== state.status.message) {
-            memoizedCallbacks.setStatusMessage(trimmedText);
-            memoizedCallbacks.setIsStatusVisible(true);
-          } else if (!trimmedText && state.status.isVisible) {
-            memoizedCallbacks.setIsStatusVisible(false);
-            memoizedCallbacks.setStatusMessage('');
-          }
-        } catch (error) {
-          console.error('Failed to fetch status:', error);
-        }
-      }, 1000);
-    };
-  }, [state.status.message, state.status.isVisible, memoizedCallbacks]);
+
 
   // DEX options for trading
   const dexOptions = [
@@ -412,12 +380,7 @@ const WalletManager: React.FC = () => {
     }
   };
 
-  // Fetch status from API with reduced frequency
-  useEffect(() => {
-    debouncedStatusFetch();
-    const interval = setInterval(debouncedStatusFetch, 60000); // Reduced to 60 seconds
-    return () => clearInterval(interval);
-  }, [debouncedStatusFetch]);
+
 
   // Extract API key from URL
   useEffect(() => {
@@ -648,26 +611,7 @@ const WalletManager: React.FC = () => {
       {/* Cyberpunk scanline effect */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-10"></div>
       
-      {/* Status Notification Banner */}
-      {state.status.isVisible && state.status.message && (
-        <div className="relative bg-gradient-to-r from-red-900/90 to-red-800/90 border-b border-red-500/50 p-3 backdrop-blur-sm z-30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-              <span className="text-red-100 font-mono text-sm font-medium">
-                ⚠️ SYSTEM ALERT: {state.status.message}
-              </span>
-            </div>
-            <button
-              onClick={() => memoizedCallbacks.setIsStatusVisible(false)}
-              className="text-red-300 hover:text-red-100 transition-colors p-1"
-              aria-label="Close notification"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+
       
       {/* Top Navigation */}
       <nav className="relative border-b border-[#02b36d70] px-4 py-2 backdrop-blur-sm bg-[#050a0e99] z-20">
