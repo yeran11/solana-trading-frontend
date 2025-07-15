@@ -6,7 +6,6 @@ import { WalletType, getWalletDisplayName } from './Utils';
 interface ChartPageProps {
   isLoadingChart: boolean;
   tokenAddress: string;
-  ammKey: string | null;
   wallets: WalletType[];
 }
 
@@ -89,7 +88,6 @@ const IconButton: React.FC<{
 export const ChartPage: React.FC<ChartPageProps> = ({
   isLoadingChart,
   tokenAddress,
-  ammKey,
   wallets
 }) => {
   const [frameLoading, setFrameLoading] = useState(true);
@@ -169,7 +167,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       setFrameLoading(true);
       setIsIframeReady(false);
     }
-  }, [tokenAddress, ammKey]);
+  }, [tokenAddress]);
   
   // Handle iframe load completion
   const handleFrameLoad = () => {

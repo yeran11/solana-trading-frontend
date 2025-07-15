@@ -90,29 +90,7 @@ export const fetchTokenBalances = async (
   return newBalances;
 };
 
-/**
- * Fetch AMM key for a token
- */
-export const fetchAmmKey = async (
-  tokenAddress: string,
-  setAmmKey: Function,
-  setIsLoadingChart: Function
-) => {
-  if (!tokenAddress) return null;
-  setIsLoadingChart(true);
-  try {
-    const response = await fetch(
-      `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${tokenAddress}&amount=100000000&slippageBps=1`
-    );
-    const data = await response.json();
-    if (data.routePlan?.[0]?.swapInfo?.ammKey) {
-      setAmmKey(data.routePlan[0].swapInfo.ammKey);
-    }
-  } catch (error) {
-    console.error('Error fetching AMM key:', error);
-  }
-  setIsLoadingChart(false);
-};
+
 
 /**
  * Handle market cap updates

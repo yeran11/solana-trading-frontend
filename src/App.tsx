@@ -23,7 +23,6 @@ import { useToast } from "./Notifications";
 import {
   fetchSolBalances,
   fetchTokenBalances,
-  fetchAmmKey,
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
@@ -72,7 +71,7 @@ const WalletManager: React.FC = () => {
     connection: Connection | null;
     solBalances: Map<string, number>;
     tokenBalances: Map<string, number>;
-    ammKey: string | null;
+
     isLoadingChart: boolean;
     currentMarketCap: number | null;
     modals: {
@@ -113,7 +112,7 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_CONNECTION'; payload: Connection | null }
     | { type: 'SET_SOL_BALANCES'; payload: Map<string, number> }
     | { type: 'SET_TOKEN_BALANCES'; payload: Map<string, number> }
-    | { type: 'SET_AMM_KEY'; payload: string | null }
+
     | { type: 'SET_LOADING_CHART'; payload: boolean }
     | { type: 'SET_MARKET_CAP'; payload: number | null }
     | { type: 'SET_MODAL'; payload: { modal: keyof AppState['modals']; open: boolean } }
@@ -151,7 +150,7 @@ const WalletManager: React.FC = () => {
     connection: null,
     solBalances: new Map(),
     tokenBalances: new Map(),
-    ammKey: null,
+
     isLoadingChart: false,
     currentMarketCap: null,
     modals: {
@@ -205,8 +204,7 @@ const WalletManager: React.FC = () => {
         return { ...state, solBalances: action.payload };
       case 'SET_TOKEN_BALANCES':
         return { ...state, tokenBalances: action.payload };
-      case 'SET_AMM_KEY':
-        return { ...state, ammKey: action.payload };
+
       case 'SET_LOADING_CHART':
         return { ...state, isLoadingChart: action.payload };
       case 'SET_MARKET_CAP':
@@ -304,7 +302,7 @@ const WalletManager: React.FC = () => {
     setConnection: (connection: Connection | null) => dispatch({ type: 'SET_CONNECTION', payload: connection }),
     setSolBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_SOL_BALANCES', payload: balances }),
     setTokenBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_TOKEN_BALANCES', payload: balances }),
-    setAmmKey: (key: string | null) => dispatch({ type: 'SET_AMM_KEY', payload: key }),
+
     setIsLoadingChart: (loading: boolean) => dispatch({ type: 'SET_LOADING_CHART', payload: loading }),
     setCurrentMarketCap: (cap: number | null) => dispatch({ type: 'SET_MARKET_CAP', payload: cap }),
     setBurnModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL', payload: { modal: 'burnModalOpen', open } }),
@@ -341,8 +339,7 @@ const WalletManager: React.FC = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(async () => {
         try {
-          const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-          const response = await fetch(`${baseUrl}/status`);
+          const response = await fetch('https://raze.bot/status.txt');
           const data = await response.json();
           const statusText = data.status || '';
           const trimmedText = statusText.trim();
@@ -447,12 +444,7 @@ const WalletManager: React.FC = () => {
     window.history.replaceState({}, '', url.toString());
   }, [state.tokenAddress]);
 
-  // Fetch AMM key when token address changes
-  useEffect(() => {
-    if (state.tokenAddress) {
-      fetchAmmKey(state.tokenAddress, memoizedCallbacks.setAmmKey, memoizedCallbacks.setIsLoadingChart);
-    }
-  }, [state.tokenAddress, memoizedCallbacks.setAmmKey, memoizedCallbacks.setIsLoadingChart]);
+
   
   // Initialize app on mount
   useEffect(() => {
@@ -786,32 +778,30 @@ const WalletManager: React.FC = () => {
             {/* Middle Column */}
             <div className="backdrop-blur-sm bg-[#050a0e99] border-r border-[#02b36d40] overflow-y-auto">
               <ChartPage
-                isLoadingChart={state.isLoadingChart}
-                tokenAddress={state.tokenAddress}
-                ammKey={state.ammKey}
-                wallets={state.wallets}
-              />
+              isLoadingChart={state.isLoadingChart}
+              tokenAddress={state.tokenAddress}
+              wallets={state.wallets}
+            />
             </div>
 
             {/* Right Column */}
             <div className="backdrop-blur-sm bg-[#050a0e99] overflow-y-auto">
               <ActionsPage
-                tokenAddress={state.tokenAddress}
-                transactionFee={state.config.transactionFee}
-                handleRefresh={handleRefresh}
-                wallets={state.wallets}
-                ammKey={state.ammKey}
-                solBalances={state.solBalances}
-                tokenBalances={state.tokenBalances}
-                currentMarketCap={state.currentMarketCap}
-                setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
-                setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
-                setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
-                setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
-                setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
-                onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
-                isFloatingCardOpen={state.floatingCard.isOpen}
-              />
+              tokenAddress={state.tokenAddress}
+              transactionFee={state.config.transactionFee}
+              handleRefresh={handleRefresh}
+              wallets={state.wallets}
+              solBalances={state.solBalances}
+              tokenBalances={state.tokenBalances}
+              currentMarketCap={state.currentMarketCap}
+              setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
+              setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
+              setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
+              setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
+              setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
+              onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
+              isFloatingCardOpen={state.floatingCard.isOpen}
+            />
             </div>
           </Split>
         </div>
@@ -859,7 +849,6 @@ const WalletManager: React.FC = () => {
               <ChartPage
                 isLoadingChart={state.isLoadingChart}
                 tokenAddress={state.tokenAddress}
-                ammKey={state.ammKey}
                 wallets={state.wallets}
               />
             ),
@@ -869,7 +858,6 @@ const WalletManager: React.FC = () => {
                 transactionFee={state.config.transactionFee}
                 handleRefresh={handleRefresh}
                 wallets={state.wallets}
-                ammKey={state.ammKey}
                 solBalances={state.solBalances}
                 tokenBalances={state.tokenBalances}
                 currentMarketCap={state.currentMarketCap}

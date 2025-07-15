@@ -54,7 +54,6 @@ Switch.displayName = 'Switch';
 interface ActionsPageProps {
   tokenAddress: string;
   transactionFee: string;
-  ammKey: string | null;
   handleRefresh: () => void;
   wallets: WalletType[];
   solBalances: Map<string, number>;
@@ -111,7 +110,6 @@ export const Tooltip = ({
 export const ActionsPage: React.FC<ActionsPageProps> = ({ 
   tokenAddress, 
   transactionFee, 
-  ammKey, 
   handleRefresh, 
   wallets, 
   solBalances, 
