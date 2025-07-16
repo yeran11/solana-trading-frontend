@@ -31,7 +31,7 @@ import { executeTrade } from './TradingLogic';
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
-const EnhancedWalletOverview = lazy(() => import('./WalletOverviewModal'));
+const EnhancedWalletOverview = lazy(() => import('./WalletOverview.tsx'));
 const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
 const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
 const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: module.ActionsPage })));
