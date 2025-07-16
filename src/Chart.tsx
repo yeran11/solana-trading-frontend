@@ -11,6 +11,22 @@ interface ChartPageProps {
     tradingStats: any;
     solPrice: number | null;
     currentWallets: any[];
+    recentTrades: {
+      type: 'buy' | 'sell';
+      address: string;
+      tokensAmount: number;
+      avgPrice: number;
+      solAmount: number;
+      timestamp: number;
+      signature: string;
+    }[];
+    tokenPrice: {
+      tokenPrice: number;
+      tokenMint: string;
+      timestamp: number;
+      tradeType: 'buy' | 'sell';
+      volume: number;
+    } | null;
   }) => void;
 }
 
@@ -44,7 +60,9 @@ type IframeResponse =
   | WalletsClearedResponse
   | CurrentWalletsResponse
   | WhitelistTradingStatsResponse
-  | SolPriceUpdateResponse;
+  | SolPriceUpdateResponse
+  | WhitelistTradeResponse
+  | TokenPriceUpdateResponse;
 
 interface IframeReadyResponse {
   type: 'IFRAME_READY';
@@ -83,6 +101,30 @@ interface SolPriceUpdateResponse {
   data: {
     solPrice: number;
     timestamp: number;
+  };
+}
+
+interface WhitelistTradeResponse {
+  type: 'WHITELIST_TRADE';
+  data: {
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+  };
+}
+
+interface TokenPriceUpdateResponse {
+  type: 'TOKEN_PRICE_UPDATE';
+  data: {
+    tokenPrice: number;
+    tokenMint: string;
+    timestamp: number;
+    tradeType: 'buy' | 'sell';
+    volume: number;
   };
 }
 
@@ -134,6 +176,22 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   } | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [currentWallets, setCurrentWallets] = useState<any[]>([]);
+  const [recentTrades, setRecentTrades] = useState<{
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+  }[]>([]);
+  const [tokenPrice, setTokenPrice] = useState<{
+    tokenPrice: number;
+    tokenMint: string;
+    timestamp: number;
+    tradeType: 'buy' | 'sell';
+    volume: number;
+  } | null>(null);
 
   // Notify parent component of data updates
   useEffect(() => {
@@ -141,10 +199,12 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       onDataUpdate({
         tradingStats,
         solPrice,
-        currentWallets
+        currentWallets,
+        recentTrades,
+        tokenPrice
       });
     }
-  }, [tradingStats, solPrice, currentWallets, onDataUpdate]);
+  }, [tradingStats, solPrice, currentWallets, recentTrades, tokenPrice, onDataUpdate]);
 
 
   
@@ -176,15 +236,36 @@ export const ChartPage: React.FC<ChartPageProps> = ({
           setCurrentWallets(event.data.wallets);
           break;
         
-        case 'WHITELIST_TRADING_STATS':
-          console.log('Trading stats updated:', event.data.data);
-          setTradingStats(event.data.data);
+        case 'WHITELIST_TRADING_STATS': {
+          const response = event.data as WhitelistTradingStatsResponse;
+          console.log('Trading stats updated:', response.data);
+          setTradingStats(response.data);
           break;
+        }
         
-        case 'SOL_PRICE_UPDATE':
-          console.log('SOL price updated:', event.data.data.solPrice);
-          setSolPrice(event.data.data.solPrice);
+        case 'SOL_PRICE_UPDATE': {
+          const response = event.data as SolPriceUpdateResponse;
+          console.log('SOL price updated:', response.data.solPrice);
+          setSolPrice(response.data.solPrice);
           break;
+        }
+        
+        case 'WHITELIST_TRADE': {
+          const response = event.data as WhitelistTradeResponse;
+          console.log('New whitelist trade:', response.data);
+          setRecentTrades(prev => {
+            const newTrades = [response.data, ...prev].slice(0, 10); // Keep only last 10 trades
+            return newTrades;
+          });
+          break;
+        }
+        
+        case 'TOKEN_PRICE_UPDATE': {
+          const response = event.data as TokenPriceUpdateResponse;
+          console.log('Token price updated:', response.data);
+          setTokenPrice(response.data);
+          break;
+        }
       }
     };
 

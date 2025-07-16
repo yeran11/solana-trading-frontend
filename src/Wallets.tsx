@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, Zap } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance, getWalletDisplayName } from './Utils';
 import { useToast } from "./Notifications";
@@ -249,6 +249,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const [buyingWalletId, setBuyingWalletId] = useState<number | null>(null);
+  const [recentlyUpdatedWallets, setRecentlyUpdatedWallets] = useState<Set<string>>(new Set());
   
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
@@ -291,6 +292,59 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   useEffect(() => {
     fetchSolBalances();
   }, [wallets.length, connection]);
+
+  // Use refs to track previous balance values
+  const prevSolBalancesRef = useRef<Map<string, number>>(new Map());
+  const prevTokenBalancesRef = useRef<Map<string, number>>(new Map());
+
+  // Monitor balance changes to show visual feedback for trade updates
+  useEffect(() => {
+    const prevSolBalances = prevSolBalancesRef.current;
+    const prevTokenBalances = prevTokenBalancesRef.current;
+    
+    // Create a serialized version of current balances to compare
+    const currentSolString = JSON.stringify(Array.from(solBalances.entries()).sort());
+    const currentTokenString = JSON.stringify(Array.from(tokenBalances.entries()).sort());
+    const prevSolString = JSON.stringify(Array.from(prevSolBalances.entries()).sort());
+    const prevTokenString = JSON.stringify(Array.from(prevTokenBalances.entries()).sort());
+    
+    // Only proceed if balances actually changed
+    if (currentSolString === prevSolString && currentTokenString === prevTokenString) {
+      return;
+    }
+    
+    // Check for balance changes and mark wallets as recently updated
+    const updatedWallets = new Set<string>();
+    
+    wallets.forEach(wallet => {
+      const currentSol = solBalances.get(wallet.address) || 0;
+      const currentToken = tokenBalances.get(wallet.address) || 0;
+      const prevSol = prevSolBalances.get(wallet.address) || 0;
+      const prevToken = prevTokenBalances.get(wallet.address) || 0;
+      
+      // Check if balances changed significantly (to avoid minor rounding differences)
+      const solChanged = Math.abs(currentSol - prevSol) > 0.001;
+      const tokenChanged = Math.abs(currentToken - prevToken) > 0.001;
+      
+      if ((solChanged || tokenChanged) && (prevSol > 0 || prevToken > 0)) {
+        updatedWallets.add(wallet.address);
+        console.log(`Balance updated for wallet ${wallet.address}: SOL ${prevSol.toFixed(4)} → ${currentSol.toFixed(4)}, Tokens ${prevToken.toFixed(4)} → ${currentToken.toFixed(4)}`);
+      }
+    });
+    
+    if (updatedWallets.size > 0) {
+      setRecentlyUpdatedWallets(updatedWallets);
+      
+      // Clear the visual indicator after 1 seconds
+      setTimeout(() => {
+        setRecentlyUpdatedWallets(new Set());
+      }, 1000);
+    }
+    
+    // Update previous balance references only after processing
+    prevSolBalancesRef.current = new Map(solBalances);
+    prevTokenBalancesRef.current = new Map(tokenBalances);
+  }, [solBalances, tokenBalances, wallets]);
 
   // Calculate balances and update external state
   useEffect(() => {
@@ -396,10 +450,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       
       if (result.success) {
         showToast('Quick buy executed successfully!', 'success');
-        // Refresh balances after successful buy
-        setTimeout(() => {
-          handleRefreshAll();
-        }, 2000);
       } else {
         showToast(result.error || 'Quick buy failed', 'error');
       }
@@ -489,10 +539,11 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   onMouseEnter={() => setHoverRow(wallet.id)}
                   onMouseLeave={() => setHoverRow(null)}
                   className={`
-                    border-b border-[#02b36d15] cursor-pointer transition-colors duration-200
+                    border-b border-[#02b36d15] cursor-pointer transition-all duration-500
                     ${hoverRow === wallet.id ? 'bg-[#02b36d15]' : ''}
                     ${wallet.isActive ? 'bg-[#02b36d10]' : ''}
                     ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
+                    ${recentlyUpdatedWallets.has(wallet.address) ? 'bg-gradient-to-r from-[#02b36d30] to-[#02b36d15] animate-pulse border-l-2 border-l-[#02b36d]' : ''}
                   `}
                 >
                   {/* Quick Buy Button or Indicator */}
@@ -577,17 +628,21 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   
                   {/* SOL balance */}
                   <td className="py-2.5 px-2 text-right font-mono text-[#e4fbf2]">
-                    <span className={`${(solBalances.get(wallet.address) || 0) > 0 ? 'text-[#7ddfbd]' : 'text-[#7ddfbd60]'}`}>
-                      {(solBalances.get(wallet.address) || 0).toFixed(3)}
-                    </span>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className={`${(solBalances.get(wallet.address) || 0) > 0 ? 'text-[#7ddfbd]' : 'text-[#7ddfbd60]'}`}>
+                        {(solBalances.get(wallet.address) || 0).toFixed(3)}
+                      </span>
+                    </div>
                   </td>
                   
                   {/* Token balance if needed */}
                   {tokenAddress && (
                     <td className="py-2.5 px-2 text-right font-mono">
-                      <span className={`${(tokenBalances.get(wallet.address) || 0) > 0 ? 'text-[#02b36d]' : 'text-[#02b36d40]'}`}>
-                        {formatTokenBalance(tokenBalances.get(wallet.address) || 0)}
-                      </span>
+                      <div className="flex items-center justify-end gap-1">
+                        <span className={`${(tokenBalances.get(wallet.address) || 0) > 0 ? 'text-[#02b36d]' : 'text-[#02b36d40]'}`}>
+                          {formatTokenBalance(tokenBalances.get(wallet.address) || 0)}
+                        </span>
+                      </div>
                     </td>
                   )}
                   

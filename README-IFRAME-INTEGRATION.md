@@ -19,7 +19,7 @@ This guide shows how to integrate the trading app as an iframe in your TypeScrip
 ```html
 <iframe 
   id="trading-iframe" 
-  src="https://frame.betterskill.dev" 
+  src="https://frame.fury.bot" 
   frameborder="0">
 </iframe>
 ```
@@ -187,6 +187,40 @@ interface SolPriceUpdateResponse {
 }
 ```
 
+#### WHITELIST_TRADE
+Sent automatically for each individual trade made by whitelisted addresses. Provides real-time individual trade data.
+
+```typescript
+interface WhitelistTradeResponse {
+  type: 'WHITELIST_TRADE';
+  data: {
+    type: 'buy' | 'sell';     // Trade type
+    address: string;          // Trader's wallet address (signer)
+    tokensAmount: number;     // Amount of tokens traded
+    avgPrice: number;         // Average price per token
+    solAmount: number;        // SOL amount involved in trade
+    timestamp: number;        // When the trade occurred
+    signature: string;        // Transaction signature
+  };
+}
+```
+
+#### TOKEN_PRICE_UPDATE
+Sent automatically for every trade (including non-whitelisted). Provides real-time token price updates from all trading activity.
+
+```typescript
+interface TokenPriceUpdateResponse {
+  type: 'TOKEN_PRICE_UPDATE';
+  data: {
+    tokenPrice: number;       // Current token price from latest trade
+    tokenMint: string;        // Token mint address
+    timestamp: number;        // When the trade occurred
+    tradeType: 'buy' | 'sell'; // Type of trade that updated the price
+    volume: number;           // SOL volume of the trade
+  };
+}
+```
+
 ## Usage Examples
 
 ### 1. Complete TypeScript Class
@@ -246,6 +280,29 @@ class TradingAppIframe {
         // You can update your UI here with the new SOL price
         this.updateSolPriceUI(data.data.solPrice);
         break;
+      
+      case 'WHITELIST_TRADE':
+        console.log('New whitelist trade:', {
+          type: data.data.type,
+          address: data.data.address,
+          tokensAmount: data.data.tokensAmount,
+          avgPrice: data.data.avgPrice,
+          solAmount: `${data.data.solAmount.toFixed(3)} SOL`
+        });
+        // You can update your UI here with the new trade data
+        this.updateTradeUI(data.data);
+        break;
+      
+      case 'TOKEN_PRICE_UPDATE':
+        console.log('Token price updated:', {
+          tokenPrice: data.data.tokenPrice,
+          tokenMint: data.data.tokenMint,
+          tradeType: data.data.tradeType,
+          volume: `${data.data.volume.toFixed(3)} SOL`
+        });
+        // You can update your UI here with the new token price
+        this.updateTokenPriceUI(data.data);
+        break;
     }
   }
 
@@ -260,6 +317,20 @@ class TradingAppIframe {
   private updateSolPriceUI(solPrice: number): void {
     // Example: Update DOM elements with SOL price
     // document.getElementById('sol-price')?.textContent = `$${solPrice.toFixed(2)}`;
+  }
+
+  private updateTradeUI(trade: any): void {
+    // Example: Update DOM elements with new trade data
+    // const tradeElement = document.createElement('div');
+    // tradeElement.innerHTML = `${trade.type.toUpperCase()}: ${trade.tokensAmount} tokens at $${trade.avgPrice.toFixed(4)} by ${trade.address.slice(0, 8)}...`;
+    // document.getElementById('trades-list')?.appendChild(tradeElement);
+  }
+
+  private updateTokenPriceUI(priceData: any): void {
+    // Example: Update DOM elements with new token price
+    // document.getElementById('token-price')?.textContent = `$${priceData.tokenPrice.toFixed(6)}`;
+    // document.getElementById('last-trade-type')?.textContent = priceData.tradeType.toUpperCase();
+    // document.getElementById('trade-volume')?.textContent = `${priceData.volume.toFixed(3)} SOL`;
   }
 
   private sendMessage(message: IframeMessage): void {
@@ -315,6 +386,24 @@ interface TradingStats {
   timestamp: number;
 }
 
+interface WhitelistTrade {
+  type: 'buy' | 'sell';
+  address: string;
+  tokensAmount: number;
+  avgPrice: number;
+  solAmount: number;
+  timestamp: number;
+  signature: string;
+}
+
+interface TokenPriceData {
+  tokenPrice: number;
+  tokenMint: string;
+  timestamp: number;
+  tradeType: 'buy' | 'sell';
+  volume: number;
+}
+
 interface UseTradingIframeReturn {
   addWallets: (wallets: (string | Wallet)[]) => void;
   clearWallets: () => void;
@@ -323,6 +412,8 @@ interface UseTradingIframeReturn {
   currentWallets: WhitelistItem[];
   tradingStats: TradingStats | null;
   solPrice: number | null;
+  recentTrades: WhitelistTrade[];
+  tokenPrice: TokenPriceData | null;
 }
 
 export function useTradingIframe(iframeRef: React.RefObject<HTMLIFrameElement>): UseTradingIframeReturn {
@@ -330,6 +421,8 @@ export function useTradingIframe(iframeRef: React.RefObject<HTMLIFrameElement>):
   const [currentWallets, setCurrentWallets] = useState<WhitelistItem[]>([]);
   const [tradingStats, setTradingStats] = useState<TradingStats | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
+  const [recentTrades, setRecentTrades] = useState<WhitelistTrade[]>([]);
+  const [tokenPrice, setTokenPrice] = useState<TokenPriceData | null>(null);
   const messageQueue = useRef<IframeMessage[]>([]);
 
   useEffect(() => {
@@ -356,6 +449,18 @@ export function useTradingIframe(iframeRef: React.RefObject<HTMLIFrameElement>):
         
         case 'SOL_PRICE_UPDATE':
           setSolPrice(event.data.data.solPrice);
+          break;
+        
+        case 'WHITELIST_TRADE':
+          setRecentTrades(prev => {
+            const newTrades = [event.data.data, ...prev];
+            // Keep only the last 50 trades to prevent memory issues
+            return newTrades.slice(0, 50);
+          });
+          break;
+        
+        case 'TOKEN_PRICE_UPDATE':
+          setTokenPrice(event.data.data);
           break;
       }
     };
@@ -392,7 +497,9 @@ export function useTradingIframe(iframeRef: React.RefObject<HTMLIFrameElement>):
     isReady,
     currentWallets,
     tradingStats,
-    solPrice
+    solPrice,
+    recentTrades,
+    tokenPrice
   };
 }
 ```
@@ -404,7 +511,7 @@ import React, { useRef } from 'react';
 
 const TradingDashboard: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { addWallets, clearWallets, getCurrentWallets, isReady, tradingStats, solPrice } = useTradingIframe(iframeRef);
+  const { addWallets, clearWallets, getCurrentWallets, isReady, tradingStats, solPrice, recentTrades, tokenPrice } = useTradingIframe(iframeRef);
 
   const handleAddExampleWallets = (): void => {
     const wallets: Wallet[] = [
@@ -485,6 +592,46 @@ const TradingDashboard: React.FC = () => {
           </div>
           <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
             Last updated: {new Date(tradingStats.timestamp).toLocaleTimeString()}
+          </div>
+        </div>
+      )}
+      
+      {/* Recent Trades Display */}
+      {recentTrades.length > 0 && (
+        <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '5px' }}>
+          <h4>Recent Whitelist Trades</h4>
+          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+            {recentTrades.map((trade, index) => (
+              <div key={`${trade.signature}-${index}`} style={{
+                padding: '10px',
+                marginBottom: '8px',
+                backgroundColor: trade.type === 'buy' ? '#f0f9ff' : '#fef2f2',
+                border: `1px solid ${trade.type === 'buy' ? '#3b82f6' : '#ef4444'}`,
+                borderRadius: '4px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{
+                      fontWeight: 'bold',
+                      color: trade.type === 'buy' ? '#3b82f6' : '#ef4444',
+                      textTransform: 'uppercase'
+                    }}>
+                      {trade.type}
+                    </span>
+                    <span style={{ marginLeft: '10px', fontSize: '14px' }}>
+                      {trade.tokensAmount.toLocaleString()} tokens @ ${trade.avgPrice.toFixed(4)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {new Date(trade.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Trader: {trade.address.slice(0, 8)}...{trade.address.slice(-4)} | 
+                  SOL Amount: {trade.solAmount.toFixed(3)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -14,7 +14,8 @@ import {
    Activity,
    TrendingUp,
    Users,
-   BarChart
+   BarChart,
+   Coins
  } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { WalletType, loadConfigFromCookies } from "./Utils";
@@ -74,6 +75,22 @@ interface ActionsPageProps {
     tradingStats: any;
     solPrice: number | null;
     currentWallets: any[];
+    recentTrades: {
+      type: 'buy' | 'sell';
+      address: string;
+      tokensAmount: number;
+      avgPrice: number;
+      solAmount: number;
+      timestamp: number;
+      signature: string;
+    }[];
+    tokenPrice: {
+      tokenPrice: number;
+      tokenMint: string;
+      timestamp: number;
+      tradeType: 'buy' | 'sell';
+      volume: number;
+    } | null;
   } | null;
 }
 
@@ -115,107 +132,165 @@ export const Tooltip = ({
     </div>
   );
 };
-
-// Data Box Component
+// Cyberpunk-themed DataBox with minimal clean column layout
 const DataBox: React.FC<{
   iframeData?: {
     tradingStats: any;
     solPrice: number | null;
     currentWallets: any[];
+    recentTrades: {
+      type: 'buy' | 'sell';
+      address: string;
+      tokensAmount: number;
+      avgPrice: number;
+      solAmount: number;
+      timestamp: number;
+      signature: string;
+    }[];
+    tokenPrice: {
+      tokenPrice: number;
+      tokenMint: string;
+      timestamp: number;
+      tradeType: 'buy' | 'sell';
+      volume: number;
+    } | null;
   } | null;
   tokenAddress: string;
-}> = ({ iframeData, tokenAddress }) => {
+  tokenBalances: Map<string, number>;
+}> = ({ iframeData, tokenAddress, tokenBalances }) => {
   if (!tokenAddress || !iframeData) return null;
 
-  const { tradingStats, solPrice, currentWallets } = iframeData;
+  const { tradingStats, solPrice, currentWallets, recentTrades, tokenPrice } = iframeData;
+
+  // Calculate holdings value
+  const totalTokens = Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0);
+  const currentTokenPrice = tokenPrice?.tokenPrice || 0;
+  const holdingsValue = totalTokens * currentTokenPrice;
 
   return (
     <div className="mb-4">
-      <div className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-4 shadow-xl border border-[#02b36d20] relative overflow-hidden">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
-            <Activity size={16} className="text-[#02b36d]" />
-          </div>
-          <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Live Data</span>
-        </div>
+      <div className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-6 shadow-xl border border-[#02b36d20] relative overflow-hidden">
         
-        {/* Streamlined horizontal layout */}
-        <div className="space-y-3">
-          {/* SOL Price and Trading Stats in one row */}
-          <div className="flex flex-wrap items-center gap-6">
-            {solPrice && (
-              <div className="flex items-center gap-3">
-                <TrendingUp size={16} className="text-[#02b36d]" />
-                <div>
-                  <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">SOL Price</span>
-                  <span className="text-lg font-bold text-[#02b36d] font-mono">${solPrice.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-            
-            {tradingStats && (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                  <div>
-                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Bought</span>
-                    <span className="text-sm font-bold text-green-400 font-mono">{tradingStats.bought.toFixed(3)} SOL</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                  <div>
-                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Sold</span>
-                    <span className="text-sm font-bold text-red-400 font-mono">{tradingStats.sold.toFixed(3)} SOL</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${tradingStats.net >= 0 ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                  <div>
-                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Net P&L</span>
-                    <span className={`text-sm font-bold font-mono ${tradingStats.net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {tradingStats.net >= 0 ? '+' : ''}{tradingStats.net.toFixed(3)} SOL
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <BarChart size={16} className="text-[#02b36d]" />
-                  <div>
-                    <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Trades</span>
-                    <span className="text-sm font-bold text-[#02b36d] font-mono">{tradingStats.trades}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+        {/* Cyberpunk accent lines */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#02b36d40] to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#02b36d40] to-transparent"></div>
+        
+        {/* Main stats grid - clean 4-column layout */}
+        <div className="grid grid-cols-4 gap-8 relative z-10">
           
-          {/* Wallets and timestamp in second row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[#02b36d20]">
-            {currentWallets && currentWallets.length > 0 && (
-              <div className="flex items-center gap-3">
-                <Users size={16} className="text-[#02b36d]" />
-                <div>
-                  <span className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase block">Active Wallets</span>
-                  <span className="text-sm font-bold text-[#02b36d] font-mono">{currentWallets.length}</span>
-                </div>
+          {/* Bought */}
+          <div className="flex flex-col items-center text-center group">
+            <div className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase mb-2 font-medium">
+              Bought
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-bold text-[#02b36d] font-mono tracking-tight">
+                {tradingStats ? tradingStats.bought.toFixed(2) : '0.00'}
               </div>
-            )}
-            
-            {tradingStats && (
-              <div className="text-xs text-[#7ddfbd60] font-mono">
-                Last updated: {new Date(tradingStats.timestamp).toLocaleTimeString()}
+              <div className="flex flex-col gap-0.5">
+                <div className="w-2 h-0.5 bg-[#02b36d] rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-2 h-0.5 bg-[#02b36d] rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-2 h-0.5 bg-[#02b36d] rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
               </div>
-            )}
+            </div>
           </div>
+
+          {/* Sold */}
+          <div className="flex flex-col items-center text-center group">
+            <div className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase mb-2 font-medium">
+              Sold
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-bold text-[#ff6b6b] font-mono tracking-tight">
+                {tradingStats ? tradingStats.sold.toFixed(2) : '0.00'}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="w-2 h-0.5 bg-[#ff6b6b] rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-2 h-0.5 bg-[#ff6b6b] rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-2 h-0.5 bg-[#ff6b6b] rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Holding */}
+          <div className="flex flex-col items-center text-center group">
+            <div className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase mb-2 font-medium">
+              Holding
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-bold text-[#7ddfbd] font-mono tracking-tight">
+                {holdingsValue.toFixed(2)}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="w-2 h-0.5 bg-[#7ddfbd] rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-2 h-0.5 bg-[#7ddfbd] rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-2 h-0.5 bg-[#7ddfbd] rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* PnL */}
+          <div className="flex flex-col items-center text-center group">
+            <div className="text-xs font-mono tracking-wider text-[#7ddfbd80] uppercase mb-2 font-medium">
+              PnL
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`text-lg font-bold font-mono tracking-tight ${
+                tradingStats && tradingStats.net >= 0 ? 'text-[#02b36d]' : 'text-[#ff6b6b]'
+              }`}>
+                {tradingStats ? (
+                  <div>
+                    {tradingStats.net >= 0 ? '+' : ''}{tradingStats.net.toFixed(2)}
+                  </div>
+                ) : (
+                  <div>+0.00</div>
+                )}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className={`w-2 h-0.5 rounded opacity-80 group-hover:opacity-100 transition-opacity ${
+                  tradingStats && tradingStats.net >= 0 ? 'bg-[#02b36d]' : 'bg-[#ff6b6b]'
+                }`}></div>
+                <div className={`w-2 h-0.5 rounded opacity-60 group-hover:opacity-100 transition-opacity ${
+                  tradingStats && tradingStats.net >= 0 ? 'bg-[#02b36d]' : 'bg-[#ff6b6b]'
+                }`}></div>
+                <div className={`w-2 h-0.5 rounded opacity-40 group-hover:opacity-100 transition-opacity ${
+                  tradingStats && tradingStats.net >= 0 ? 'bg-[#02b36d]' : 'bg-[#ff6b6b]'
+                }`}></div>
+              </div>
+            </div>
+          </div>
+
         </div>
+
+        {/* Minimal footer info */}
+        {currentWallets && currentWallets.length > 0 && (
+          <div className="mt-8 pt-4 border-t border-[#02b36d20]">
+            <div className="flex items-center justify-center gap-8 text-sm">
+              <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                <div className="w-2 h-2 rounded-full bg-[#02b36d] animate-pulse"></div>
+                <span className="text-[#7ddfbd] font-mono text-xs tracking-wider">
+                  {currentWallets.length} ACTIVE
+                </span>
+              </div>
+              {tradingStats && (
+                <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                  <div className="w-2 h-2 rounded-full bg-[#02b36d]"></div>
+                  <span className="text-[#7ddfbd] font-mono text-xs tracking-wider">
+                    {tradingStats.trades} TRADES
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Subtle glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#02b36d05] to-transparent pointer-events-none"></div>
+        
       </div>
     </div>
   );
 };
-
 export const ActionsPage: React.FC<ActionsPageProps> = ({ 
   tokenAddress, 
   transactionFee, 
@@ -321,7 +396,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("MoonBuy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`MoonBuy failed: ${result.error}`, "error");
           }
@@ -342,7 +416,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("MoonSell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`MoonSell failed: ${result.error}`, "error");
           }
@@ -403,7 +476,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("BoopBuy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`BoopBuy failed: ${result.error}`, "error");
           }
@@ -424,7 +496,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("BoopSell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`BoopSell failed: ${result.error}`, "error");
           }
@@ -485,7 +556,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("PumpBuy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`PumpBuy failed: ${result.error}`, "error");
           }
@@ -518,7 +588,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("PumpSell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`PumpSell failed: ${result.error}`, "error");
           }
@@ -583,7 +652,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Auto Buy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Auto Buy failed: ${result.error}`, "error");
           }
@@ -614,7 +682,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Auto Sell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`Auto Sell failed: ${result.error}`, "error");
           }
@@ -677,7 +744,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("RayBuy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`RayBuy failed: ${result.error}`, "error");
           }
@@ -712,7 +778,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("RaySell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`RaySell failed: ${result.error}`, "error");
           }
@@ -774,7 +839,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("RayBuy transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`RayBuy failed: ${result.error}`, "error");
           }
@@ -809,7 +873,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("RaySell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`RaySell failed: ${result.error}`, "error");
           }
@@ -872,7 +935,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("Swap transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`MoonBuy failed: ${result.error}`, "error");
           }
@@ -907,7 +969,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           
           if (result.success) {
             showToast("MoonSell transactions submitted successfully", "success");
-            handleRefresh(); // Refresh balances
           } else {
             showToast(`MoonSell failed: ${result.error}`, "error");
           }
@@ -991,31 +1052,11 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         
         {/* Token Operations */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
-                <Settings2 size={16} className="text-[#02b36d]" />
-              </div>
-              <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Operations</span>
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
+              <Settings2 size={16} className="text-[#02b36d]" />
             </div>
-            
-            {/* PNL Button moved to Token Operations row */}
-            <button
-              onClick={() => {
-                if (!tokenAddress) {
-                  showToast("Please select a token first", "error");
-                  return;
-                }
-                setCalculatePNLModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg
-                        bg-gradient-to-r from-[#02b36d] to-[#01a35f] hover:from-[#01a35f] hover:to-[#029359]
-                        shadow-md shadow-[#02b36d40] hover:shadow-[#02b36d60]
-                        transition-all duration-300 relative overflow-hidden"
-            >
-              <ChartSpline size={16} className="text-black relative z-10" />
-              <span className="text-sm font-mono tracking-wider text-black font-medium relative z-10">Share PNL</span>
-            </button>
+            <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Operations</span>
           </div>
           
           <div className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-4 shadow-xl border border-[#02b36d20] relative overflow-hidden">
@@ -1092,8 +1133,36 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
             </div>
           </div>
           
-          {/* Live Data Box under Token Operations */}
-          <DataBox iframeData={iframeData} tokenAddress={tokenAddress} />
+          {/* Live Data Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-gradient-to-br from-[#02b36d20] to-[#02b36d05] rounded-lg">
+                  <Activity size={16} className="text-[#02b36d]" />
+                </div>
+                <span className="font-mono text-sm tracking-wider text-[#7ddfbd] uppercase">Live Data</span>
+              </div>
+              
+              {/* Share PNL Button moved next to Live Data */}
+              <button
+                onClick={() => {
+                  if (!tokenAddress) {
+                    showToast("Please select a token first", "error");
+                    return;
+                  }
+                  setCalculatePNLModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg
+                          bg-gradient-to-r from-[#02b36d] to-[#01a35f] hover:from-[#01a35f] hover:to-[#029359]
+                          shadow-md shadow-[#02b36d40] hover:shadow-[#02b36d60]
+                          transition-all duration-300 relative overflow-hidden"
+              >
+                <ChartSpline size={16} className="text-black relative z-10" />
+                <span className="text-sm font-mono tracking-wider text-black font-medium relative z-10">Share PNL</span>
+              </button>
+            </div>
+            <DataBox iframeData={iframeData} tokenAddress={tokenAddress} tokenBalances={tokenBalances} />
+          </div>
         </div>
       </div>
 
@@ -1132,7 +1201,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Main Website Link */}
             <a 
-              href="https://fury.bot" 
+              href="https://raze.bot" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center justify-center py-2 px-4 rounded-lg bg-gradient-to-r 
@@ -1149,12 +1218,12 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
               >
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
-              FURY.BOT
+              RAZE.BOT
             </a>
             
             {/* GitHub Link */}
             <a 
-              href="https://github.com/furydotbot/raze.bot/" 
+              href="https://github.com/razedotbot/solana-ui/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center justify-center py-2 px-4 rounded-lg bg-gradient-to-r 
@@ -1172,7 +1241,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.934.359.31.678.92.678 1.855 0 1.337-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
               </svg>
               <span className="text-xs font-mono tracking-wider text-[#02b36d] font-semibold">
-                @FURYDOTBOT
+                @RAZEDOTBOT
               </span>
             </a>
           </div>
