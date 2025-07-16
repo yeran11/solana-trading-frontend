@@ -7,6 +7,7 @@ import { executeCookCreate, WalletForCookCreate, TokenMetadata, CookCreateConfig
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
+const MIN_WALLETS = 2; // Minimum number of wallets required (developer + 1 buyer)
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -32,11 +33,6 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [deploymentSuccessData, setDeploymentSuccessData] = useState<{
-    mintAddress?: string;
-    poolId?: string;
-  } | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [tokenData, setTokenData] = useState<TokenMetadata>({
     name: '',
     symbol: '',
@@ -123,39 +119,6 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
     }
   };
 
-  // Function to copy mint address to clipboard
-  const copyToClipboard = async (text: string | undefined) => {
-    if (!text) {
-      showToast("No address to copy", "error");
-      return;
-    }
-    
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopySuccess(true);
-      showToast("Mint address copied to clipboard", "success");
-      
-      // Reset copy success after 2 seconds
-      setTimeout(() => {
-        setCopySuccess(false);
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-      showToast("Failed to copy to clipboard", "error");
-    }
-  };
-
-  // Function to open explorer
-  const openInExplorer = (mintAddress: string | undefined) => {
-    if (!mintAddress) {
-      showToast("No address to view in explorer", "error");
-      return;
-    }
-    
-    // Open Solana explorer for the mint address
-    window.open(`https://explorer.solana.com/address/${mintAddress}?cluster=mainnet-beta`, '_blank');
-  };
-
   // Trigger file input click
   const triggerFileInput = () => {
     if (fileInputRef.current) {
@@ -176,8 +139,6 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
       setSelectedWallets([]);
       setWalletAmounts({});
       setIsConfirmed(false);
-      setDeploymentSuccessData(null);
-      setCopySuccess(false);
     }
   }, [isOpen]);
 
@@ -249,8 +210,8 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
         }
         break;
       case 1:
-        if (selectedWallets.length === 0) {
-          showToast("Please select at least one wallet", "error");
+        if (selectedWallets.length < MIN_WALLETS) {
+          showToast("Please select at least 2 wallets (developer + 1 buyer)", "error");
           return false;
         }
         if (selectedWallets.length > MAX_WALLETS) {
@@ -332,22 +293,33 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
       );
       
       if (result.success && result.mintAddress && result.poolId) {
-        showToast(`Token deployment successful!`, "success");
+        showToast(`Token deployment successful! Mint Address: ${result.mintAddress}`, "success");
         
-        // Store the deployment success data
-        setDeploymentSuccessData({
-          mintAddress: result.mintAddress,
-          poolId: result.poolId
+        // Reset form states
+        setSelectedWallets([]);
+        setWalletAmounts({});
+        setTokenData({
+          name: '',
+          symbol: '',
+          description: '',
+          decimals: 6,
+          telegram: '',
+          twitter: '',
+          website: '',
+          discord: '',
+          uri: ''
         });
+        setIsConfirmed(false);
+        setCurrentStep(0);
         
-        // Move to success step (step 4)
-        setCurrentStep(3);
+        // Close modal
+        onClose();
         
-        // Pass result to onDeploy callback
-        onDeploy({
-          mintAddress: result.mintAddress,
-          poolId: result.poolId
-        });
+        // Set tokenAddress in URL and reload page
+        const url = new URL(window.location.href);
+        url.searchParams.set('tokenAddress', result.mintAddress);
+        window.history.pushState({}, '', url);
+        window.location.reload();
       } else {
         throw new Error(result.error || "Token deployment failed");
       }
@@ -359,25 +331,7 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
     }
   };
 
-  // Reset modal state for a new deployment
-  const handleNewDeployment = () => {
-    setSelectedWallets([]);
-    setWalletAmounts({});
-    setTokenData({
-      name: '',
-      symbol: '',
-      description: '',
-      decimals: 6,
-      telegram: '',
-      twitter: '',
-      website: '',
-      discord: '',
-      uri: ''
-    });
-    setIsConfirmed(false);
-    setCurrentStep(0);
-    setDeploymentSuccessData(null);
-  };
+
 
   // Format wallet address for display
   const formatAddress = (address: string) => {
@@ -1074,131 +1028,6 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
             </div>
           </div>
         );
-      
-      // New Success Step
-      case 3:
-        return (
-          <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
-                <CheckCircle size={16} className="text-[#02b36d]" />
-              </div>
-              <h3 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-                <span className="text-[#02b36d]">/</span> DEPLOYMENT SUCCESSFUL <span className="text-[#02b36d]">/</span>
-              </h3>
-            </div>
-            
-            <div className="bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg modal-glow relative">
-              {/* Ambient grid background */}
-              <div className="absolute inset-0 z-0 opacity-10"
-                   style={{
-                     backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-                     backgroundSize: '20px 20px',
-                     backgroundPosition: 'center center',
-                   }}>
-              </div>
-              
-              <div className="p-6 space-y-6 relative z-10">
-                {/* Success Icon */}
-                <div className="flex justify-center">
-                  <div className="w-20 h-20 rounded-full bg-[#02b36d20] flex items-center justify-center">
-                    <CheckCircle size={48} className="text-[#02b36d]" />
-                  </div>
-                </div>
-                
-                {/* Success Message */}
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-[#e4fbf2] mb-2 font-mono">Token Successfully Deployed!</h3>
-                  <p className="text-[#7ddfbd] font-mono">Your token has been created and is now live on the blockchain.</p>
-                </div>
-                
-                {/* Token Info */}
-                <div className="bg-[#091217] border border-[#02b36d30] rounded-lg p-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* Mint Address */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-[#7ddfbd] font-mono">MINT ADDRESS:</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => deploymentSuccessData && copyToClipboard(deploymentSuccessData.mintAddress)}
-                            className="p-1.5 rounded-lg bg-[#02b36d20] hover:bg-[#02b36d30] text-[#02b36d] transition-all"
-                            title="Copy to clipboard"
-                          >
-                            {copySuccess ? <Check size={16} /> : <Copy size={16} />}
-                          </button>
-                          <button
-                            onClick={() => deploymentSuccessData && openInExplorer(deploymentSuccessData.mintAddress)}
-                            className="p-1.5 rounded-lg bg-[#02b36d20] hover:bg-[#02b36d30] text-[#02b36d] transition-all"
-                            title="View in Explorer"
-                          >
-                            <ExternalLink size={16} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex">
-                        <input
-                          type="text"
-                          value={deploymentSuccessData?.mintAddress}
-                          readOnly
-                          className="w-full bg-[#050a0e] border border-[#02b36d40] rounded-lg p-2.5 text-[#e4fbf2] focus:outline-none focus:ring-1 focus:ring-[#02b36d] font-mono text-sm"
-                          onClick={(e) => e.currentTarget.select()}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Pool ID */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-[#7ddfbd] font-mono">POOL ID:</span>
-                      </div>
-                      <div className="flex">
-                        <input
-                          type="text"
-                          value={deploymentSuccessData?.poolId}
-                          readOnly
-                          className="w-full bg-[#050a0e] border border-[#02b36d40] rounded-lg p-2.5 text-[#e4fbf2] focus:outline-none focus:ring-1 focus:ring-[#02b36d] font-mono text-sm"
-                          onClick={(e) => e.currentTarget.select()}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Token Details Summary */}
-                    <div className="space-y-2 pt-2 border-t border-[#02b36d30]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-[#7ddfbd] font-mono">TOKEN NAME:</span>
-                        <span className="text-sm text-[#e4fbf2] font-mono">{tokenData.name}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-[#7ddfbd] font-mono">TOKEN SYMBOL:</span>
-                        <span className="text-sm text-[#e4fbf2] font-mono">{tokenData.symbol}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Instructions */}
-                <div className="bg-[#091217] border border-[#02b36d30] rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Info size={16} className="text-[#02b36d]" />
-                    <h4 className="text-sm font-medium text-[#7ddfbd] font-mono">NEXT STEPS:</h4>
-                  </div>
-                  <ul className="space-y-2 text-sm text-[#e4fbf2] font-mono pl-6 list-disc">
-                    <li>Your token is now tradable on Cook.meme</li>
-                    <li>Add liquidity or use the mint address to trade on DEXs</li>
-                    <li>Share your token with the community through your social channels</li>
-                  </ul>
-                </div>
-              </div>
-              
-              {/* Cyberpunk decorative corner elements */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#02b36d] opacity-70"></div>
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#02b36d] opacity-70"></div>
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#02b36d] opacity-70"></div>
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#02b36d] opacity-70"></div>
-            </div>
-          </div>
-        );
     }
   };
   
@@ -1368,15 +1197,13 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
           </button>
         </div>
 
-        {/* Progress Indicator - Only show for steps 0-2 */}
-        {currentStep < 3 && (
-          <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
-            <div 
-              className="h-full bg-[#02b36d] transition-all duration-300"
-              style={{ width: `${(currentStep + 1) / STEPS_DEPLOY.length * 100}%` }}
-            ></div>
-          </div>
-        )}
+        {/* Progress Indicator */}
+        <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
+          <div 
+            className="h-full bg-[#02b36d] transition-all duration-300"
+            style={{ width: `${(currentStep + 1) / 3 * 100}%` }}
+          ></div>
+        </div>
 
         {/* Content */}
         <div className="relative z-10 p-6 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-[#02b36d40] scrollbar-track-[#091217]">
@@ -1386,60 +1213,39 @@ export const DeployCookModal: React.FC<DeployCookModalProps> = ({
             </div>
 
             <div className="flex justify-between mt-8 pt-4 border-t border-[#02b36d30]">
-              {currentStep === 3 ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleNewDeployment}
-                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
-                  >
-                    NEW DEPLOYMENT
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-5 py-2.5 rounded-lg bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 transition-all shadow-lg font-mono tracking-wider modal-btn-cyberpunk"
-                  >
-                    CLOSE
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={currentStep === 0 ? onClose : handleBack}
-                    disabled={isSubmitting}
-                    className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
-                  >
-                    {currentStep === 0 ? 'CANCEL' : 'BACK'}
-                  </button>
+              <button
+                type="button"
+                onClick={currentStep === 0 ? onClose : handleBack}
+                disabled={isSubmitting}
+                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+              >
+                {currentStep === 0 ? 'CANCEL' : 'BACK'}
+              </button>
 
-                  <button
-                    type={currentStep === 2 ? 'submit' : 'button'}
-                    onClick={currentStep === 2 ? undefined : handleNext}
-                    disabled={currentStep === 2 ? (isSubmitting || !isConfirmed) : isSubmitting}
-                    className={`px-5 py-2.5 rounded-lg flex items-center transition-all shadow-lg font-mono tracking-wider ${
-                      currentStep === 2 && (isSubmitting || !isConfirmed)
-                        ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50'
-                        : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'
-                    }`}
-                  >
-                    {currentStep === 2 ? (
-                      isSubmitting ? (
-                        <>
-                          <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
-                          <span>DEPLOYING...</span>
-                        </>
-                      ) : 'CONFIRM DEPLOY'
-                    ) : (
-                      <span className="flex items-center">
-                        NEXT
-                        <ChevronRight size={16} className="ml-1" />
-                      </span>
-                    )}
-                  </button>
-                </>
-              )}
+              <button
+                type={currentStep === 2 ? 'submit' : 'button'}
+                onClick={currentStep === 2 ? undefined : handleNext}
+                disabled={currentStep === 2 ? (isSubmitting || !isConfirmed) : isSubmitting}
+                className={`px-5 py-2.5 rounded-lg flex items-center transition-all shadow-lg font-mono tracking-wider ${
+                  currentStep === 2 && (isSubmitting || !isConfirmed)
+                    ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50'
+                    : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'
+                }`}
+              >
+                {currentStep === 2 ? (
+                  isSubmitting ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                      <span>DEPLOYING...</span>
+                    </>
+                  ) : 'CONFIRM DEPLOY'
+                ) : (
+                  <span className="flex items-center">
+                    NEXT
+                    <ChevronRight size={16} className="ml-1" />
+                  </span>
+                )}
+              </button>
             </div>
           </form>
         </div>

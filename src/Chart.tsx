@@ -193,7 +193,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     volume: number;
   } | null>(null);
 
-  // Notify parent component of data updates
+  // Notify parent component of data updates (excluding currentWallets to prevent balance updates on selection)
   useEffect(() => {
     if (onDataUpdate) {
       onDataUpdate({
@@ -204,7 +204,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         tokenPrice
       });
     }
-  }, [tradingStats, solPrice, currentWallets, recentTrades, tokenPrice, onDataUpdate]);
+  }, [tradingStats, solPrice, recentTrades, tokenPrice, onDataUpdate]);
 
 
   
@@ -283,7 +283,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     iframeRef.current.contentWindow?.postMessage(message, '*');
   };
 
-  // Send wallets to iframe when they change
+  // Send wallets to iframe only when addresses change (not selection changes)
   useEffect(() => {
     if (wallets && wallets.length > 0) {
       const iframeWallets: Wallet[] = wallets.map((wallet) => ({
@@ -301,7 +301,12 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         type: 'CLEAR_WALLETS'
       });
     }
-  }, [wallets, isIframeReady]);
+  }, [
+    // Only trigger when wallet addresses change, not when isActive changes
+    wallets.map(w => w.address).join(','), 
+    wallets.length, 
+    isIframeReady
+  ]);
   
   // Reset loading state when token changes
   useEffect(() => {

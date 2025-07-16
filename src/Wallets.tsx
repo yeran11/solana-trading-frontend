@@ -344,7 +344,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
     // Update previous balance references only after processing
     prevSolBalancesRef.current = new Map(solBalances);
     prevTokenBalancesRef.current = new Map(tokenBalances);
-  }, [solBalances, tokenBalances, wallets]);
+  }, [solBalances, tokenBalances]); // Removed wallets from dependency array to prevent triggering on selection changes
 
   // Calculate balances and update external state
   useEffect(() => {

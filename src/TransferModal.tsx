@@ -13,6 +13,7 @@ import bs58 from 'bs58';
 import { useToast } from "./Notifications";
 import { WalletType } from './Utils';
 import { Buffer } from 'buffer';
+import { sendToJitoBundleService } from './utils/jitoService';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -137,18 +138,15 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       // Sign the transaction
       transaction.sign([keypair]);
       
-      // Step 4: Send the signed transaction directly through the RPC connection
-      const signature = await connection.sendTransaction(transaction);
+      // Step 4: Send the signed transaction via Jito Bundle Service
+      const serializedTransaction = bs58.encode(transaction.serialize());
+      const jitoResult = await sendToJitoBundleService(serializedTransaction);
       
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signature);
-      
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err}`);
-      }
+      // Extract signature from Jito result
+      const signature = jitoResult.signature || jitoResult.txid || 'Unknown';
       
       // Success message with transfer type from the build result
-      showToast(`${buildResult.data.transferType} transfer completed successfully. Signature: ${signature}`, "success");
+      showToast(`${buildResult.data.transferType} transfer completed successfully.`, "success");
       resetForm();
       onClose();
     } catch (error) {

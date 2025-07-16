@@ -31,7 +31,7 @@ import { executeTrade } from './TradingLogic';
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
-const EnhancedWalletOverview = lazy(() => import('./WalletOverview'));
+const EnhancedWalletOverview = lazy(() => import('./WalletOverviewModal'));
 const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
 const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
 const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: module.ActionsPage })));
@@ -392,7 +392,7 @@ const WalletManager: React.FC = () => {
         }
       }
     }
-  }, [state.iframeData?.recentTrades, state.wallets]);
+  }, [state.iframeData?.recentTrades]); // Removed state.wallets to prevent triggering on wallet selection changes
 
 
 
