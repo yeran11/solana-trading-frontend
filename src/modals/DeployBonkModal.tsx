@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw } from 'lucide-react';
-import { getWallets } from './Utils';
-import { useToast } from "./Notifications";
-import { executePumpCreate, WalletForPumpCreate, TokenCreationConfig } from './utils/pumpcreate';
+import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
+import { getWallets } from '../Utils';
+import { useToast } from "../Notifications";
+import { executeBonkCreate, WalletForBonkCreate, TokenMetadata, BonkCreateConfig } from '../utils/bonkcreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -14,13 +14,13 @@ interface BaseModalProps {
   onClose: () => void;
 }
 
-interface DeployPumpModalProps extends BaseModalProps {
+interface DeployBonkModalProps extends BaseModalProps {
   onDeploy: (data: any) => void;
   handleRefresh: () => void;
   solBalances: Map<string, number>;
 }
 
-export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
+export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   isOpen,
   onClose,
   onDeploy,
@@ -31,16 +31,22 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [mintPubkey, setMintPubkey] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [tokenData, setTokenData] = useState({
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const [tokenData, setTokenData] = useState<TokenMetadata>({
     name: '',
     symbol: '',
     description: '',
+    decimals: 6,
+    supply: '1000000000000000',
+    totalSellA: '793100000000000',
     telegram: '',
     twitter: '',
     website: '',
-    file: ''
+    createdOn: 'https://bonk.fun',
+    uri: '', // image URL
+    type: 'meme' // default to meme
   });
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,24 +54,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const [sortOption, setSortOption] = useState('address');
   const [sortDirection, setSortDirection] = useState('asc');
   const [balanceFilter, setBalanceFilter] = useState('all');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const generateMintPubkey = async () => {
-    setIsGenerating(true);
-    try {
-      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
-      const mintResponse = await fetch(`${baseUrl}/api/utilities/generate-mint`);
-      const data = await mintResponse.json();
-      setMintPubkey(data.pubkey);
-      showToast("Mint pubkey generated successfully", "success");
-    } catch (error) {
-      console.error('Error generating mint pubkey:', error);
-      showToast("Failed to generate mint pubkey", "error");
-    }
-    setIsGenerating(false);
-  };
 
   // Function to handle image upload
   const handleImageUpload = async (e) => {
@@ -109,7 +98,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           const response = JSON.parse(xhr.responseText);
-          setTokenData(prev => ({ ...prev, file: response.url }));
+          setTokenData(prev => ({ ...prev, uri: response.url }));
           showToast("Image uploaded successfully", "success");
         } else {
           showToast("Failed to upload image", "error");
@@ -132,6 +121,8 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
     }
   };
 
+
+
   // Trigger file input click
   const triggerFileInput = () => {
     if (fileInputRef.current) {
@@ -147,6 +138,11 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       handleRefresh();
+      // Reset states when opening modal
+      setCurrentStep(0);
+      setSelectedWallets([]);
+      setWalletAmounts({});
+      setIsConfirmed(false);
     }
   }, [isOpen]);
 
@@ -212,8 +208,8 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const validateStep = () => {
     switch (currentStep) {
       case 0:
-        if (!tokenData.name || !tokenData.symbol || !tokenData.file || !mintPubkey) {
-          showToast("Name, symbol, logo image, and mint pubkey are required", "error");
+        if (!tokenData.name || !tokenData.symbol || !tokenData.uri || !tokenData.description) {
+          showToast("Name, symbol, description and logo image are required", "error");
           return false;
         }
         break;
@@ -249,80 +245,86 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
 
   const handleDeploy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isConfirmed || !mintPubkey) return;
+    if (!isConfirmed) return;
 
     setIsSubmitting(true);
     
     try {
-      // Format wallets for pump create with address and private key
-      const pumpCreateWallets: WalletForPumpCreate[] = selectedWallets.map(privateKey => {
+      // Get owner wallet (first wallet)
+      if (selectedWallets.length === 0) {
+        throw new Error("No wallets selected");
+      }
+      
+      const ownerPrivateKey = selectedWallets[0];
+      const ownerWallet = wallets.find(w => w.privateKey === ownerPrivateKey);
+      
+      if (!ownerWallet) {
+        throw new Error("Owner wallet not found");
+      }
+      
+      // Format buyer wallets (all wallets except the first/owner)
+      const buyerWallets: WalletForBonkCreate[] = selectedWallets.slice(1).map(privateKey => {
         const wallet = wallets.find(w => w.privateKey === privateKey);
         if (!wallet) {
           throw new Error(`Wallet not found`);
         }
         return {
-          address: wallet.address,
-          privateKey: privateKey
+          publicKey: wallet.address,
+          privateKey: privateKey,
+          amount: parseFloat(walletAmounts[privateKey]) * 1e9 // Convert to lamports
         };
       });
       
-      // Format amounts as numbers
-      const customAmounts = selectedWallets.map(key => parseFloat(walletAmounts[key]));
-      
-      // Create token configuration object
-      const tokenCreationConfig: TokenCreationConfig = {
-        mintPubkey: mintPubkey,
-        config: {
-          tokenCreation: {
-            metadata: {
-              name: tokenData.name,
-              symbol: tokenData.symbol,
-              description: tokenData.description,
-              telegram: tokenData.telegram,
-              twitter: tokenData.twitter,
-              website: tokenData.website,
-              file: tokenData.file
-            },
-            defaultSolAmount: customAmounts[0] || 0.1 // Use first wallet's amount as default
-          },
-        }
+      // Create config object
+      const config: BonkCreateConfig = {
+        tokenMetadata: tokenData,
+        ownerPublicKey: ownerWallet.address,
+        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.1,
+        type: tokenData.type || 'meme'
       };
       
-      console.log(`Starting client-side token creation with ${pumpCreateWallets.length} wallets`);
+      console.log(`Starting token creation with ${buyerWallets.length + 1} wallets`);
       
-      // Call our client-side execution function instead of the backend
-      const result = await executePumpCreate(
-        pumpCreateWallets,
-        tokenCreationConfig,
-        customAmounts
+      // Call our bonk create execution function
+      const result = await executeBonkCreate(
+        config,
+        {
+          publicKey: ownerWallet.address, 
+          privateKey: ownerPrivateKey
+        },
+        buyerWallets
       );
       
-      if (result.success && result.mintAddress) {
-        showToast(`Token deployment successful! Mint address: ${result.mintAddress}`, "success");
+      if (result.success && result.mintAddress && result.poolId) {
+        showToast(`Token deployment successful! Mint: ${result.mintAddress}`, "success");
         
-        // Reset form state
+        // Reset form states
         setSelectedWallets([]);
         setWalletAmounts({});
-        setMintPubkey('');
         setTokenData({
           name: '',
           symbol: '',
           description: '',
+          decimals: 6,
+          supply: '1000000000000000',
+          totalSellA: '793100000000000',
           telegram: '',
           twitter: '',
           website: '',
-          file: ''
+          createdOn: 'https://bonk.fun',
+          uri: '',
+          type: 'meme'
         });
         setIsConfirmed(false);
         setCurrentStep(0);
+        
+        // Close modal
         onClose();
         
-        // Redirect to token address page
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('tokenAddress', result.mintAddress);
-        window.history.pushState({}, '', currentUrl.toString());
-        
-        // Reload the page to show the new token
+        // Set tokenAddress in URL and reload page
+        const url = new URL(window.location.href);
+        url.searchParams.set('tokenAddress', result.mintAddress);
+        window.history.pushState({}, '', url);
         window.location.reload();
       } else {
         throw new Error(result.error || "Token deployment failed");
@@ -334,6 +336,8 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       setIsSubmitting(false);
     }
   };
+
+
 
   // Format wallet address for display
   const formatAddress = (address: string) => {
@@ -371,55 +375,6 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               </h3>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Mint Pubkey <span className="text-[#02b36d]">&#60;</span>
-                  </label>
-                  <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
-                    <Info size={14} className="text-[#7ddfbd] cursor-help" />
-                    {showInfoTip && (
-                      <div className="absolute left-0 bottom-full mb-2 p-2 bg-[#091217] border border-[#02b36d30] rounded shadow-lg text-xs text-[#e4fbf2] w-48 z-10 font-mono">
-                        This key is sensitive! Do not share.
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={generateMintPubkey}
-                  disabled={isGenerating}
-                  className={`px-4 py-1.5 text-sm rounded-lg transition-all flex items-center gap-1 modal-btn-cyberpunk
-                    ${isGenerating 
-                      ? 'bg-[#091217] text-[#7ddfbd] cursor-not-allowed' 
-                      : 'bg-[#091217] hover:bg-[#0a1419] border border-[#02b36d40] hover:border-[#02b36d] text-[#e4fbf2] shadow-lg hover:shadow-[#02b36d40] transform hover:-translate-y-0.5'
-                    }`}
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw size={14} className="animate-spin text-[#02b36d]" />
-                      <span className="font-mono tracking-wider">GENERATING...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw size={14} className="text-[#02b36d]" />
-                      <span className="font-mono tracking-wider">GENERATE</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={mintPubkey}
-                  onChange={(e) => setMintPubkey(e.target.value)}
-                  className="w-full pl-4 pr-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] placeholder-[#7ddfbd70] focus:outline-none focus:ring-1 focus:ring-[#02b36d50] focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
-                  placeholder="ENTER OR GENERATE A MINT PUBKEY"
-                />
-              </div>
-            </div>
-
             <div className="bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg modal-glow">
               <div className="p-6 space-y-6 relative">
                 {/* Ambient grid background */}
@@ -494,11 +449,11 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       )}
                     </button>
                     
-                    {tokenData.file && (
+                    {tokenData.uri && (
                       <div className="flex items-center gap-3 flex-grow">
                         <div className="h-12 w-12 rounded overflow-hidden border border-[#02b36d40] bg-[#091217] flex items-center justify-center">
                           <img 
-                            src={tokenData.file}
+                            src={tokenData.uri}
                             alt="Logo Preview"
                             className="max-h-full max-w-full object-contain"
                             onError={(e) => {
@@ -509,7 +464,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => setTokenData(prev => ({ ...prev, file: '' }))}
+                          onClick={() => setTokenData(prev => ({ ...prev, uri: '' }))}
                           className="p-1.5 rounded-full hover:bg-[#091217] text-[#7ddfbd] hover:text-[#e4fbf2] transition-all"
                         >
                           <X size={14} />
@@ -531,7 +486,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   
                 <div className="space-y-2 relative z-10">
                   <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Description <span className="text-[#02b36d]">&#60;</span>
+                  <span className="text-[#02b36d]">&#62;</span> Description <span className="text-[#02b36d]">*</span> <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <textarea
                     value={tokenData.description}
@@ -540,6 +495,36 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                     placeholder="DESCRIBE YOUR TOKEN"
                     rows={3}
                   />
+                </div>
+
+                <div className="space-y-2 relative z-10">
+                  <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
+                    <span className="text-[#02b36d]">&#62;</span> Token Type <span className="text-[#02b36d]">*</span> <span className="text-[#02b36d]">&#60;</span>
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTokenData(prev => ({ ...prev, type: 'meme' }))}
+                      className={`flex-1 px-4 py-2.5 rounded-lg font-mono tracking-wider transition-all ${
+                        tokenData.type === 'meme'
+                          ? 'bg-[#02b36d] text-[#091217] border border-[#02b36d] shadow-lg transform -translate-y-0.5'
+                          : 'bg-[#091217] text-[#e4fbf2] border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#0a1419]'
+                      }`}
+                    >
+                      MEME
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTokenData(prev => ({ ...prev, type: 'tech' }))}
+                      className={`flex-1 px-4 py-2.5 rounded-lg font-mono tracking-wider transition-all ${
+                        tokenData.type === 'tech'
+                          ? 'bg-[#02b36d] text-[#091217] border border-[#02b36d] shadow-lg transform -translate-y-0.5'
+                          : 'bg-[#091217] text-[#e4fbf2] border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#0a1419]'
+                      }`}
+                    >
+                      TECH
+                    </button>
+                  </div>
                 </div>
   
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
@@ -909,12 +894,12 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                         </span>
                       </div>
                     )}
-                    {tokenData.file && (
+                    {tokenData.uri && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-[#7ddfbd] font-mono">LOGO:</span>
                         <div className="bg-[#091217] border border-[#02b36d40] rounded-lg p-1 w-12 h-12 flex items-center justify-center">
                           <img 
-                            src={tokenData.file}
+                            src={tokenData.uri}
                             alt="Token Logo"
                             className="max-w-full max-h-full rounded object-contain"
                             onError={(e) => {
@@ -1051,6 +1036,8 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
             </div>
           </div>
         );
+      
+      // New Success Step
     }
   };
   
@@ -1209,7 +1196,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <PlusCircle size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPLOY PUMPFUN <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> DEPLOY BONK TOKEN <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 
@@ -1224,13 +1211,13 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
         <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
           <div 
             className="h-full bg-[#02b36d] transition-all duration-300"
-            style={{ width: `${(currentStep + 1) / STEPS_DEPLOY.length * 100}%` }}
+            style={{ width: `${(currentStep + 1) / 3 * 100}%` }}
           ></div>
         </div>
 
         {/* Content */}
         <div className="relative z-10 p-6 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-[#02b36d40] scrollbar-track-[#091217]">
-          <form onSubmit={currentStep === STEPS_DEPLOY.length - 1 ? handleDeploy : (e) => e.preventDefault()}>
+          <form onSubmit={currentStep === 2 ? handleDeploy : (e) => e.preventDefault()}>
             <div className="min-h-[300px]">
               {renderStepContent()}
             </div>
@@ -1246,16 +1233,16 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               </button>
 
               <button
-                type={currentStep === STEPS_DEPLOY.length - 1 ? 'submit' : 'button'}
-                onClick={currentStep === STEPS_DEPLOY.length - 1 ? undefined : handleNext}
-                disabled={currentStep === STEPS_DEPLOY.length - 1 ? (isSubmitting || !isConfirmed) : isSubmitting}
+                type={currentStep === 2 ? 'submit' : 'button'}
+                onClick={currentStep === 2 ? undefined : handleNext}
+                disabled={currentStep === 2 ? (isSubmitting || !isConfirmed) : isSubmitting}
                 className={`px-5 py-2.5 rounded-lg flex items-center transition-all shadow-lg font-mono tracking-wider ${
-                  currentStep === STEPS_DEPLOY.length - 1 && (isSubmitting || !isConfirmed)
+                  currentStep === 2 && (isSubmitting || !isConfirmed)
                     ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50'
                     : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'
                 }`}
               >
-                {currentStep === STEPS_DEPLOY.length - 1 ? (
+                {currentStep === 2 ? (
                   isSubmitting ? (
                     <>
                       <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>

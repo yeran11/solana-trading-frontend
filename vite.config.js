@@ -27,40 +27,8 @@ export default defineConfig({
           'vendor-solana': ['@solana/web3.js', '@solana/spl-token'],
           'vendor-ui': ['lucide-react', 'framer-motion', 'react-split'],
           'vendor-utils': ['bs58', 'buffer', 'crypto-js', 'd3'],
-          
-          // Trading utilities - separate chunk for each DEX
-          'trading-pump': [
-            './src/utils/pumpbuy.ts',
-            './src/utils/pumpsell.ts',
-            './src/utils/pumpcreate.ts'
-          ],
-          'trading-moon': [
-            './src/utils/moonbuy.ts', 
-            './src/utils/moonsell.ts',
-            './src/utils/mooncreate.ts'
-          ],
-          'trading-boop': [
-            './src/utils/boopbuy.ts',
-            './src/utils/boopsell.ts',
-            './src/utils/boopcreate.ts'
-          ],
-          'trading-jupiter': [
-            './src/utils/jupbuy.ts',
-            './src/utils/jupsell.ts'
-          ],
-          'trading-raydium': [
-            './src/utils/raybuy.ts',
-            './src/utils/raysell.ts'
-          ],
-          'trading-launch': [
-            './src/utils/launchbuy.ts',
-            './src/utils/launchsell.ts'
-          ],
-          'trading-swap': [
-            './src/utils/swapbuy.ts',
-            './src/utils/swapsell.ts'
-          ],
-          'trading-other': [
+
+          'operations': [
             './src/utils/bonkcreate.ts',
             './src/utils/cookcreate.ts',
             './src/utils/cleaner.ts',
@@ -71,12 +39,12 @@ export default defineConfig({
           
           // Modal components
           'modals': [
-            './src/BurnModal.tsx',
-            './src/CalculatePNLModal.tsx', 
-            './src/DeployModal.tsx',
-            './src/CleanerModal.tsx',
-            './src/CustomBuyModal.tsx',
-            './src/SettingsModal.tsx'
+            './src/modals/BurnModal.tsx',
+            './src/modals/CalculatePNLModal.tsx', 
+            './src/modals/DeployModal.tsx',
+            './src/modals/CleanerModal.tsx',
+            './src/modals/CustomBuyModal.tsx',
+            './src/modals/SettingsModal.tsx'
           ],
           
           // Page components

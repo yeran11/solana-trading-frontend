@@ -238,7 +238,6 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         
         case 'WHITELIST_TRADING_STATS': {
           const response = event.data as WhitelistTradingStatsResponse;
-          console.log('Trading stats updated:', response.data);
           setTradingStats(response.data);
           break;
         }
@@ -252,7 +251,6 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         
         case 'WHITELIST_TRADE': {
           const response = event.data as WhitelistTradeResponse;
-          console.log('New whitelist trade:', response.data);
           setRecentTrades(prev => {
             const newTrades = [response.data, ...prev].slice(0, 10); // Keep only last 10 trades
             return newTrades;
@@ -262,7 +260,6 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         
         case 'TOKEN_PRICE_UPDATE': {
           const response = event.data as TokenPriceUpdateResponse;
-          console.log('Token price updated:', response.data);
           setTokenPrice(response.data);
           break;
         }

@@ -26,11 +26,11 @@ import {
   handleSortWallets,
   handleApiKeyFromUrl
 } from './Manager';
-import { countActiveWallets, validateActiveWallets, getScriptName, maxWalletsConfig } from './Wallets';
-import { executeTrade } from './TradingLogic';
+import { countActiveWallets, getScriptName } from './utils/wallets';
+import { executeTrade } from './utils/trading.ts';
 
 // Lazy loaded components
-const EnhancedSettingsModal = lazy(() => import('./SettingsModal'));
+const EnhancedSettingsModal = lazy(() => import('./modals/SettingsModal.tsx'));
 const EnhancedWalletOverview = lazy(() => import('./WalletOverview.tsx'));
 const WalletsPage = lazy(() => import('./Wallets').then(module => ({ default: module.WalletsPage })));
 const ChartPage = lazy(() => import('./Chart').then(module => ({ default: module.ChartPage })));
@@ -38,11 +38,11 @@ const ActionsPage = lazy(() => import('./Actions').then(module => ({ default: mo
 const MobileLayout = lazy(() => import('./Mobile'));
 
 // Import modal components 
-const BurnModal = lazy(() => import('./BurnModal').then(module => ({ default: module.BurnModal })));
-const PnlModal = lazy(() => import('./CalculatePNLModal').then(module => ({ default: module.PnlModal })));
-const DeployModal = lazy(() => import('./DeployModal').then(module => ({ default: module.DeployModal })));
-const CleanerTokensModal = lazy(() => import('./CleanerModal').then(module => ({ default: module.CleanerTokensModal })));
-const CustomBuyModal = lazy(() => import('./CustomBuyModal').then(module => ({ default: module.CustomBuyModal })));
+const BurnModal = lazy(() => import('./modals/BurnModal.tsx').then(module => ({ default: module.BurnModal })));
+const PnlModal = lazy(() => import('./modals/CalculatePNLModal.tsx').then(module => ({ default: module.PnlModal })));
+const DeployModal = lazy(() => import('./modals/DeployModal.tsx').then(module => ({ default: module.DeployModal })));
+const CleanerTokensModal = lazy(() => import('./modals/CleanerModal.tsx').then(module => ({ default: module.CleanerTokensModal })));
+const CustomBuyModal = lazy(() => import('./modals/CustomBuyModal.tsx').then(module => ({ default: module.CustomBuyModal })));
 const FloatingTradingCard = lazy(() => import('./FloatingTradingCard'));
 
 const WalletManager: React.FC = () => {
@@ -63,7 +63,7 @@ const WalletManager: React.FC = () => {
     tokenAddress: string;
     isModalOpen: boolean;
     isSettingsOpen: boolean;
-    activeTab: 'network' | 'wallets' | 'advanced';
+    activeTab: 'wallets' | 'advanced';
     config: ConfigType;
     currentPage: 'wallets' | 'chart' | 'actions';
     wallets: WalletType[];
@@ -122,7 +122,7 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_TOKEN_ADDRESS'; payload: string }
     | { type: 'SET_MODAL_OPEN'; payload: boolean }
     | { type: 'SET_SETTINGS_OPEN'; payload: boolean }
-    | { type: 'SET_ACTIVE_TAB'; payload: 'network' | 'wallets' | 'advanced' }
+    | { type: 'SET_ACTIVE_TAB'; payload: 'wallets' | 'advanced' }
     | { type: 'SET_CONFIG'; payload: ConfigType }
     | { type: 'SET_CURRENT_PAGE'; payload: 'wallets' | 'chart' | 'actions' }
     | { type: 'SET_WALLETS'; payload: WalletType[] }
@@ -153,7 +153,7 @@ const WalletManager: React.FC = () => {
     tokenAddress: '',
     isModalOpen: false,
     isSettingsOpen: false,
-    activeTab: 'network',
+    activeTab: 'wallets',
     config: {
       rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
       transactionFee: '0.000005',
@@ -161,7 +161,11 @@ const WalletManager: React.FC = () => {
       selectedDex: 'auto',
       isDropdownOpen: false,
       buyAmount: '',
-      sellAmount: ''
+      sellAmount: '',
+      slippageBps: '9900', // Default 99% slippage
+      bundleMode: 'batch', // Default bundle mode
+      singleDelay: '200', // Default 200ms delay between wallets in single mode
+      batchDelay: '1000' // Default 1000ms delay between batches
     },
     currentPage: 'wallets',
     wallets: [],
@@ -312,7 +316,7 @@ const WalletManager: React.FC = () => {
     setTokenAddress: (address: string) => dispatch({ type: 'SET_TOKEN_ADDRESS', payload: address }),
     setIsModalOpen: (open: boolean) => dispatch({ type: 'SET_MODAL_OPEN', payload: open }),
     setIsSettingsOpen: (open: boolean) => dispatch({ type: 'SET_SETTINGS_OPEN', payload: open }),
-    setActiveTab: (tab: 'network' | 'wallets' | 'advanced') => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab }),
+    setActiveTab: (tab: 'wallets' | 'advanced') => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab }),
     setConfig: (config: ConfigType) => dispatch({ type: 'SET_CONFIG', payload: config }),
     setCurrentPage: (page: 'wallets' | 'chart' | 'actions') => dispatch({ type: 'SET_CURRENT_PAGE', payload: page }),
     setWallets: (wallets: WalletType[]) => dispatch({ type: 'SET_WALLETS', payload: wallets }),
@@ -388,7 +392,6 @@ const WalletManager: React.FC = () => {
             }
           });
           
-          console.log(`Updated balances for wallet ${formatAddress(latestTrade.address)}: SOL ${currentSolBalance.toFixed(4)} → ${newSolBalance.toFixed(4)}, Tokens ${currentTokenBalance.toFixed(4)} → ${newTokenBalance.toFixed(4)}`);
         }
       }
     }
@@ -997,10 +1000,8 @@ const WalletManager: React.FC = () => {
         handleTradeSubmit={handleTradeSubmit}
         isLoading={state.isRefreshing}
         dexOptions={dexOptions}
-        validateActiveWallets={validateActiveWallets}
         getScriptName={getScriptName}
         countActiveWallets={countActiveWallets}
-        maxWalletsConfig={maxWalletsConfig}
         currentMarketCap={state.currentMarketCap}
         tokenBalances={state.tokenBalances}
       />

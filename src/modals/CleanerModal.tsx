@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, ChevronRight, X, DollarSign, Info, Search, Settings, ArrowDown, Trash2, Plus, PlusCircle } from 'lucide-react';
-import { getWallets, loadConfigFromCookies } from './Utils';
-import { useToast } from "./Notifications";
+import { getWallets, loadConfigFromCookies } from '../Utils';
+import { useToast } from "../Notifications";
 // Import the cleaner operation functions at the top of the file
-import { executeCleanerOperation, validateCleanerInputs, WalletInfo } from './utils/cleaner';
+import { executeCleanerOperation, validateCleanerInputs, WalletInfo } from '../utils/cleaner';
 
 
 const STEPS_BUYSELL = ['Configure Sellers', 'Configure Buyers', 'Review'];

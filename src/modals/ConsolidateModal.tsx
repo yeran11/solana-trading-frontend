@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, X, CheckCircle, DollarSign, Info, Search, ChevronRight } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import { useToast } from "./Notifications";
-import { WalletType } from './Utils';
+import { useToast } from "../Notifications";
+import { WalletType } from '../Utils';
 
-import { consolidateSOL, validateConsolidationInputs } from './utils/consolidate';
+import { consolidateSOL, validateConsolidationInputs } from '../utils/consolidate';
 interface ConsolidateModalProps {
   isOpen: boolean;
   onClose: () => void;

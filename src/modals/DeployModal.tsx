@@ -6,7 +6,7 @@ import { DeployBonkModal } from './DeployBonkModal';
 import { DeployCookModal } from './DeployCookModal';
 import { DeployMoonModal } from './DeployMoonModal';
 import { DeployBoopModal } from './DeployBoopModal';
-import { useToast } from "./Notifications";
+import { useToast } from "../Notifications";
 
 interface BaseModalProps {
   isOpen: boolean;

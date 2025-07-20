@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowsUpFromLine, DollarSign, X, CheckCircle, Info, Search, ChevronRight, Settings } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import { useToast } from "./Notifications";
-import { WalletType } from './Utils';
-import { batchDistributeSOL, validateDistributionInputs } from './utils/distribute';
+import { useToast } from "../Notifications";
+import { WalletType } from '../Utils';
+import { batchDistributeSOL, validateDistributionInputs } from '../utils/distribute';
 
 interface DistributeModalProps {
   isOpen: boolean;

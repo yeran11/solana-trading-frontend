@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, Zap } from 'lucide-react';
-import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance, getWalletDisplayName } from './Utils';
+import { RefreshCw, ExternalLink,  DollarSign, Activity, Zap } from 'lucide-react';
+import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, getWalletDisplayName } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
 import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
-import { executeJupSwap, validateJupSwapInputs } from './utils/jupbuy';
+import { executeBuy, createBuyConfig, validateBuyInputs } from './utils/buy';
+import { 
+  ScriptType, 
+  countActiveWallets, 
+  getActiveWallets, 
+  toggleAllWallets, 
+  toggleAllWalletsWithBalance, 
+  toggleWalletsByBalance, 
+  getScriptName 
+} from './utils/wallets';
 
 // Tooltip Component with cyberpunk styling
 export const Tooltip = ({ 
@@ -42,137 +51,6 @@ export const Tooltip = ({
       )}
     </div>
   );
-};
-
-// Max wallets configuration
-export const maxWalletsConfig = {
-  'raybuy': 1000,
-  'raysell': 1000,
-  'pumpbuy': 1000,
-  'pumpsell': 1000,
-  'jupbuy': 1000,
-  'swapbuy': 1000,
-  'swapsell': 1000,
-  'jupsell': 1000,
-  'moonbuy': 1000,
-  'launchsell': 1000,
-  'launchbuy': 1000,
-  'moonsell': 1000,
-  'boopbuy': 1000,
-  'boopsell': 1000
-} as const;
-
-// Updated toggle function for wallets based on token and SOL conditions
-export const toggleWalletsByBalance = (
-  wallets: WalletType[], 
-  showWithTokens: boolean,
-  solBalances: Map<string, number>,
-  tokenBalances: Map<string, number>
-): WalletType[] => {
-  return wallets.map(wallet => ({
-    ...wallet,
-    isActive: showWithTokens 
-      ? (tokenBalances.get(wallet.address) || 0) > 0  // Select wallets with tokens
-      : (solBalances.get(wallet.address) || 0) > 0 && (tokenBalances.get(wallet.address) || 0) === 0  // Select wallets with only SOL
-  }));
-};
-
-export type ScriptType = keyof typeof maxWalletsConfig;
-
-/**
- * Counts the number of active wallets in the provided wallet array
- * @param wallets Array of wallet objects
- * @returns Number of active wallets
- */
-export const countActiveWallets = (wallets: WalletType[]): number => {
-  return wallets.filter(wallet => wallet.isActive).length;
-};
-
-/**
- * Returns an array of only the active wallets
- * @param wallets Array of wallet objects
- * @returns Array of active wallets
- */
-export const getActiveWallets = (wallets: WalletType[]): WalletType[] => {
-  return wallets.filter(wallet => wallet.isActive);
-};
-
-/**
- * Checks if the number of active wallets exceeds the maximum allowed for a specific script
- * @param wallets Array of wallet objects
- * @param scriptName Name of the script to check against
- * @returns Object containing validation result and relevant information
- */
-export const validateActiveWallets = (wallets: WalletType[], scriptName: ScriptType) => {
-  const activeCount = countActiveWallets(wallets);
-  const maxAllowed = maxWalletsConfig[scriptName];
-  const isValid = activeCount <= maxAllowed;
-
-  return {
-    isValid,
-    activeCount,
-    maxAllowed,
-    scriptName,
-    message: isValid 
-      ? `Valid: ${activeCount} active wallets (max ${maxAllowed})`
-      : `Error: Too many active wallets (${activeCount}). Maximum allowed for ${scriptName} is ${maxAllowed}`
-  };
-};
-
-// New function to toggle all wallets regardless of balance
-export const toggleAllWallets = (wallets: WalletType[]): WalletType[] => {
-  const allActive = wallets.every(wallet => wallet.isActive);
-  return wallets.map(wallet => ({
-    ...wallet,
-    isActive: !allActive
-  }));
-};
-
-// Updated to use separate SOL balance tracking
-export const toggleAllWalletsWithBalance = (
-  wallets: WalletType[],
-  solBalances: Map<string, number>
-): WalletType[] => {
-  // Check if all wallets with balance are already active
-  const walletsWithBalance = wallets.filter(wallet => 
-    (solBalances.get(wallet.address) || 0) > 0
-  );
-  const allWithBalanceActive = walletsWithBalance.every(wallet => wallet.isActive);
-  
-  // Toggle based on current state
-  return wallets.map(wallet => ({
-    ...wallet,
-    isActive: (solBalances.get(wallet.address) || 0) > 0 
-      ? !allWithBalanceActive 
-      : wallet.isActive
-  }));
-};
-
-/**
- * Gets the appropriate script name based on selected DEX and mode
- * @param selectedDex Selected DEX name
- * @param isBuyMode Whether in buy mode
- * @returns The corresponding script name
- */
-export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptType => {
-  switch(selectedDex) {
-    case 'raydium':
-      return isBuyMode ? 'raybuy' : 'raysell';
-    case 'auto':
-      return isBuyMode ? 'jupbuy' : 'jupsell';
-    case 'pumpfun':
-      return isBuyMode ? 'pumpbuy' : 'pumpsell';
-    case 'pumpswap':
-      return isBuyMode ? 'swapbuy' : 'swapsell';
-    case 'moonshot':
-      return isBuyMode ? 'moonbuy' : 'moonsell';
-    case 'launchpad':
-      return isBuyMode ? 'launchbuy' : 'launchsell';
-    case 'boopfun':
-      return isBuyMode ? 'boopbuy' : 'boopsell';
-    default:
-      return isBuyMode ? 'pumpbuy' : 'pumpsell';
-  }
 };
 
 interface WalletsPageProps {
@@ -254,7 +132,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
   const [internalTokenBalances, setInternalTokenBalances] = useState<Map<string, number>>(new Map());
-  const [refreshingWalletId, setRefreshingWalletId] = useState<number | null>(null);
   
   const solBalances = externalSolBalances || internalSolBalances;
   const setSolBalances = setExternalSolBalances || setInternalSolBalances;
@@ -263,35 +140,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   
   const { showToast } = useToast();
 
-  // Fetch SOL balances for all wallets one by one
-  const fetchSolBalances = async () => {
-    const newBalances = new Map<string, number>(solBalances);
-    
-    // Process wallets sequentially
-    for (const wallet of wallets) {
-      setRefreshingWalletId(wallet.id);
-      try {
-        const balance = await fetchSolBalance(connection, wallet.address);
-        newBalances.set(wallet.address, balance);
-        // Update balances after each wallet to show progress
-        setSolBalances(new Map(newBalances));
-      } catch (error) {
-        console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
-        newBalances.set(wallet.address, 0);
-      }
-      
-      // Add a small delay to make the sequential update visible
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    
-    setRefreshingWalletId(null);
-    return newBalances;
-  };
-
-  // Fetch SOL balances initially and when wallets change
-  useEffect(() => {
-    fetchSolBalances();
-  }, [wallets.length, connection]);
+  // Remove the internal fetchSolBalances function since App.tsx manages balance fetching
+  // The component now relies on external balance props passed from App.tsx
 
   // Use refs to track previous balance values
   const prevSolBalancesRef = useRef<Map<string, number>>(new Map());
@@ -328,7 +178,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       
       if ((solChanged || tokenChanged) && (prevSol > 0 || prevToken > 0)) {
         updatedWallets.add(wallet.address);
-        console.log(`Balance updated for wallet ${wallet.address}: SOL ${prevSol.toFixed(4)} → ${currentSol.toFixed(4)}, Tokens ${prevToken.toFixed(4)} → ${currentToken.toFixed(4)}`);
       }
     });
     
@@ -387,13 +236,10 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   };
 
   const handleRefreshAll = async () => {
-    if (isRefreshing || refreshingWalletId !== null) return;
+    if (isRefreshing) return;
     
-    // Call the parent's refresh handler to indicate the refresh has started
+    // Call the parent's refresh handler which manages all balance fetching
     handleRefresh();
-    
-    // Perform the wallet-by-wallet refresh
-    await fetchSolBalances();
   };
 
   const handleQuickBuy = async (wallet: WalletType, e: React.MouseEvent) => {
@@ -418,16 +264,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         // Round to 3 decimal places
         solAmountToUse = Math.round(solAmountToUse * 1000) / 1000;
       }
-      
-      // Quick buy configuration with calculated amount
-      const swapConfig = {
-        inputMint: 'So11111111111111111111111111111111111111112', // SOL
-        outputMint: tokenAddress,
-        solAmount: solAmountToUse, // Random or fixed amount
-        slippageBps: 300 // 3% slippage
-      };
 
-      const walletForSwap = {
+      // Create wallet for buy
+      const walletForBuy = {
         address: wallet.address,
         privateKey: wallet.privateKey
       };
@@ -439,14 +278,22 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         return;
       }
       
+      // Create buy configuration using the unified system
+      const buyConfig = createBuyConfig({
+        tokenAddress,
+        protocol: 'jupiter', // Use Jupiter for quick buy
+        solAmount: solAmountToUse
+        // slippageBps will be automatically set from config in the buy.ts file
+      });
+      
       // Validate inputs
-      const validation = validateJupSwapInputs([walletForSwap], swapConfig, solBalances);
+      const validation = validateBuyInputs([walletForBuy], buyConfig, solBalances);
       if (!validation.valid) {
         showToast(validation.error || 'Validation failed', 'error');
         return;
       }
       
-      const result = await executeJupSwap([walletForSwap], swapConfig);
+      const result = await executeBuy([walletForBuy], buyConfig);
       
       if (result.success) {
         showToast('Quick buy executed successfully!', 'success');
@@ -455,7 +302,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       }
     } catch (error) {
       console.error('Quick buy error:', error);
-      showToast('Quick buy failed: ' + (error.message || 'Unknown error'), 'error');
+      showToast('Quick buy failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
     } finally {
       setBuyingWalletId(null);
     }
@@ -476,7 +323,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             connection={connection}
             tokenBalances={tokenBalances}
             handleRefresh={handleRefreshAll}
-            isRefreshing={isRefreshing || refreshingWalletId !== null}
+            isRefreshing={isRefreshing}
             showingTokenWallets={showingTokenWallets}
             handleBalanceToggle={handleBalanceToggle}
             setWallets={setWallets}
@@ -542,7 +389,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     border-b border-[#02b36d15] cursor-pointer transition-all duration-500
                     ${hoverRow === wallet.id ? 'bg-[#02b36d15]' : ''}
                     ${wallet.isActive ? 'bg-[#02b36d10]' : ''}
-                    ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
+                    ''
                     ${recentlyUpdatedWallets.has(wallet.address) ? 'bg-gradient-to-r from-[#02b36d30] to-[#02b36d15] animate-pulse border-l-2 border-l-[#02b36d]' : ''}
                   `}
                 >
@@ -595,9 +442,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   {/* Address with proper sizing */}
                   <td className="py-2.5 px-2 font-mono">
                     <div className="flex items-center">
-                      {refreshingWalletId === wallet.id && (
-                        <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
-                      )}
+
                       <Tooltip 
                         content={wallet.label ? `${wallet.label} (${formatAddress(wallet.address)})` : `Click to copy: ${wallet.address}`}
                         position="top"

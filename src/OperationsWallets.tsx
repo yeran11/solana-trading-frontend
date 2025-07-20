@@ -9,11 +9,11 @@ import {
 } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { WalletType, saveWalletsToCookies } from './Utils';
-import { DistributeModal } from './DistributeModal';
-import { ConsolidateModal } from './ConsolidateModal';
-import { TransferModal } from './TransferModal';
-import { DepositModal } from './DepositModal';
-import { MixerModal } from './MixerModal';
+import { DistributeModal } from './modals/DistributeModal';
+import { ConsolidateModal } from './modals/ConsolidateModal';
+import { TransferModal } from './modals/TransferModal';
+import { DepositModal } from './modals/DepositModal';
+import { MixerModal } from './modals/MixerModal';
 
 interface WalletOperationsButtonsProps {
   wallets: WalletType[];

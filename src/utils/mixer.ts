@@ -1,13 +1,5 @@
 import { Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-const MAX_BUNDLES_PER_SECOND = 2;
-
-// Rate limiting state
-const rateLimitState = {
-  count: 0,
-  lastReset: Date.now(),
-  maxBundlesPerSecond: MAX_BUNDLES_PER_SECOND
-};
 
 interface WalletMixing {
   address: string;
@@ -39,7 +31,7 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
       const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
       
       // Send to our backend proxy instead of directly to Jito
-      const response = await fetch(`${baseUrl}/api/transactions/send`, {
+      const response = await fetch(`${baseUrl}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { DollarSign, X, CheckCircle, Wallet, Info, Search, ChevronRight } from 'lucide-react';
-import { Connection, PublicKey, LAMPORTS_PER_SOL, SystemProgram, Transaction } from '@solana/web3.js';
+import { ArrowUpDown, X, CheckCircle, DollarSign, Info, Search, ChevronRight } from 'lucide-react';
+import { 
+  Connection, 
+  PublicKey, 
+  Keypair, 
+  VersionedTransaction, 
+  TransactionMessage,
+  MessageV0
+} from '@solana/web3.js';
 import bs58 from 'bs58';
-import { useToast } from "./Notifications";
-import { WalletType } from './Utils';
+import { useToast } from "../Notifications";
+import { WalletType } from '../Utils';
+import { Buffer } from 'buffer';
+import { sendToJitoBundleService } from '../utils/jitoService';
 
-interface DepositModalProps {
+interface TransferModalProps {
   isOpen: boolean;
   onClose: () => void;
   wallets: WalletType[];
@@ -14,26 +23,31 @@ interface DepositModalProps {
   connection: Connection;
 }
 
-export const DepositModal: React.FC<DepositModalProps> = ({
+export const TransferModal: React.FC<TransferModalProps> = ({
   isOpen,
   onClose,
   wallets,
   solBalances,
   connection
 }) => {
-  // States for deposit operation
-  const [publicKey, setPublicKey] = useState('');
-  const [selectedWallet, setSelectedWallet] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // States for the modal
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const { showToast } = useToast();
+
+  // States for transfer operation
+  const [sourceWallet, setSourceWallet] = useState('');
+  const [receiverAddress, setReceiverAddress] = useState('');
+  const [selectedToken, setSelectedToken] = useState('');
+  const [amount, setAmount] = useState('');
+  
+  // States for enhanced functionality
+  const [sourceSearchTerm, setSourceSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('address');
   const [sortDirection, setSortDirection] = useState('asc');
   const [balanceFilter, setBalanceFilter] = useState('all');
   const [showInfoTip, setShowInfoTip] = useState(false);
-  const { showToast } = useToast();
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -57,104 +71,117 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     return solBalances.has(address) ? (solBalances.get(address) ?? 0) : 0;
   };
 
+  // Get wallet by privateKey
+  const getWalletByPrivateKey = (privateKey: string) => {
+    return wallets.find(wallet => wallet.privateKey === privateKey);
+  };
+
   // Reset form state
   const resetForm = () => {
     setCurrentStep(0);
-    setSelectedWallet('');
-    setAmount('');
     setIsConfirmed(false);
-    setSearchTerm('');
+    setSourceWallet('');
+    setReceiverAddress('');
+    setSelectedToken('');
+    setAmount('');
+    setSourceSearchTerm('');
     setSortOption('address');
     setSortDirection('asc');
     setBalanceFilter('all');
-    // Don't reset publicKey as the user might want to make multiple deposits
   };
 
-  // Function to get recent blockhash (for deposit operation)
-  const getRecentBlockhash = async () => {
-    const { blockhash } = await connection.getLatestBlockhash('finalized');
-    return blockhash;
-  };
-
-  // Connect to Phantom wallet
-  const connectPhantomWallet = async () => {
-    try {
-      const { solana } = window as any;
-      if (!solana?.isPhantom) {
-        throw new Error("Phantom wallet not found");
-      }
-      
-      const response = await solana.connect();
-      setPublicKey(response.publicKey.toString());
-      return true;
-    } catch (error) {
-      console.error('Error connecting to Phantom wallet:', error);
-      showToast("Failed to connect to Phantom wallet", "error");
-      return false;
-    }
-  };
-
-  // Handle deposit operation
-  const handleDeposit = async (e: React.FormEvent) => {
+  // Handle transfer operation with local signing and direct RPC submission
+  const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedWallet || !amount || !publicKey || !isConfirmed) return;
- 
+    if (!isConfirmed) return;
     setIsSubmitting(true);
+
     try {
-      const { solana } = window as any;
-      if (!solana?.isPhantom) {
-        throw new Error("Phantom wallet not found");
+      const selectedWalletObj = getWalletByPrivateKey(sourceWallet);
+      if (!selectedWalletObj) {
+        throw new Error('Source wallet not found');
       }
- 
-      // Convert string public keys to PublicKey objects
-      const fromPubkey = new PublicKey(publicKey);
-      const toPubkey = new PublicKey(selectedWallet);
-     
-      // Create transfer instruction
-      const transferInstruction = SystemProgram.transfer({
-        fromPubkey,
-        toPubkey,
-        lamports: Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL)
+
+      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
+      
+      // Step 1: Request the transaction from the backend
+      const buildResponse = await fetch(`${baseUrl}/api/tokens/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderPublicKey: selectedWalletObj.address,  // Send public key only
+          receiver: receiverAddress,
+          tokenAddress: selectedToken,
+          amount: amount,
+        }),
       });
- 
-      // Get recent blockhash
-      const recentBlockhash = await getRecentBlockhash();
- 
-      // Create new transaction
-      const transaction = new Transaction({
-        recentBlockhash,
-        feePayer: fromPubkey
-      });
- 
-      // Add transfer instruction to transaction
-      transaction.add(transferInstruction);
- 
-      // Get transaction buffer
-      const serializedTransaction = transaction.serialize({
-        requireAllSignatures: false,
-        verifySignatures: false
-      });
- 
-      // Convert to base58
-      const encodedTransaction = bs58.encode(serializedTransaction);
- 
-      // Send transaction request to Phantom
-      const signature = await solana.request({
-        method: 'signAndSendTransaction',
-        params: {
-          message: encodedTransaction
-        }
-      });
- 
-      // Show success message
-      showToast("Transaction sent successfully!", "success");
-     
-      // Reset form and close modal
+
+      if (!buildResponse.ok) {
+        throw new Error(`HTTP error! status: ${buildResponse.status}`);
+      }
+
+      const buildResult = await buildResponse.json();
+      if (!buildResult.success) {
+        throw new Error(buildResult.error);
+      }
+
+      // Step 2: Deserialize the transaction message from Base58
+      const transactionBuffer = Buffer.from(bs58.decode(buildResult.data.transaction));
+      const messageV0 = MessageV0.deserialize(transactionBuffer);
+      
+      // Step 3: Create and sign the versioned transaction
+      const transaction = new VersionedTransaction(messageV0);
+      
+      // Create keypair from private key
+      const keypair = Keypair.fromSecretKey(bs58.decode(sourceWallet));
+      
+      // Sign the transaction
+      transaction.sign([keypair]);
+      
+      // Step 4: Send the signed transaction via Jito Bundle Service
+      const serializedTransaction = bs58.encode(transaction.serialize());
+      const jitoResult = await sendToJitoBundleService(serializedTransaction);
+      
+      // Extract signature from Jito result
+      const signature = jitoResult.signature || jitoResult.txid || 'Unknown';
+      
+      // Success message with transfer type from the build result
+      showToast(`${buildResult.data.transferType} transfer completed successfully.`, "success");
       resetForm();
       onClose();
     } catch (error) {
-      console.error('Error:', error);
-      showToast("Deposit failed", "error");
+      console.error('Transfer error:', error);
+      
+      // Extract meaningful error message to show to user
+      let errorMessage = 'Transfer failed';
+      
+      if (error instanceof Error) {
+        // Try to parse detailed error message which might be JSON
+        if (error.message.includes('{') && error.message.includes('}')) {
+          try {
+            // Sometimes error messages contain JSON from the API
+            const errorJson = JSON.parse(error.message.substring(
+              error.message.indexOf('{'), 
+              error.message.lastIndexOf('}') + 1
+            ));
+            
+            if (errorJson.error) {
+              errorMessage = `${errorMessage}: ${errorJson.error}`;
+            } else {
+              errorMessage = `${errorMessage}: ${error.message}`;
+            }
+          } catch (e) {
+            // If we can't parse JSON, just use the original message
+            errorMessage = `${errorMessage}: ${error.message}`;
+          }
+        } else {
+          errorMessage = `${errorMessage}: ${error.message}`;
+        }
+      } else {
+        errorMessage = `${errorMessage}: Unknown error`;
+      }
+      
+      showToast(errorMessage, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -162,22 +189,22 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   // Filter and sort wallets based on search term and other criteria
   const filterWallets = (walletList: WalletType[], search: string) => {
-    // First apply search filter
-    let filtered = walletList;
+    // First filter out wallets with zero balance
+    let filtered = walletList.filter(wallet => (getWalletBalance(wallet.address) || 0) > 0);
+    
+    // Then apply search filter
     if (search) {
       filtered = filtered.filter(wallet => 
         wallet.address.toLowerCase().includes(search.toLowerCase())
       );
     }
     
-    // Then apply balance filter
+    // Then apply additional balance filter
     if (balanceFilter !== 'all') {
-      if (balanceFilter === 'nonZero') {
-        filtered = filtered.filter(wallet => (getWalletBalance(wallet.address) || 0) > 0);
-      } else if (balanceFilter === 'highBalance') {
+      if (balanceFilter === 'highBalance') {
         filtered = filtered.filter(wallet => (getWalletBalance(wallet.address) || 0) >= 0.1);
       } else if (balanceFilter === 'lowBalance') {
-        filtered = filtered.filter(wallet => (getWalletBalance(wallet.address) || 0) < 0.1 && (getWalletBalance(wallet.address) || 0) > 0);
+        filtered = filtered.filter(wallet => (getWalletBalance(wallet.address) || 0) < 0.1);
       }
     }
     
@@ -198,6 +225,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   // If modal is not open, don't render anything
   if (!isOpen) return null;
+
+  // Get the selected wallet address
+  const selectedWalletAddress = getWalletByPrivateKey(sourceWallet)?.address || '';
 
   // Animation keyframes for cyberpunk elements
   const modalStyleElement = document.createElement('style');
@@ -329,12 +359,22 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       62%, 68% { transform: translate(0, 0) skew(0.33deg); }
       64%, 66% { transform: translate(0, 0) skew(-0.33deg); }
     }
+    
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    
+    @keyframes scale-in {
+      0% { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
   `;
   document.head.appendChild(modalStyleElement);
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container" style={{backgroundColor: 'rgba(5, 10, 14, 0.85)'}}>
-      <div className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-md overflow-hidden transform modal-cyberpunk-content modal-glow">
+      <div className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-md md:max-w-xl overflow-hidden transform modal-cyberpunk-content modal-glow">
         {/* Ambient grid background */}
         <div className="absolute inset-0 z-0 opacity-10"
              style={{
@@ -348,10 +388,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         <div className="relative z-10 p-4 flex justify-between items-center border-b border-[#02b36d40]">
           <div className="flex items-center">
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
-              <DollarSign size={16} className="text-[#02b36d]" />
+              <ArrowUpDown size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPOSIT SOL <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> TRANSFER SOL <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 
@@ -374,55 +414,30 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         <div className="relative z-10 p-5 space-y-5">
           {currentStep === 0 && (
             <div className="animate-[fadeIn_0.3s_ease]">
-              <div>
-                <button
-                  onClick={connectPhantomWallet}
-                  className="w-full px-4 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] text-[#e4fbf2] rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-[#02b36d40] transform hover:-translate-y-0.5 modal-btn-cyberpunk"
-                >
-                  <svg width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="128" height="128" rx="64" fill="#050a0e"/>
-                    <path d="M110.584 64.9142H99.142C99.142 41.8335 80.2231 23 57.142 23C36.3226 23 18.7929 38.8944 15.6294 59.0563C15.2463 61.2766 15.0547 63.5605 15.0547 65.8019C15.0547 67.693 17.0548 69.142 18.9496 69.142H41.0038C42.2774 69.142 43.3791 68.2511 43.6484 67.002C43.8341 66.1368 44.0274 65.2393 44.3292 64.3971C46.5275 57.427 52.3790 52.4294 59.2648 52.4294C67.7598 52.4294 74.6521 59.3214 74.6521 67.8164C74.6521 76.3113 67.7598 83.2037 59.2648 83.2037C55.9574 83.2037 52.8709 82.0949 50.3999 80.1855C49.431 79.4954 48.1363 79.5393 47.2752 80.3996L32.0447 95.6302C30.8197 96.8548 31.5636 99 33.2599 99C34.9026 99 36.5454 98.8781 38.142 98.6553C44.9556 97.6553 51.2356 94.8281 56.3762 90.642C58.6555 88.7861 61.0457 86.7567 63.7865 85.0392C63.9501 84.9312 64.114 84.8231 64.3322 84.7151C76.4899 79.4954 85.7462 68.6714 87.4429 55.4348C87.6739 53.7519 87.7891 52.0158 87.7891 50.2259C87.7891 48.9332 88.5024 47.7629 89.6275 47.2292L106.396 39.3163C108.364 38.4161 110.584 39.8481 110.584 41.9863V64.9142Z" fill="#02b36d"/>
-                    <path d="M110.584 64.9142H99.142C99.142 41.8335 80.2231 23 57.142 23C36.3226 23 18.7929 38.8944 15.6294 59.0563C15.2463 61.2766 15.0547 63.5605 15.0547 65.8019C15.0547 67.693 17.0548 69.142 18.9496 69.142H41.0038C42.2774 69.142 43.3791 68.2511 43.6484 67.002C43.8341 66.1368 44.0274 65.2393 44.3292 64.3971C46.5275 57.427 52.3790 52.4294 59.2648 52.4294C67.7598 52.4294 74.6521 59.3214 74.6521 67.8164C74.6521 76.3113 67.7598 83.2037 59.2648 83.2037C55.9574 83.2037 52.8709 82.0949 50.3999 80.1855C49.431 79.4954 48.1363 79.5393 47.2752 80.3996L32.0447 95.6302C30.8197 96.8548 31.5636 99 33.2599 99C34.9026 99 36.5454 98.8781 38.142 98.6553C44.9556 97.6553 51.2356 94.8281 56.3762 90.642C58.6555 88.7861 61.0457 86.7567 63.7865 85.0392C63.9501 84.9312 64.114 84.8231 64.3322 84.7151C76.4899 79.4954 85.7462 68.6714 87.4429 55.4348C87.6739 53.7519 87.7891 52.0158 87.7891 50.2259C87.7891 48.9332 88.5024 47.7629 89.6275 47.2292L106.396 39.3163C108.364 38.4161 110.584 39.8481 110.584 41.9863V64.9142Z" fill="url(#paint0_linear_phantom)"/>
-                    <defs>
-                      <linearGradient id="paint0_linear_phantom" x1="62.8196" y1="23" x2="62.8196" y2="99" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#7ddfbd"/>
-                        <stop offset="1" stopColor="#02b36d"/>
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <span className="font-mono tracking-wider">CONNECT PHANTOM</span>
-                </button>
-                {publicKey && (
-                  <div className="mt-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30] text-sm font-mono text-[#e4fbf2] break-all shadow-inner animate-[fadeIn_0.3s_ease]">
-                    <div className="text-xs text-[#7ddfbd] mb-1 font-mono uppercase">Connected:</div>
-                    {publicKey}
-                  </div>
-                )}
-              </div>
-              
-              <div className="group mt-5">
+              {/* Source Wallet Selection */}
+              <div className="group">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Select Recipient <span className="text-[#02b36d]">&#60;</span>
+                    <span className="text-[#02b36d]">&#62;</span> Source Wallet <span className="text-[#02b36d]">&#60;</span>
                   </label>
-                  {selectedWallet && (
+                  {sourceWallet && (
                     <div className="flex items-center gap-1 text-xs">
                       <DollarSign size={10} className="text-[#7ddfbd]" />
                       <span className="text-[#02b36d] font-medium font-mono">
-                        {formatSolBalance(getWalletBalance(selectedWallet))} SOL
+                        {formatSolBalance(getWalletBalance(selectedWalletAddress))} SOL
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Search, Sort, and Filter Options */}
+                {/* Source Search and Filters */}
                 <div className="mb-2 flex space-x-2">
                   <div className="relative flex-grow">
                     <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7ddfbd]" />
                     <input
                       type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={sourceSearchTerm}
+                      onChange={(e) => setSourceSearchTerm(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
                       placeholder="SEARCH WALLETS..."
                     />
@@ -446,19 +461,19 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 </div>
 
                 <div className="max-h-40 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 group-hover:border-[#02b36d40] scrollbar-thin">
-                  {filterWallets(wallets, searchTerm).length > 0 ? (
-                    filterWallets(wallets, searchTerm).map((wallet) => (
+                  {filterWallets(wallets, sourceSearchTerm).length > 0 ? (
+                    filterWallets(wallets, sourceSearchTerm).map((wallet) => (
                       <div 
                         key={wallet.id}
                         className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer transition-all duration-200 border-b border-[#02b36d20] last:border-b-0
-                                  ${selectedWallet === wallet.address ? 'bg-[#02b36d10] border-[#02b36d30]' : ''}`}
-                        onClick={() => setSelectedWallet(wallet.address)}
+                                  ${sourceWallet === wallet.privateKey ? 'bg-[#02b36d10] border-[#02b36d30]' : ''}`}
+                        onClick={() => setSourceWallet(wallet.privateKey)}
                       >
                         <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center transition-all duration-300
-                                        ${selectedWallet === wallet.address
+                                        ${sourceWallet === wallet.privateKey
                                           ? 'bg-[#02b36d] shadow-md shadow-[#02b36d40]' 
                                           : 'border border-[#02b36d30] bg-[#091217]'}`}>
-                          {selectedWallet === wallet.address && (
+                          {sourceWallet === wallet.privateKey && (
                             <CheckCircle size={14} className="text-[#050a0e] animate-[fadeIn_0.2s_ease]" />
                           )}
                         </div>
@@ -473,28 +488,79 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                     ))
                   ) : (
                     <div className="p-3 text-sm text-[#7ddfbd] text-center font-mono">
-                      {searchTerm ? "NO WALLETS FOUND" : "NO WALLETS AVAILABLE"}
+                      {sourceSearchTerm ? "NO WALLETS FOUND WITH BALANCE > 0" : "NO WALLETS AVAILABLE WITH BALANCE > 0"}
                     </div>
                   )}
                 </div>
-                {selectedWallet && (
+                {sourceWallet && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium pl-1">
                     <span className="text-[#7ddfbd] font-mono">CURRENT BALANCE:</span>
-                    <span className="text-[#02b36d] font-semibold font-mono">{formatSolBalance(getWalletBalance(selectedWallet) || 0)} SOL</span>
+                    <span className="text-[#02b36d] font-semibold font-mono">{formatSolBalance(getWalletBalance(selectedWalletAddress) || 0)} SOL</span>
                   </div>
                 )}
               </div>
               
+              {/* Recipient Address */}
               <div className="group mt-5">
-                <div className="flex items-center gap-1 mb-2">
+                <label className="block text-sm font-medium text-[#7ddfbd] mb-1.5 group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                  <span className="text-[#02b36d]">&#62;</span> Recipient Address <span className="text-[#02b36d]">&#60;</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={receiverAddress}
+                    onChange={(e) => setReceiverAddress(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    placeholder="ENTER RECIPIENT ADDRESS"
+                  />
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                </div>
+                {solBalances.has(receiverAddress) && (
+                  <div className="mt-1.5 flex items-center text-xs font-medium pl-1">
+                    <span className="text-[#7ddfbd] font-mono mr-1">RECIPIENT BALANCE:</span>
+                    <span className="text-[#02b36d] font-semibold font-mono">{formatSolBalance(getWalletBalance(receiverAddress))} SOL</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Token Address */}
+              <div className="group mt-5">
+                <div className="flex items-center gap-1 mb-1.5">
                   <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Amount (SOL) <span className="text-[#02b36d]">&#60;</span>
+                    <span className="text-[#02b36d]">&#62;</span> Token Address <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
                     <Info size={14} className="text-[#7ddfbd] cursor-help" />
                     {showInfoTip && (
                       <div className="absolute left-0 bottom-full mb-2 p-2 bg-[#091217] border border-[#02b36d30] rounded shadow-lg text-xs text-[#e4fbf2] w-48 z-10 font-mono">
-                        Enter the amount of SOL to deposit
+                        Leave empty to transfer SOL instead of a token
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={selectedToken}
+                    onChange={(e) => setSelectedToken(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    placeholder="ENTER TOKEN ADDRESS (LEAVE EMPTY FOR SOL)"
+                  />
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                </div>
+              </div>
+              
+              {/* Amount */}
+              <div className="group mt-5">
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
+                    <span className="text-[#02b36d]">&#62;</span> Amount <span className="text-[#02b36d]">&#60;</span>
+                  </label>
+                  <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
+                    <Info size={14} className="text-[#7ddfbd] cursor-help" />
+                    {showInfoTip && (
+                      <div className="absolute left-0 bottom-full mb-2 p-2 bg-[#091217] border border-[#02b36d30] rounded shadow-lg text-xs text-[#e4fbf2] w-48 z-10 font-mono">
+                        Enter the amount to transfer
                       </div>
                     )}
                   </div>
@@ -510,19 +576,31 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       }
                     }}
                     className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
-                    placeholder="ENTER AMOUNT TO DEPOSIT"
+                    placeholder="ENTER AMOUNT TO TRANSFER"
                   />
                   <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
                 </div>
-                {selectedWallet && amount && (
-                  <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium pl-1">
-                    <span className="text-[#7ddfbd] font-mono">NEW BALANCE AFTER DEPOSIT:</span>
-                    <span className="text-[#02b36d] font-semibold font-mono">
-                      {(parseFloat(formatSolBalance(getWalletBalance(selectedWallet) || 0)) + parseFloat(amount || '0')).toFixed(4)} SOL
+              </div>
+              
+              {/* Transfer Summary */}
+              {sourceWallet && receiverAddress && amount && (
+                <div className="p-3 bg-[#091217] border border-[#02b36d30] rounded-lg mt-5 animate-[fadeIn_0.3s_ease]">
+                  <div className="flex justify-between items-center text-sm font-mono">
+                    <span className="text-[#7ddfbd]">TRANSFER:</span>
+                    <span className="text-[#02b36d] font-medium">
+                      {amount} {selectedToken ? 'TOKENS' : 'SOL'}
                     </span>
                   </div>
-                )}
-              </div>
+                  <div className="flex justify-between items-center text-sm mt-1 font-mono">
+                    <span className="text-[#7ddfbd]">FROM:</span>
+                    <span className="text-[#e4fbf2]">{formatAddress(selectedWalletAddress)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm mt-1 font-mono">
+                    <span className="text-[#7ddfbd]">TO:</span>
+                    <span className="text-[#e4fbf2]">{formatAddress(receiverAddress)}</span>
+                  </div>
+                </div>
+              )}
               
               <div className="flex justify-end gap-3 mt-6">
                 <button
@@ -533,9 +611,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 </button>
                 <button
                   onClick={() => setCurrentStep(1)}
-                  disabled={!publicKey || !selectedWallet || !amount}
+                  disabled={!sourceWallet || !receiverAddress || !amount}
                   className={`px-5 py-2.5 text-[#050a0e] rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider 
-                            ${!publicKey || !selectedWallet || !amount
+                            ${!sourceWallet || !receiverAddress || !amount
                               ? 'bg-[#02b36d50] cursor-not-allowed opacity-50' 
                               : 'bg-[#02b36d] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
                 >
@@ -545,7 +623,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               </div>
             </div>
           )}
-
+          
           {currentStep === 1 && (
             <div className="animate-[fadeIn_0.3s_ease]">
               {/* Review Summary */}
@@ -553,36 +631,80 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 <h3 className="text-base font-semibold text-[#e4fbf2] mb-3 font-mono tracking-wider">TRANSACTION SUMMARY</h3>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">FROM:</span>
-                    <div className="flex items-center bg-[#0a1419] px-2 py-1 rounded border border-[#02b36d20]">
-                      <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(publicKey)}</span>
+                  <div>
+                    <p className="text-[#7ddfbd] text-sm font-mono mb-1">TRANSFER AMOUNT:</p>
+                    <div className="p-2.5 bg-[#050a0e] rounded border border-[#02b36d20] shadow-inner">
+                      <p className="text-[#02b36d] font-mono text-sm font-semibold">
+                        {amount} {selectedToken ? 'TOKENS' : 'SOL'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[#7ddfbd] text-sm font-mono mb-1">FROM WALLET:</p>
+                    <div className="p-2.5 bg-[#050a0e] rounded border border-[#02b36d20] shadow-inner">
+                      <p className="text-[#e4fbf2] font-mono text-sm break-all">
+                        {selectedWalletAddress}
+                      </p>
+                      <div className="flex items-center mt-1 text-xs text-[#7ddfbd]">
+                        <DollarSign size={12} className="mr-0.5" />
+                        BALANCE: {formatSolBalance(getWalletBalance(selectedWalletAddress) || 0)} SOL
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">TO WALLET:</span>
-                    <div className="flex items-center bg-[#0a1419] px-2 py-1 rounded border border-[#02b36d20]">
-                      <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(selectedWallet)}</span>
+                  <div>
+                    <p className="text-[#7ddfbd] text-sm font-mono mb-1">TO RECIPIENT:</p>
+                    <div className="p-2.5 bg-[#050a0e] rounded border border-[#02b36d20] shadow-inner">
+                      <p className="text-[#e4fbf2] font-mono text-sm break-all">
+                        {receiverAddress}
+                      </p>
+                      {solBalances.has(receiverAddress) && (
+                        <div className="flex items-center mt-1 text-xs text-[#7ddfbd]">
+                          <DollarSign size={12} className="mr-0.5" />
+                          CURRENT: {formatSolBalance(getWalletBalance(receiverAddress) || 0)} SOL
+                        </div>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">RECIPIENT BALANCE:</span>
-                    <span className="text-sm text-[#e4fbf2] font-mono">{formatSolBalance(getWalletBalance(selectedWallet) || 0)} SOL</span>
-                  </div>
+                  {selectedToken && (
+                    <div>
+                      <p className="text-[#7ddfbd] text-sm font-mono mb-1">TOKEN:</p>
+                      <div className="p-2.5 bg-[#050a0e] rounded border border-[#02b36d20] shadow-inner">
+                        <p className="text-[#e4fbf2] font-mono text-sm break-all">
+                          {selectedToken}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   
-                  <div className="pt-2 border-t border-[#02b36d20] flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#7ddfbd] font-mono">AMOUNT TO DEPOSIT:</span>
-                    <span className="text-sm font-semibold text-[#02b36d] font-mono">{parseFloat(amount).toFixed(4)} SOL</span>
+                  {/* Local signing section */}
+                  <div className="mt-3 p-3 bg-[#071612] rounded border border-[#02b36d40]">
+                    <p className="text-sm text-[#02b36d] font-medium mb-2 font-mono">LOCAL TRANSACTION SIGNING</p>
+                    <p className="text-xs text-[#e4fbf2] font-mono">
+                      YOUR PRIVATE KEY WILL REMAIN SECURE ON YOUR DEVICE. THE TRANSACTION WILL BE SIGNED LOCALLY AND SUBMITTED DIRECTLY TO THE SOLANA NETWORK VIA RPC.
+                    </p>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">NEW BALANCE:</span>
-                    <span className="text-sm text-[#e4fbf2] font-mono">
-                      {(getWalletBalance(selectedWallet) + parseFloat(amount)).toFixed(4)} SOL
-                    </span>
-                  </div>
+
+                  {/* Estimated balances after transfer (only for SOL transfers) */}
+                  {!selectedToken && (
+                    <div className="mt-3 p-3 bg-[#071612] rounded border border-[#02b36d40]">
+                      <p className="text-sm text-[#7ddfbd] mb-2 font-mono">ESTIMATED BALANCES AFTER TRANSFER:</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-[#7ddfbd] font-mono">SOURCE WALLET:</span>
+                        <span className="text-xs text-[#e4fbf2] font-mono">
+                          {(getWalletBalance(selectedWalletAddress) - parseFloat(amount)).toFixed(4)} SOL
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-[#7ddfbd] font-mono">RECIPIENT WALLET:</span>
+                        <span className="text-xs text-[#e4fbf2] font-mono">
+                          {(getWalletBalance(receiverAddress) + parseFloat(amount)).toFixed(4)} SOL
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -591,7 +713,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 <div className="relative mx-1">
                   <input
                     type="checkbox"
-                    id="confirmDeposit"
+                    id="confirmTransfer"
                     checked={isConfirmed}
                     onChange={(e) => setIsConfirmed(e.target.checked)}
                     className="peer sr-only"
@@ -599,12 +721,12 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
                   <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
-                <label htmlFor="confirmDeposit" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
-                  I CONFIRM THIS DEPOSIT TRANSACTION
+                <label htmlFor="confirmTransfer" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
+                  I CONFIRM THIS TRANSFER TRANSACTION
                 </label>
               </div>
               
-              {/* Back/Deposit Buttons */}
+              {/* Buttons */}
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setCurrentStep(0)}
@@ -613,7 +735,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   BACK
                 </button>
                 <button
-                  onClick={handleDeposit}
+                  onClick={handleTransfer}
                   disabled={!isConfirmed || isSubmitting}
                   className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider
                             ${!isConfirmed || isSubmitting
@@ -626,7 +748,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       PROCESSING...
                     </>
                   ) : (
-                    "DEPOSIT SOL"
+                    "TRANSFER"
                   )}
                 </button>
               </div>

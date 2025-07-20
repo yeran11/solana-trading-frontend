@@ -9,7 +9,7 @@ window.Buffer = Buffer;
 import './styles/globals.css';
 import { ToastProvider } from "./Notifications";
 import ServerConfig from './ServerConfig';
-import IntroModal from './IntroModal';
+import IntroModal from './modals/IntroModal';
 const App = lazy(() => import('./App'));
 
 declare global {

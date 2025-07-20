@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, X, Move, Edit3, Plus, Check, ChevronDown, Sparkles } from 'lucide-react';
 import { loadConfigFromCookies, WalletType } from './Utils';
-import { ScriptType } from './Wallets';
+import { ScriptType } from './utils/wallets';
 
 // Helper function to format numbers with k, M, B suffixes
 const formatNumber = (num) => {
@@ -218,16 +218,8 @@ interface FloatingTradingCardProps {
   handleTradeSubmit: (wallets: any[], isBuy: boolean, dex?: string, buyAmount?: string, sellAmount?: string) => void;
   isLoading: boolean;
   dexOptions: any[];
-  validateActiveWallets: (wallets: WalletType[], scriptName: ScriptType) => { 
-    isValid: boolean; 
-    activeCount: number; 
-    maxAllowed: number; 
-    scriptName: ScriptType; 
-    message: string; 
-  };
   getScriptName: (dex: string, isBuy: boolean) => ScriptType;
   countActiveWallets: (wallets: WalletType[]) => number;
-  maxWalletsConfig: any;
   currentMarketCap: number | null;
   tokenBalances: Map<string, number>;
 }
@@ -252,10 +244,8 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
   handleTradeSubmit,
   isLoading,
   dexOptions,
-  validateActiveWallets,
   getScriptName,
   countActiveWallets,
-  maxWalletsConfig,
   currentMarketCap,
   tokenBalances
 }) => {

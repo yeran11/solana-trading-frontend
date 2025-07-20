@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowsUpFromLine, DollarSign, X, CheckCircle, Info, Search, ChevronRight, Settings } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import { useToast } from "./Notifications";
-import { WalletType } from './Utils';
-import { batchMixSOL, validateMixingInputs } from './utils/mixer.ts';
+import { useToast } from "../Notifications.tsx";
+import { WalletType } from '../Utils.tsx';
+import { batchMixSOL, validateMixingInputs } from '../utils/mixer.ts';
 
 interface MixerModalProps {
   isOpen: boolean;

@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Keypair, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 
 // Constants for rate limiting
@@ -96,7 +96,7 @@ const sendBundle = async (encodedBundle: string[]): Promise<any> => {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
     // Send to our backend proxy instead of directly to Jito
-    const response = await fetch(`${baseUrl}/api/transactions/send`, {
+    const response = await fetch(`${baseUrl}/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
-import { getWallets } from './Utils';
-import { useToast } from "./Notifications";
-import { executeBonkCreate, WalletForBonkCreate, TokenMetadata, BonkCreateConfig } from './utils/bonkcreate';
+import { getWallets } from '../Utils';
+import { useToast } from "../Notifications";
+import { executeMoonCreate, WalletForMoonCreate } from '../utils/mooncreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -14,13 +14,23 @@ interface BaseModalProps {
   onClose: () => void;
 }
 
-interface DeployBonkModalProps extends BaseModalProps {
+interface DeployMoonModalProps extends BaseModalProps {
   onDeploy: (data: any) => void;
   handleRefresh: () => void;
   solBalances: Map<string, number>;
 }
 
-export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
+// Update TokenMetadata interface to match what Moonit expects
+interface TokenMetadata {
+  name: string;
+  symbol: string;
+  description: string;
+  imageUrl: string; // Changed from uri to imageUrl
+  totalSupply: string; // Changed from supply
+  links: Array<{url: string, label: string}>;
+}
+
+export const DeployMoonModal: React.FC<DeployMoonModalProps> = ({
   isOpen,
   onClose,
   onDeploy,
@@ -33,20 +43,13 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-
   const [tokenData, setTokenData] = useState<TokenMetadata>({
     name: '',
     symbol: '',
     description: '',
-    decimals: 6,
-    supply: '1000000000000000',
-    totalSellA: '793100000000000',
-    telegram: '',
-    twitter: '',
-    website: '',
-    createdOn: 'https://bonk.fun',
-    uri: '', // image URL
-    type: 'meme' // default to meme
+    imageUrl: '', // Changed from uri
+    totalSupply: '42000000000', // Default supply for Moonit
+    links: [] // Links array for Moonit
   });
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +101,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           const response = JSON.parse(xhr.responseText);
-          setTokenData(prev => ({ ...prev, uri: response.url }));
+          setTokenData(prev => ({ ...prev, imageUrl: response.url })); // Changed from uri to imageUrl
           showToast("Image uploaded successfully", "success");
         } else {
           showToast("Failed to upload image", "error");
@@ -121,7 +124,57 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     }
   };
 
+  // Update social links when fields change
+  const updateSocialLinks = (type: 'telegram' | 'twitter' | 'website', value: string) => {
+    setTokenData(prev => {
+      // Remove old link of this type if it exists
+      const filteredLinks = prev.links.filter(link => 
+        (type === 'website' && !link.url.startsWith('http'))
+      );
+      
+      // Add new link if value is not empty
+      let newLinks = [...filteredLinks];
+      if (value) {
+        let url = value;
+        let label = '';
+        
+        // Format the URL properly
+        if (type === 'telegram') {
+          url = url.startsWith('https://t.me/') ? url : `https://t.me/${url.replace('@', '').replace('t.me/', '')}`;
+          label = 'telegram';
+        } else if (type === 'twitter') {
+          url = url.startsWith('https://') ? url : `https://x.com/${url.replace('@', '').replace('twitter.com/', '').replace('x.com/', '')}`;
+          label = 'twitter';
+        } else if (type === 'website') {
+          url = url.startsWith('http') ? url : `https://${url}`;
+          label = 'website';
+        }
+        
+        newLinks.push({ url, label });
+      }
+      
+      return {
+        ...prev,
+        links: newLinks
+      };
+    });
+  };
 
+  // Helper functions to get social values from links array
+  const getTelegram = () => {
+    const telegramLink = tokenData.links.find(link => link.label === 'telegram');
+    return telegramLink ? telegramLink.url.replace('https://t.me/', '') : '';
+  };
+  
+  const getTwitter = () => {
+    const twitterLink = tokenData.links.find(link => link.label === 'twitter');
+    return twitterLink ? twitterLink.url.replace('https://x.com/', '') : '';
+  };
+  
+  const getWebsite = () => {
+    const websiteLink = tokenData.links.find(link => link.label === 'website');
+    return websiteLink ? websiteLink.url : '';
+  };
 
   // Trigger file input click
   const triggerFileInput = () => {
@@ -208,7 +261,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
   const validateStep = () => {
     switch (currentStep) {
       case 0:
-        if (!tokenData.name || !tokenData.symbol || !tokenData.uri || !tokenData.description) {
+        if (!tokenData.name || !tokenData.symbol || !tokenData.imageUrl || !tokenData.description) {
           showToast("Name, symbol, description and logo image are required", "error");
           return false;
         }
@@ -250,81 +303,75 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Get owner wallet (first wallet)
-      if (selectedWallets.length === 0) {
-        throw new Error("No wallets selected");
-      }
-      
-      const ownerPrivateKey = selectedWallets[0];
-      const ownerWallet = wallets.find(w => w.privateKey === ownerPrivateKey);
-      
-      if (!ownerWallet) {
-        throw new Error("Owner wallet not found");
-      }
-      
-      // Format buyer wallets (all wallets except the first/owner)
-      const buyerWallets: WalletForBonkCreate[] = selectedWallets.slice(1).map(privateKey => {
+      // Format wallets for Moonit
+      const walletObjs: WalletForMoonCreate[] = selectedWallets.map(privateKey => {
         const wallet = wallets.find(w => w.privateKey === privateKey);
         if (!wallet) {
-          throw new Error(`Wallet not found`);
+          throw new Error(`Wallet not found for private key`);
         }
         return {
-          publicKey: wallet.address,
-          privateKey: privateKey,
-          amount: parseFloat(walletAmounts[privateKey]) * 1e9 // Convert to lamports
+          address: wallet.address,
+          privateKey
         };
       });
       
-      // Create config object
-      const config: BonkCreateConfig = {
-        tokenMetadata: tokenData,
-        ownerPublicKey: ownerWallet.address,
-        initialBuyAmount: parseFloat(walletAmounts[ownerPrivateKey]) || 0.1,
-        type: tokenData.type || 'meme'
+      // Calculate amounts
+      const amountsArray = selectedWallets.map(key => parseFloat(walletAmounts[key] || "0.1"));
+      
+      // Create config object for Moonit
+      const config = {
+        config: {
+          tokenCreation: {
+            metadata: {
+              name: tokenData.name,
+              symbol: tokenData.symbol,
+              description: tokenData.description,
+              imageUrl: tokenData.imageUrl, 
+              totalSupply: tokenData.totalSupply,
+              links: tokenData.links
+            },
+            defaultSolAmount: 0.1
+          },
+          // Set Jito config
+          jito: {
+            tipAmount: 0.0005
+          }
+        }
       };
       
-      console.log(`Starting token creation with ${buyerWallets.length + 1} wallets`);
+      console.log(`Starting token creation with ${walletObjs.length} wallets`);
       
-      // Call our bonk create execution function
-      const result = await executeBonkCreate(
+      // Call our moonshot create execution function
+      const result = await executeMoonCreate(
+        walletObjs,
         config,
-        {
-          publicKey: ownerWallet.address, 
-          privateKey: ownerPrivateKey
-        },
-        buyerWallets
+        amountsArray
       );
       
-      if (result.success && result.mintAddress && result.poolId) {
-        showToast(`Token deployment successful! Mint: ${result.mintAddress}`, "success");
+      if (result.success && result.mintAddress) {
+        showToast(`Token deployment successful! Mint address: ${result.mintAddress}`, "success");
         
-        // Reset form states
+        // Reset form state
         setSelectedWallets([]);
         setWalletAmounts({});
         setTokenData({
           name: '',
           symbol: '',
           description: '',
-          decimals: 6,
-          supply: '1000000000000000',
-          totalSellA: '793100000000000',
-          telegram: '',
-          twitter: '',
-          website: '',
-          createdOn: 'https://bonk.fun',
-          uri: '',
-          type: 'meme'
+          imageUrl: '',
+          totalSupply: '42000000000',
+          links: []
         });
         setIsConfirmed(false);
         setCurrentStep(0);
-        
-        // Close modal
         onClose();
         
-        // Set tokenAddress in URL and reload page
-        const url = new URL(window.location.href);
-        url.searchParams.set('tokenAddress', result.mintAddress);
-        window.history.pushState({}, '', url);
+        // Redirect to token address page
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('tokenAddress', result.mintAddress);
+        window.history.pushState({}, '', currentUrl.toString());
+        
+        // Reload the page to show the new token
         window.location.reload();
       } else {
         throw new Error(result.error || "Token deployment failed");
@@ -336,8 +383,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
       setIsSubmitting(false);
     }
   };
-
-
 
   // Format wallet address for display
   const formatAddress = (address: string) => {
@@ -449,11 +494,11 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       )}
                     </button>
                     
-                    {tokenData.uri && (
+                    {tokenData.imageUrl && (
                       <div className="flex items-center gap-3 flex-grow">
                         <div className="h-12 w-12 rounded overflow-hidden border border-[#02b36d40] bg-[#091217] flex items-center justify-center">
                           <img 
-                            src={tokenData.uri}
+                            src={tokenData.imageUrl}
                             alt="Logo Preview"
                             className="max-h-full max-w-full object-contain"
                             onError={(e) => {
@@ -464,7 +509,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => setTokenData(prev => ({ ...prev, uri: '' }))}
+                          onClick={() => setTokenData(prev => ({ ...prev, imageUrl: '' }))}
                           className="p-1.5 rounded-full hover:bg-[#091217] text-[#7ddfbd] hover:text-[#e4fbf2] transition-all"
                         >
                           <X size={14} />
@@ -497,35 +542,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                   />
                 </div>
 
-                <div className="space-y-2 relative z-10">
-                  <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Token Type <span className="text-[#02b36d]">*</span> <span className="text-[#02b36d]">&#60;</span>
-                  </label>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setTokenData(prev => ({ ...prev, type: 'meme' }))}
-                      className={`flex-1 px-4 py-2.5 rounded-lg font-mono tracking-wider transition-all ${
-                        tokenData.type === 'meme'
-                          ? 'bg-[#02b36d] text-[#091217] border border-[#02b36d] shadow-lg transform -translate-y-0.5'
-                          : 'bg-[#091217] text-[#e4fbf2] border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#0a1419]'
-                      }`}
-                    >
-                      MEME
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTokenData(prev => ({ ...prev, type: 'tech' }))}
-                      className={`flex-1 px-4 py-2.5 rounded-lg font-mono tracking-wider transition-all ${
-                        tokenData.type === 'tech'
-                          ? 'bg-[#02b36d] text-[#091217] border border-[#02b36d] shadow-lg transform -translate-y-0.5'
-                          : 'bg-[#091217] text-[#e4fbf2] border border-[#02b36d40] hover:border-[#02b36d] hover:bg-[#0a1419]'
-                      }`}
-                    >
-                      TECH
-                    </button>
-                  </div>
-                </div>
+
   
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
                   <div className="space-y-2">
@@ -535,8 +552,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     <div className="relative">
                       <input
                         type="text"
-                        value={tokenData.telegram}
-                        onChange={(e) => setTokenData(prev => ({ ...prev, telegram: e.target.value }))}
+                        value={getTelegram()}
+                        onChange={(e) => updateSocialLinks('telegram', e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] placeholder-[#7ddfbd70] focus:outline-none focus:ring-1 focus:ring-[#02b36d50] focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
                         placeholder="T.ME/YOURGROUP"
                       />
@@ -554,8 +571,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     <div className="relative">
                       <input
                         type="text"
-                        value={tokenData.twitter}
-                        onChange={(e) => setTokenData(prev => ({ ...prev, twitter: e.target.value }))}
+                        value={getTwitter()}
+                        onChange={(e) => updateSocialLinks('twitter', e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] placeholder-[#7ddfbd70] focus:outline-none focus:ring-1 focus:ring-[#02b36d50] focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
                         placeholder="@YOURHANDLE"
                       />
@@ -573,8 +590,8 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     <div className="relative">
                       <input
                         type="text"
-                        value={tokenData.website}
-                        onChange={(e) => setTokenData(prev => ({ ...prev, website: e.target.value }))}
+                        value={getWebsite()}
+                        onChange={(e) => updateSocialLinks('website', e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] placeholder-[#7ddfbd70] focus:outline-none focus:ring-1 focus:ring-[#02b36d50] focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
                         placeholder="HTTPS://YOURSITE.COM"
                       />
@@ -671,7 +688,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
               <div className="flex items-center gap-2">
                 <Info size={14} className="text-[#02b36d]" />
                 <span className="text-sm text-[#7ddfbd] font-mono">
-                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING DEVELOPER WALLET)
+                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS
                 </span>
               </div>
             </div>
@@ -755,7 +772,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                                 </div>
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-[#02b36d] font-mono">{index === 0 ? 'DEVELOPER' : `#${index + 1}`}</span>
+                                    <span className="text-sm font-medium text-[#02b36d] font-mono">{index === 0 ? 'CREATOR' : `#${index + 1}`}</span>
                                     <span className="text-sm font-medium text-[#e4fbf2] font-mono glitch-text">
                                       {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
                                     </span>
@@ -886,6 +903,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       <span className="text-sm text-[#7ddfbd] font-mono">SYMBOL:</span>
                       <span className="text-sm font-medium text-[#e4fbf2] font-mono">{tokenData.symbol}</span>
                     </div>
+
                     {tokenData.description && (
                       <div className="flex items-start justify-between">
                         <span className="text-sm text-[#7ddfbd] font-mono">DESCRIPTION:</span>
@@ -894,12 +912,12 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                         </span>
                       </div>
                     )}
-                    {tokenData.uri && (
+                    {tokenData.imageUrl && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-[#7ddfbd] font-mono">LOGO:</span>
                         <div className="bg-[#091217] border border-[#02b36d40] rounded-lg p-1 w-12 h-12 flex items-center justify-center">
                           <img 
-                            src={tokenData.uri}
+                            src={tokenData.imageUrl}
                             alt="Token Logo"
                             className="max-w-full max-h-full rounded object-contain"
                             onError={(e) => {
@@ -912,29 +930,29 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                     )}
                   </div>
                   
-                  {(tokenData.telegram || tokenData.twitter || tokenData.website) && (
+                  {tokenData.links.length > 0 && (
                     <>
                       <div className="h-px bg-[#02b36d30] my-3"></div>
                       <h4 className="text-sm font-medium text-[#7ddfbd] mb-2 font-mono uppercase tracking-wider">
                         <span className="text-[#02b36d]">&#62;</span> Social Links <span className="text-[#02b36d]">&#60;</span>
                       </h4>
                       <div className="space-y-2">
-                        {tokenData.telegram && (
+                        {getTelegram() && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#7ddfbd] font-mono">TELEGRAM:</span>
-                            <span className="text-sm text-[#02b36d] font-mono">{tokenData.telegram}</span>
+                            <span className="text-sm text-[#02b36d] font-mono">{getTelegram()}</span>
                           </div>
                         )}
-                        {tokenData.twitter && (
+                        {getTwitter() && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#7ddfbd] font-mono">TWITTER:</span>
-                            <span className="text-sm text-[#02b36d] font-mono">{tokenData.twitter}</span>
+                            <span className="text-sm text-[#02b36d] font-mono">{getTwitter()}</span>
                           </div>
                         )}
-                        {tokenData.website && (
+                        {getWebsite() && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#7ddfbd] font-mono">WEBSITE:</span>
-                            <span className="text-sm text-[#02b36d] font-mono">{tokenData.website}</span>
+                            <span className="text-sm text-[#02b36d] font-mono">{getWebsite()}</span>
                           </div>
                         )}
                       </div>
@@ -980,7 +998,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
                       return (
                         <div key={index} className="flex justify-between items-center p-3 bg-[#091217] rounded-lg mb-2 border border-[#02b36d30] hover:border-[#02b36d] transition-all">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#02b36d] text-xs font-medium w-6 font-mono">{index === 0 ? 'DEV' : `#${index + 1}`}</span>
+                            <span className="text-[#02b36d] text-xs font-medium w-6 font-mono">{index === 0 ? 'CRET' : `#${index + 1}`}</span>
                             <span className="font-mono text-sm text-[#e4fbf2] glitch-text">
                               {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
                             </span>
@@ -1036,8 +1054,6 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
             </div>
           </div>
         );
-      
-      // New Success Step
     }
   };
   
@@ -1196,7 +1212,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
               <PlusCircle size={16} className="text-[#02b36d]" />
             </div>
             <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPLOY BONK TOKEN <span className="text-[#02b36d]">/</span>
+              <span className="text-[#02b36d]">/</span> DEPLOY MOON TOKEN <span className="text-[#02b36d]">/</span>
             </h2>
           </div>
           <button 
@@ -1207,7 +1223,7 @@ export const DeployBonkModal: React.FC<DeployBonkModalProps> = ({
           </button>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Progress Indicator - Only show for steps 0-2 */}
         <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
           <div 
             className="h-full bg-[#02b36d] transition-all duration-300"

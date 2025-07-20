@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Plus, Upload, FileUp, Download, Trash2, Settings, Globe, Zap, Wallet, Key, Save } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import { WalletTooltip } from './Styles';
+import { WalletTooltip } from '../Styles';
 import { 
   createNewWallet,
   importWallet,
@@ -11,8 +11,8 @@ import {
   WalletType,
   ConfigType,
   copyToClipboard
-} from './Utils';
-import { handleCleanupWallets } from './Manager';
+} from '../Utils';
+import { handleCleanupWallets } from '../Manager';
 
 interface EnhancedSettingsModalProps {
   isOpen: boolean;
@@ -29,8 +29,8 @@ interface EnhancedSettingsModalProps {
   setTokenBalances: (balances: Map<string, number>) => void;
   tokenAddress: string;
   showToast: (message: string, type: 'success' | 'error') => void;
-  activeTab: 'network' | 'wallets' | 'advanced';
-  setActiveTab: (tab: 'network' | 'wallets' | 'advanced') => void;
+  activeTab: 'wallets' | 'advanced';
+  setActiveTab: (tab: 'wallets' | 'advanced') => void;
 }
 
 const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
@@ -284,7 +284,6 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
         {/* Tab Navigation */}
         <div className="flex space-x-1 mb-6 bg-[#0a1419] rounded-lg p-1">
           {([
-            { id: 'network', label: 'NETWORK', icon: Globe },
             { id: 'wallets', label: 'WALLETS', icon: Wallet },
             { id: 'advanced', label: 'ADVANCED', icon: Zap }
           ] as const).map(({ id, label, icon: Icon }) => (
@@ -305,45 +304,6 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
-          {activeTab === 'network' && (
-            <div className="space-y-6">
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Globe size={20} className="text-[#02b36d]" />
-                  NETWORK CONFIGURATION
-                </h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
-                      RPC Endpoint
-                    </label>
-                    <input
-                      type="text"
-                      value={config.rpcEndpoint}
-                      onChange={(e) => onConfigChange('rpcEndpoint', e.target.value)}
-                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
-                      placeholder="Enter RPC endpoint URL"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
-                      Transaction Fee (SOL)
-                    </label>
-                    <input
-                      type="text"
-                      value={config.transactionFee}
-                      onChange={(e) => onConfigChange('transactionFee', e.target.value)}
-                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
-                      placeholder="0.000005"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {activeTab === 'wallets' && (
             <div className="space-y-6">
               {/* Create Wallets Section */}
@@ -511,13 +471,163 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 
           {activeTab === 'advanced' && (
             <div className="space-y-6">
+              {/* Network Configuration Section */}
               <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
                 <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Zap size={20} className="text-[#02b36d]" />
-                  ADVANCED SETTINGS
+                  <Globe size={20} className="text-[#02b36d]" />
+                  NETWORK CONFIGURATION
                 </h3>
                 
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                      RPC Endpoint
+                    </label>
+                    <input
+                      type="text"
+                      value={config.rpcEndpoint}
+                      onChange={(e) => onConfigChange('rpcEndpoint', e.target.value)}
+                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
+                      placeholder="Enter RPC endpoint URL"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                      Transaction Fee (SOL)
+                    </label>
+                    <input
+                      type="text"
+                      value={config.transactionFee}
+                      onChange={(e) => onConfigChange('transactionFee', e.target.value)}
+                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
+                      placeholder="0.000005"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Trading Configuration Section */}
+              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
+                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
+                  <Zap size={20} className="text-[#02b36d]" />
+                  TRADING CONFIGURATION
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                      Default Bundle Mode
+                    </label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { value: 'single', label: '🔄 Single', description: 'Each wallet sent separately' },
+                        { value: 'batch', label: '📦 Batch', description: '5 wallets per bundle' },
+                        { value: 'all-in-one', label: '🚀 All-in-one', description: 'All wallets prepared first, then sent concurrently' }
+                      ].map(option => (
+                        <div 
+                          key={option.value}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            config.bundleMode === option.value 
+                              ? 'border-[#02b36d] bg-[#02b36d10]' 
+                              : 'border-[#02b36d30] hover:border-[#02b36d50]'
+                          }`}
+                          onClick={() => onConfigChange('bundleMode', option.value)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="text-sm font-medium text-[#e4fbf2] font-mono">
+                                  {option.label}
+                                </div>
+                                <div className="text-xs text-[#7ddfbd] font-mono">
+                                  {option.description}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              config.bundleMode === option.value 
+                                ? 'border-[#02b36d] bg-[#02b36d]' 
+                                : 'border-[#02b36d30]'
+                            }`}>
+                              {config.bundleMode === option.value && (
+                                <div className="w-full h-full rounded-full bg-[#02b36d] flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-[#050a0e]"></div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-xs text-[#7ddfbd80] font-mono mt-2">
+                      This will be the default bundle mode for new trading operations
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                        Single Mode Delay (ms)
+                      </label>
+                      <input
+                        type="number"
+                        min="50"
+                        max="5000"
+                        step="50"
+                        value={config.singleDelay || '200'}
+                        onChange={(e) => onConfigChange('singleDelay', e.target.value)}
+                        className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
+                        placeholder="200"
+                      />
+                      <div className="text-xs text-[#7ddfbd80] font-mono mt-1">
+                        Delay between wallets in single mode
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                        Batch Mode Delay (ms)
+                      </label>
+                      <input
+                        type="number"
+                        min="100"
+                        max="10000"
+                        step="100"
+                        value={config.batchDelay || '1000'}
+                        onChange={(e) => onConfigChange('batchDelay', e.target.value)}
+                        className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
+                        placeholder="1000"
+                      />
+                      <div className="text-xs text-[#7ddfbd80] font-mono mt-1">
+                        Delay between batches in batch mode
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                      Default Slippage (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0.1"
+                      max="100"
+                      step="0.1"
+                      value={config.slippageBps ? (parseFloat(config.slippageBps) / 100).toString() : '99'}
+                      onChange={(e) => {
+                        const percentage = parseFloat(e.target.value) || 99;
+                        const bps = Math.round(percentage * 100).toString();
+                        onConfigChange('slippageBps', bps);
+                      }}
+                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
+                      placeholder="99.0"
+                    />
+                    <div className="text-xs text-[#7ddfbd80] font-mono mt-1">
+                      High slippage tolerance for volatile tokens (recommended: 99%)
+                    </div>
+                  </div>
+                  
                   <div>
                     <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
                       API Key (Optional)
@@ -527,7 +637,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       value={config.apiKey}
                       onChange={(e) => onConfigChange('apiKey', e.target.value)}
                       className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
-                      placeholder="Enter API key for enhanced features"
+                      placeholder="Enter API key"
                     />
                   </div>
                   
