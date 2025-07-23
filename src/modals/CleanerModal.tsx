@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, ChevronRight, X, DollarSign, Info, Search, Settings, ArrowDown, Trash2, Plus, PlusCircle } from 'lucide-react';
-import { getWallets, loadConfigFromCookies } from '../Utils';
+import { getWallets, loadConfigFromCookies, getWalletDisplayName } from '../Utils';
 import { useToast } from "../Notifications";
 // Import the cleaner operation functions at the top of the file
 import { executeCleanerOperation, validateCleanerInputs, WalletInfo } from '../utils/cleaner';
@@ -830,7 +830,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between items-center">
-                                <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                                <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                                 <div className="flex items-center space-x-2">
                                   <span className={`text-xs ${hasInsufficientSOL(wallet.address) ? 'text-red-400' : 'text-[#7ddfbd]'} font-mono`}>
                                     {formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL
@@ -1056,7 +1056,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                               </div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-center">
-                                  <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                                  <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                                   <div className="flex items-center space-x-2">
                                     <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
                                     {(getWalletTokenBalance(wallet.address) || 0) > 0 && (
@@ -1373,21 +1373,19 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                   
                   {/* Confirmation checkbox */}
                   <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d30] modal-glow">
-                    <div className="flex items-center px-3 py-3 bg-[#0a1419] rounded-lg border border-[#02b36d20]">
+                    <div 
+                      className="flex items-center px-3 py-3 bg-[#0a1419] rounded-lg border border-[#02b36d20] cursor-pointer"
+                      onClick={() => setIsConfirmed(!isConfirmed)}
+                    >
                       <div className="relative mx-1">
-                        <input
-                          type="checkbox"
-                          id="confirmBuySell"
-                          checked={isConfirmed}
-                          onChange={(e) => setIsConfirmed(e.target.checked)}
-                          className="peer sr-only"
-                        />
-                        <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                        <div 
+                          className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                        ></div>
                         <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                       </div>
-                      <label htmlFor="confirmBuySell" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
+                      <span className="text-[#e4fbf2] text-sm ml-2 select-none font-mono">
                         I CONFIRM THAT I WANT TO EXECUTE {getTotalOperationsCount()} OPERATIONS AS DETAILED ABOVE. THIS ACTION CANNOT BE UNDONE.
-                      </label>
+                      </span>
                     </div>
                   </div>
                 </div>

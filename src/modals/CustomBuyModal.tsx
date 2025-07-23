@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, ChevronRight, DollarSign, X, Info, Search } from 'lucide-react';
-import { getWallets } from '../Utils';
+import { getWallets, getWalletDisplayName } from '../Utils';
 import { useToast } from "../Notifications";
 
 const STEPS_CUSTOMBUY = ['Select Wallets', 'Configure Buy', 'Review'];
@@ -384,7 +384,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
   const getWalletDisplayFromKey = (privateKey: string) => {
     const wallet = wallets.find(w => w.privateKey === privateKey);
     return wallet 
-      ? formatAddress(wallet.address)
+      ? getWalletDisplayName(wallet)
       : privateKey.slice(0, 8);
   };
 
@@ -655,7 +655,7 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                         )}
                       </div>
                       <div className="flex-1 flex flex-col">
-                        <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                        <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                         <div className="flex items-center gap-3 mt-0.5">
                           <div className="flex items-center">
                             <DollarSign size={12} className="text-[#7ddfbd] mr-1" />
@@ -1074,24 +1074,22 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
                          backgroundPosition: 'center center',
                        }}>
                   </div>
-                  <div className="flex items-start gap-3 relative z-10">
+                  <div 
+                    className="flex items-start gap-3 relative z-10 cursor-pointer"
+                    onClick={() => setIsConfirmed(!isConfirmed)}
+                  >
                     <div className="relative mt-1">
-                      <input
-                        type="checkbox"
-                        id="confirm"
-                        checked={isConfirmed}
-                        onChange={(e) => setIsConfirmed(e.target.checked)}
-                        className="peer sr-only"
-                      />
-                      <div className="w-5 h-5 border border-[#02b36d40] rounded-md peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                      <div 
+                        className={`w-5 h-5 border border-[#02b36d40] rounded-md transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                      ></div>
                       <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                     </div>
-                    <label htmlFor="confirm" className="text-sm text-[#7ddfbd] leading-relaxed font-mono">
+                    <span className="text-sm text-[#7ddfbd] leading-relaxed font-mono select-none">
                       I CONFIRM THAT I WANT TO BUY {tokenInfo?.symbol || 'TOKEN'} USING THE SPECIFIED AMOUNTS
                       ACROSS {selectedWallets.length} WALLETS
                       VIA {protocolOptions.find(p => p.value === selectedProtocol)?.label.toUpperCase()} PROTOCOL. 
                       TRANSACTIONS WILL BE PROCESSED IN {bundleModeOptions.find(b => b.value === bundleMode)?.label.toUpperCase() || bundleMode.toUpperCase()} MODE. THIS ACTION CANNOT BE UNDONE.
-                    </label>
+                    </span>
                   </div>
                 </div>
               </div>

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowDown, X, CheckCircle, DollarSign, Info, Search, ChevronRight } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { useToast } from "../Notifications";
-import { WalletType } from '../Utils';
+import { WalletType, getWalletDisplayName } from '../Utils';
 
 import { consolidateSOL, validateConsolidationInputs } from '../utils/consolidate';
 interface ConsolidateModalProps {
@@ -515,7 +515,7 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                               )}
                             </div>
                             <div className="flex-1 flex flex-col">
-                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                               <div className="flex items-center mt-0.5">
                                 <DollarSign size={12} className="text-[#7ddfbd] mr-1" />
                                 <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
@@ -593,7 +593,7 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                                 )}
                               </div>
                               <div className="flex-1 flex justify-between items-center">
-                                <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                                <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                                 <div className="flex flex-col items-end">
                                   <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(balance)} SOL</span>
                                   {selectedSourceWallets.includes(wallet.address) && amount && (
@@ -771,7 +771,7 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-[#7ddfbd] font-mono">TO WALLET:</span>
                       <div className="flex items-center bg-[#0a1419] px-2 py-1 rounded border border-[#02b36d20]">
-                        <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(selectedRecipientWallet)}</span>
+                        <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{getWalletByAddress(selectedRecipientWallet) ? getWalletDisplayName(getWalletByAddress(selectedRecipientWallet)!) : formatAddress(selectedRecipientWallet)}</span>
                       </div>
                     </div>
                     
@@ -806,20 +806,24 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                 
                 {/* Confirmation Checkbox */}
                 <div className="flex items-center px-3 py-3 bg-[#091217] rounded-lg border border-[#02b36d30]">
-                  <div className="relative mx-1">
-                    <input
-                      type="checkbox"
-                      id="confirmConsolidate"
-                      checked={isConfirmed}
-                      onChange={(e) => setIsConfirmed(e.target.checked)}
-                      className="peer sr-only"
-                    />
-                    <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
-                    <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                  <div 
+                    className="flex items-center cursor-pointer"
+                    onClick={() => setIsConfirmed(!isConfirmed)}
+                  >
+                    <div className="relative mx-1">
+                      <div 
+                        className="w-5 h-5 border border-[#02b36d40] rounded transition-all cursor-pointer"
+                        style={{
+                          backgroundColor: isConfirmed ? '#02b36d' : 'transparent',
+                          borderColor: isConfirmed ? '#02b36d' : '#02b36d40'
+                        }}
+                      ></div>
+                      <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                    </div>
+                    <span className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
+                      I CONFIRM THIS CONSOLIDATION OPERATION
+                    </span>
                   </div>
-                  <label htmlFor="confirmConsolidate" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
-                    I CONFIRM THIS CONSOLIDATION OPERATION
-                  </label>
                 </div>
               </div>
               
@@ -841,7 +845,7 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
                           <div key={wallet.id} className="flex items-center justify-between py-1.5 border-b border-[#02b36d20] last:border-b-0">
                             <div className="flex items-center">
                               <span className="text-[#7ddfbd] text-xs mr-2 w-6 font-mono">{index + 1}.</span>
-                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                             </div>
                             <div className="flex items-center">
                               <span className="text-xs text-[#7ddfbd] mr-2 font-mono">CURRENT: {formatSolBalance(balance)} SOL</span>
@@ -901,3 +905,5 @@ export const ConsolidateModal: React.FC<ConsolidateModalProps> = ({
     document.body
   );
 };
+
+export default ConsolidateModal;

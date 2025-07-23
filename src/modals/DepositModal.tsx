@@ -4,7 +4,7 @@ import { DollarSign, X, CheckCircle, Wallet, Info, Search, ChevronRight } from '
 import { Connection, PublicKey, LAMPORTS_PER_SOL, SystemProgram, Transaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { useToast } from "../Notifications";
-import { WalletType } from '../Utils';
+import { WalletType, getWalletDisplayName } from '../Utils';
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -463,7 +463,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                           )}
                         </div>
                         <div className="flex-1 flex flex-col">
-                          <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                          <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                           <div className="flex items-center mt-0.5">
                             <DollarSign size={12} className="text-[#7ddfbd] mr-1" />
                             <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
@@ -587,21 +587,19 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               </div>
               
               {/* Confirmation Checkbox */}
-              <div className="flex items-center px-3 py-3 bg-[#091217] rounded-lg border border-[#02b36d30] mb-5">
+              <div 
+                className="flex items-center px-3 py-3 bg-[#091217] rounded-lg border border-[#02b36d30] mb-5 cursor-pointer"
+                onClick={() => setIsConfirmed(!isConfirmed)}
+              >
                 <div className="relative mx-1">
-                  <input
-                    type="checkbox"
-                    id="confirmDeposit"
-                    checked={isConfirmed}
-                    onChange={(e) => setIsConfirmed(e.target.checked)}
-                    className="peer sr-only"
-                  />
-                  <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                  <div 
+                    className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                  ></div>
                   <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
-                <label htmlFor="confirmDeposit" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
+                <span className="text-[#e4fbf2] text-sm ml-2 select-none font-mono">
                   I CONFIRM THIS DEPOSIT TRANSACTION
-                </label>
+                </span>
               </div>
               
               {/* Back/Deposit Buttons */}

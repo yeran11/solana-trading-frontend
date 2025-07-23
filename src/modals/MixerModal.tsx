@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowsUpFromLine, DollarSign, X, CheckCircle, Info, Search, ChevronRight, Settings } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import { useToast } from "../Notifications.tsx";
-import { WalletType } from '../Utils.tsx';
+import { WalletType, getWalletDisplayName } from '../Utils.tsx';
 import { batchMixSOL, validateMixingInputs } from '../utils/mixer.ts';
 
 interface MixerModalProps {
@@ -595,7 +595,7 @@ export const MixerModal: React.FC<MixerModalProps> = ({
                             )}
                           </div>
                           <div className="flex-1 flex justify-between items-center">
-                            <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                            <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                             <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
                           </div>
                         </div>
@@ -671,7 +671,7 @@ export const MixerModal: React.FC<MixerModalProps> = ({
                               className="font-mono text-sm text-[#e4fbf2] cursor-pointer glitch-text"
                               onClick={() => toggleRecipientWalletSelection(wallet.address)}
                             >
-                              {formatAddress(wallet.address)}
+                              {getWalletDisplayName(wallet)}
                             </span>
                             
                             {useCustomAmounts && selectedRecipientWallets.includes(wallet.address) ? (
@@ -899,7 +899,7 @@ export const MixerModal: React.FC<MixerModalProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-[#7ddfbd] font-mono">FROM WALLET:</span>
                       <div className="flex items-center bg-[#0a1419] px-2 py-1 rounded border border-[#02b36d20]">
-                        <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(selectedSenderWallet)}</span>
+                        <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{getWalletByAddress(selectedSenderWallet) ? getWalletDisplayName(getWalletByAddress(selectedSenderWallet)!) : formatAddress(selectedSenderWallet)}</span>
                       </div>
                     </div>
                     
@@ -941,20 +941,24 @@ export const MixerModal: React.FC<MixerModalProps> = ({
                 
                 {/* Confirmation Checkbox */}
                 <div className="flex items-center px-3 py-3 bg-[#091217] rounded-lg border border-[#02b36d30]">
-                  <div className="relative mx-1">
-                    <input
-                      type="checkbox"
-                      id="confirmMixer"
-                      checked={isConfirmed}
-                      onChange={(e) => setIsConfirmed(e.target.checked)}
-                      className="peer sr-only"
-                    />
-                    <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
-                    <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                  <div 
+                    className="flex items-center cursor-pointer"
+                    onClick={() => setIsConfirmed(!isConfirmed)}
+                  >
+                    <div className="relative mx-1">
+                      <div 
+                        className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all cursor-pointer"
+                        style={{
+                          backgroundColor: isConfirmed ? '#02b36d' : 'transparent',
+                          borderColor: isConfirmed ? '#02b36d' : '#02b36d40'
+                        }}
+                      ></div>
+                      <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                    </div>
+                    <span className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
+                      I CONFIRM THIS MIXING OPERATION
+                    </span>
                   </div>
-                  <label htmlFor="confirmMixer" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
-                    I CONFIRM THIS MIXING OPERATION
-                  </label>
                 </div>
               </div>
               
@@ -973,7 +977,7 @@ export const MixerModal: React.FC<MixerModalProps> = ({
                           <div key={wallet.id} className="flex items-center justify-between py-1.5 border-b border-[#02b36d20] last:border-b-0">
                             <div className="flex items-center">
                               <span className="text-[#7ddfbd] text-xs mr-2 w-6 font-mono">{index + 1}.</span>
-                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                             </div>
                             <div className="flex items-center">
                               <span className="text-xs text-[#7ddfbd] mr-2 font-mono">CURRENT: {formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>

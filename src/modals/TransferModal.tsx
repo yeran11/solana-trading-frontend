@@ -11,7 +11,7 @@ import {
 } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { useToast } from "../Notifications";
-import { WalletType } from '../Utils';
+import { WalletType, getWalletDisplayName } from '../Utils';
 import { Buffer } from 'buffer';
 import { sendToJitoBundleService } from '../utils/jitoService';
 
@@ -707,7 +707,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                               )}
                             </div>
                             <div className="flex-1 flex flex-col">
-                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                               <div className="flex items-center mt-0.5">
                                 {transferType === 'SOL' ? (
                                   <>
@@ -936,21 +936,19 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                     </div>
 
                     {/* Confirmation Checkbox */}
-                    <div className="flex items-center px-3 py-3 bg-[#050a0e] rounded-lg border border-[#02b36d40] mt-4">
+                    <div 
+                      className="flex items-center px-3 py-3 bg-[#050a0e] rounded-lg border border-[#02b36d40] mt-4 cursor-pointer"
+                      onClick={() => setIsConfirmed(!isConfirmed)}
+                    >
                       <div className="relative mx-1">
-                        <input
-                          type="checkbox"
-                          id="confirmTransfer"
-                          checked={isConfirmed}
-                          onChange={(e) => setIsConfirmed(e.target.checked)}
-                          className="peer sr-only"
-                        />
-                        <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all"></div>
+                        <div 
+                          className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                        ></div>
                         <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                       </div>
-                      <label htmlFor="confirmTransfer" className="text-[#e4fbf2] text-sm ml-2 cursor-pointer select-none font-mono">
+                      <span className="text-[#e4fbf2] text-sm ml-2 select-none font-mono">
                         CONFIRM BATCH TRANSFER
-                      </label>
+                      </span>
                     </div>
 
                     {/* Execute Button */}

@@ -596,7 +596,16 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                 initial="rest"
                 whileHover="hover"
                 whileTap="tap"
-                onClick={openWalletsModal}
+                onClick={() => {
+                  // Open settings modal with wallets tab active
+                  setIsModalOpen(false); // Close wallet modal if open
+                  // These functions should be passed from parent component
+                  if (typeof window !== 'undefined' && window.dispatchEvent) {
+                    // Create and dispatch a custom event to open settings with wallets tab
+                    const event = new CustomEvent('openSettingsWalletsTab');
+                    window.dispatchEvent(event);
+                  }
+                }}
                 className="flex items-center text-xs font-mono tracking-wider text-[#02b36d] 
                            hover:text-[#7ddfbd] px-2 py-1 rounded bg-[#071015] border 
                            border-[#02b36d30] hover:border-[#02b36d50] transition-colors duration-200"

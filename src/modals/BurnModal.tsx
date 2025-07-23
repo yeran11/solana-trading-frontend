@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, ChevronLeft, ChevronRight, Info, Search, X, ArrowDown } from 'lucide-react';
-import { getWallets } from '../Utils';
+import { getWallets, getWalletDisplayName } from '../Utils';
 import { useToast } from "../Notifications";
 import { loadConfigFromCookies } from '../Utils';
 import * as web3 from '@solana/web3.js';
@@ -707,7 +707,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                             )}
                           </div>
                           <div className="flex-1 flex justify-between items-center">
-                            <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{formatAddress(wallet.address)}</span>
+                            <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
                             <div className="flex flex-col items-end">
                               <span className="text-xs text-[#7ddfbd] font-mono">
                                 {(solBalances.get(wallet.address) || 0).toFixed(4)} SOL
@@ -737,7 +737,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                       <span className="text-sm text-[#02b36d] font-mono tracking-wide">SELECTED_WALLET</span>
                       <div className="flex items-center bg-[#091217] px-2 py-1 rounded-lg border border-[#02b36d20]">
                         <span className="text-sm font-mono text-[#e4fbf2] glitch-text">
-                          {formatAddress(wallets.find(w => w.privateKey === sourceWallet)?.address || '')}
+                          {getWalletDisplayName(wallets.find(w => w.privateKey === sourceWallet)!)}
                         </span>
                       </div>
                     </div>
@@ -822,7 +822,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                             </svg>
                           </div>
                           <span className="text-sm text-[#e4fbf2] font-mono glitch-text">
-                            {formatAddress(wallets.find(w => w.privateKey === sourceWallet)?.address || '')}
+                            {getWalletDisplayName(wallets.find(w => w.privateKey === sourceWallet)!)}
                           </span>
                         </div>
                       </div>
@@ -1073,26 +1073,24 @@ export const BurnModal: React.FC<BurnModalProps> = ({
 
                 {/* Confirmation Checkbox with cyberpunk style */}
                 <div className="bg-[#091217] rounded-lg border border-[#02b36d30] p-4 mt-4">
-                  <div className="flex items-start gap-3">
+                  <div 
+                    className="flex items-start gap-3 cursor-pointer"
+                    onClick={() => setIsConfirmed(!isConfirmed)}
+                  >
                     <div className="relative mt-1">
-                      <input
-                        type="checkbox"
-                        id="confirm"
-                        checked={isConfirmed}
-                        onChange={(e) => setIsConfirmed(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-5 h-5 border border-[#02b36d40] rounded peer-checked:bg-[#02b36d] peer-checked:border-0 transition-all cursor-pointer"></div>
+                      <div 
+                        className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                      ></div>
                       <CheckCircle 
                         size={14} 
                         className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`}
                       />
                     </div>
-                    <label htmlFor="confirm" className="text-sm text-[#e4fbf2] leading-relaxed cursor-pointer font-mono">
+                    <span className="text-sm text-[#e4fbf2] leading-relaxed font-mono select-none">
                       I confirm that I want to burn <span className="text-[#02b36d] font-medium">
                         {amount} {getSelectedTokenSymbol()}
                       </span>. I understand this action cannot be undone and the tokens will be permanently removed from circulation.
-                    </label>
+                    </span>
                   </div>
                 </div>
               </div>

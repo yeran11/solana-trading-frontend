@@ -358,7 +358,7 @@ const WalletManager: React.FC = () => {
     activeTab: 'wallets',
     config: {
       rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
-      transactionFee: '0.000005',
+      transactionFee: '0.001',
       apiKey: '',
       selectedDex: 'auto',
       isDropdownOpen: false,
@@ -726,6 +726,20 @@ const WalletManager: React.FC = () => {
       saveWalletsToCookies(state.wallets);
     }
   }, [state.wallets]);
+
+  // Listen for custom event to open settings modal with wallets tab
+  useEffect(() => {
+    const handleOpenSettingsWalletsTab = () => {
+      memoizedCallbacks.setActiveTab('wallets');
+      memoizedCallbacks.setIsSettingsOpen(true);
+    };
+
+    window.addEventListener('openSettingsWalletsTab', handleOpenSettingsWalletsTab);
+    
+    return () => {
+      window.removeEventListener('openSettingsWalletsTab', handleOpenSettingsWalletsTab);
+    };
+  }, [memoizedCallbacks.setActiveTab, memoizedCallbacks.setIsSettingsOpen]);
 
   // Save quick buy preferences when they change
   useEffect(() => {
