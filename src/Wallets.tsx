@@ -322,6 +322,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             solBalances={solBalances}
             connection={connection}
             tokenBalances={tokenBalances}
+            tokenAddress={tokenAddress}
             handleRefresh={handleRefreshAll}
             isRefreshing={isRefreshing}
             showingTokenWallets={showingTokenWallets}

@@ -94,7 +94,7 @@ const sendBundle = async (encodedBundle: string[]): Promise<any> => {
     const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     
     // Send to our backend proxy instead of directly to Jito
-    const response = await fetch(`${baseUrl}/send`, {
+    const response = await fetch(`${baseUrl}/api/transactions/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

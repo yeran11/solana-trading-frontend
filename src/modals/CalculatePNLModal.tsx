@@ -16,6 +16,28 @@ interface BasePnlModalProps {
 interface PnlModalProps extends BasePnlModalProps {
   handleRefresh: () => void;
   tokenAddress: string;
+  iframeData?: {
+    tradingStats: any;
+    solPrice: number | null;
+    currentWallets: any[];
+    recentTrades: {
+      type: 'buy' | 'sell';
+      address: string;
+      tokensAmount: number;
+      avgPrice: number;
+      solAmount: number;
+      timestamp: number;
+      signature: string;
+    }[];
+    tokenPrice: {
+      tokenPrice: number;
+      tokenMint: string;
+      timestamp: number;
+      tradeType: 'buy' | 'sell';
+      volume: number;
+    } | null;
+  } | null;
+  tokenBalances: Map<string, number>;
 }
 
 interface PnlData {
@@ -27,7 +49,9 @@ export const PnlModal: React.FC<PnlModalProps> = ({
   isOpen,
   onClose,
   handleRefresh,
-  tokenAddress
+  tokenAddress,
+  iframeData,
+  tokenBalances
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
@@ -53,7 +77,9 @@ export const PnlModal: React.FC<PnlModalProps> = ({
   // Reset form state
   const resetForm = () => {
     setCurrentStep(0);
-    setSelectedWallets([]);
+    // Automatically select all wallets
+    const allWalletKeys = wallets.map(wallet => wallet.privateKey);
+    setSelectedWallets(allWalletKeys);
     setPnlData({});
     setSearchTerm('');
     setSortOption('address');
@@ -78,42 +104,61 @@ export const PnlModal: React.FC<PnlModalProps> = ({
   };
 
   const fetchPnlData = async () => {
-    if (selectedWallets.length === 0) return;
+    if (selectedWallets.length === 0 || !iframeData || !iframeData.tradingStats) return;
     
     setIsLoading(true);
     try {
       // Get wallet addresses from private keys
-      const addresses = selectedWallets.map(privateKey => 
+      const selectedAddresses = selectedWallets.map(privateKey => 
         wallets.find(wallet => wallet.privateKey === privateKey)?.address || ''
-      ).filter(address => address !== '').join(',');
+      ).filter(address => address !== '');
       
-      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
-      const response = await fetch(`${baseUrl}/api/analytics/pnl`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          addresses,
-          tokenAddress,
-          options: {
-            includeTimestamp: true
+      // Calculate PNL data directly from iframeData
+      const calculatedPnlData: Record<string, PnlData> = {};
+      
+      // Use trading stats for overall PNL calculation
+      const { tradingStats, recentTrades } = iframeData;
+      const currentTimestamp = new Date().toISOString();
+      
+      // For each selected wallet, calculate its contribution to the overall PNL
+      selectedAddresses.forEach(address => {
+        // Filter trades for this wallet
+        const walletTrades = recentTrades.filter(trade => trade.address === address);
+        
+        // Calculate wallet's contribution to PNL
+        let walletProfit = 0;
+        
+        // If we have specific wallet trades, calculate from those
+        if (walletTrades.length > 0) {
+          const buyTrades = walletTrades.filter(trade => trade.type === 'buy');
+          const sellTrades = walletTrades.filter(trade => trade.type === 'sell');
+          
+          const totalBought = buyTrades.reduce((sum, trade) => sum + trade.solAmount, 0);
+          const totalSold = sellTrades.reduce((sum, trade) => sum + trade.solAmount, 0);
+          
+          walletProfit = totalSold - totalBought;
+        } else {
+          // If no specific trades, estimate based on overall stats and token balance
+          const walletTokenBalance = tokenBalances.get(address) || 0;
+          const totalTokens = Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0);
+          
+          if (totalTokens > 0) {
+            // Estimate wallet's contribution to PNL based on its proportion of tokens
+            const proportion = walletTokenBalance / totalTokens;
+            walletProfit = tradingStats.net * proportion;
           }
-        }),
+        }
+        
+        calculatedPnlData[address] = {
+          profit: walletProfit,
+          timestamp: currentTimestamp
+        };
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       
-      if (result.success) {
-        setPnlData(result.data);
-      } else {
-        throw new Error('Failed to calculate PNL');
-      }
+      setPnlData(calculatedPnlData);
     } catch (error) {
-      console.error('Error:', error);
-      showToast("Failed to fetch PNL data", "error");
+      console.error('Error calculating PNL data:', error);
+      showToast("Failed to calculate PNL data", "error");
     } finally {
       setIsLoading(false);
     }
@@ -421,6 +466,26 @@ export const PnlModal: React.FC<PnlModalProps> = ({
                     onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                   >
                     {sortDirection === 'asc' ? '↑' : '↓'}
+                  </button>
+                </div>
+                
+                {/* Select All Button */}
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    className="w-full py-2 bg-[#091217] border border-[#02b36d40] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] hover:bg-[#02b36d10] transition-all modal-btn-cyberpunk font-mono text-sm"
+                    onClick={() => {
+                      // Get all wallet private keys
+                      const allWalletKeys = wallets.map(wallet => wallet.privateKey);
+                      // If all wallets are already selected, deselect all. Otherwise, select all.
+                      if (selectedWallets.length === allWalletKeys.length) {
+                        setSelectedWallets([]);
+                      } else {
+                        setSelectedWallets(allWalletKeys);
+                      }
+                    }}
+                  >
+                    {selectedWallets.length === wallets.length ? 'DESELECT ALL WALLETS' : 'SELECT ALL WALLETS'}
                   </button>
                 </div>
 

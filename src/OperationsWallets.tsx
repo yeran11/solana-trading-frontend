@@ -20,6 +20,7 @@ interface WalletOperationsButtonsProps {
   solBalances: Map<string, number>;
   connection: Connection;
   tokenBalances: Map<string, number>;
+  tokenAddress: string;
   
   handleRefresh: () => void;
   isRefreshing: boolean;
@@ -48,6 +49,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   solBalances,
   connection,
   tokenBalances,
+  tokenAddress,
   handleRefresh,
   isRefreshing,
   showingTokenWallets,
@@ -284,6 +286,8 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
         onClose={closeModal}
         wallets={wallets}
         solBalances={solBalances}
+        tokenBalances={tokenBalances}
+        tokenAddress={tokenAddress}
         connection={connection}
       />
      

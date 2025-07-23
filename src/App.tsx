@@ -1,5 +1,5 @@
-import React, { useEffect, lazy, useCallback, useReducer, useMemo } from 'react';
-import { X, Settings } from 'lucide-react';
+import React, { useEffect, lazy, useCallback, useReducer, useMemo, useState } from 'react';
+import { X, Settings, Globe, Wifi } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import ServiceSelector from './Menu.tsx';
 import { WalletTooltip, initStyles } from './Styles';
@@ -44,6 +44,208 @@ const DeployModal = lazy(() => import('./modals/DeployModal.tsx').then(module =>
 const CleanerTokensModal = lazy(() => import('./modals/CleanerModal.tsx').then(module => ({ default: module.CleanerTokensModal })));
 const CustomBuyModal = lazy(() => import('./modals/CustomBuyModal.tsx').then(module => ({ default: module.CustomBuyModal })));
 const FloatingTradingCard = lazy(() => import('./FloatingTradingCard'));
+
+interface ServerInfo {
+  id: string;
+  name: string;
+  url: string;
+  region: string;
+  flag: string;
+  ping?: number;
+}
+
+// Server Region Selector Component
+const ServerRegionSelector: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentRegion, setCurrentRegion] = useState<string>('US');
+  const [availableServers, setAvailableServers] = useState<ServerInfo[]>([]);
+  const [isChanging, setIsChanging] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
+
+  // Function to update server data from window
+  const updateServerData = useCallback(() => {
+    if (window.serverRegion) {
+      setCurrentRegion(window.serverRegion);
+    }
+    
+    if (window.availableServers && window.availableServers.length > 0) {
+      setAvailableServers(window.availableServers);
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial load
+    updateServerData();
+    
+    // Set up polling to check for server updates
+    const checkForUpdates = () => {
+      updateServerData();
+    };
+    
+    // Check every 500ms for server updates
+    const interval = setInterval(checkForUpdates, 500);
+    
+    // Also listen for window events if available
+    const handleServerUpdate = () => {
+      updateServerData();
+    };
+    
+    // Custom event listener for server updates
+    window.addEventListener('serverChanged', handleServerUpdate);
+    
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('serverChanged', handleServerUpdate);
+    };
+  }, [updateServerData]);
+
+  const handleServerSwitch = async (serverId: string) => {
+    if (!window.switchServer) {
+      showToast('Server switching not available', 'error');
+      return;
+    }
+
+    setIsChanging(true);
+    setIsOpen(false);
+
+    try {
+      const success = await window.switchServer(serverId);
+      if (success) {
+        const server = availableServers.find(s => s.id === serverId);
+        if (server) {
+          setCurrentRegion(server.region);
+          showToast(`Switched to ${server.name} server`, 'success');
+          
+          // No need to reload the page - the server change event will handle updates
+          console.log('Server switched successfully without page reload');
+        }
+      } else {
+        showToast('Failed to switch server', 'error');
+      }
+    } catch (error) {
+      console.error('Error switching server:', error);
+      showToast('Error switching server', 'error');
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  const getCurrentServer = () => {
+    return availableServers.find(server => server.region === currentRegion) || {
+      id: 'unknown',
+      name: 'Unknown',
+      url: '',
+      region: currentRegion,
+      flag: '🌐',
+      ping: 0
+    };
+  };
+
+  const currentServer = getCurrentServer();
+
+  return (
+    <div className="relative">
+      <WalletTooltip content={`${currentServer.name}`} position="bottom">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          disabled={isChanging || isLoading}
+          className="flex items-center gap-2 p-2 border border-[#02b36d40] hover:border-[#02b36d] bg-[#0a1419] rounded cyberpunk-btn group transition-all duration-200"
+        >
+          {isChanging ? (
+            <div className="animate-spin h-4 w-4 border-2 border-[#02b36d] border-t-transparent rounded-full"></div>
+          ) : isLoading ? (
+            <>
+              <Globe size={16} className="text-[#02b36d] animate-pulse" />
+              <div className="flex flex-col items-start">
+                <div className="font-bold text-[#02b36d] font-mono text-sm">
+                  <span className="animate-pulse">Loading...</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Globe size={16} className="text-[#02b36d] group-hover:text-[#04d47c]" />
+              <div className="flex flex-col items-start">
+                <div className="font-bold text-[#02b36d] font-mono text-sm flex items-center gap-1">
+                  <span className="text-base">{currentServer.flag}</span>
+                  {currentServer.ping && currentServer.ping < Infinity && (
+                    <span className="text-xs text-[#7ddfbd]">({currentServer.ping}ms)</span>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </button>
+      </WalletTooltip>
+
+      {isOpen && !isChanging && !isLoading && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Dropdown */}
+          <div className="absolute top-full right-0 mt-2 w-64 bg-[#0a1419] border border-[#02b36d40] rounded-lg shadow-2xl z-50 cyberpunk-modal">
+            <div className="p-3">
+              <div className="text-xs font-mono text-[#7ddfbd] uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Wifi size={12} />
+                Select Server Region
+              </div>
+              
+              <div className="space-y-2">
+                {availableServers.length > 0 ? (
+                  availableServers.map((server) => (
+                    <button
+                      key={server.id}
+                      onClick={() => handleServerSwitch(server.id)}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
+                        server.region === currentRegion
+                          ? 'bg-[#02b36d20] border border-[#02b36d80] text-[#04d47c]'
+                          : 'bg-[#050a0e] border border-[#02b36d20] hover:border-[#02b36d40] hover:bg-[#0a1419] text-[#b3f0d7]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{server.flag}</span>
+                        <div className="text-left">
+                          <div className="font-mono font-semibold">{server.name}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {server.ping && server.ping < Infinity && (
+                          <div className={`text-xs font-mono px-2 py-1 rounded ${
+                            server.ping < 100 ? 'bg-green-500/20 text-green-400' :
+                            server.ping < 200 ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {server.ping}ms
+                          </div>
+                        )}
+                        
+                        {server.region === currentRegion && (
+                          <div className="w-2 h-2 bg-[#02b36d] rounded-full animate-pulse"></div>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center text-[#7ddfbd] text-sm py-4">
+                    <div className="animate-pulse">No servers available</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 const WalletManager: React.FC = () => {
   // Apply styles
@@ -733,14 +935,8 @@ const WalletManager: React.FC = () => {
             </button>
           </WalletTooltip>
 
-          <div className="flex items-center ml-4">
-            <div className="flex flex-col items-start">
-              <div className="text-xs text-[#7ddfbd] font-mono uppercase tracking-wider">WALLETS</div>
-              <div className={`font-bold text-[#02b36d] font-mono ${state.tickEffect ? 'scale-110 transition-transform' : 'transition-transform'}`}>
-                {state.wallets.length}
-              </div>
-            </div>
-          </div>
+          {/* Server Region Selector instead of Wallet Count */}
+          <ServerRegionSelector />
         </div>
       </nav>
 
@@ -950,6 +1146,8 @@ const WalletManager: React.FC = () => {
         onClose={() => memoizedCallbacks.setCalculatePNLModalOpen(false)}
         handleRefresh={handleRefresh}    
         tokenAddress={state.tokenAddress}
+        iframeData={state.iframeData}
+        tokenBalances={state.tokenBalances}
       />
       
       <DeployModal

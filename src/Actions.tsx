@@ -431,7 +431,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         
         {/* Token Operations */}
         <div className="space-y-4">          
-          <div className="bg-gradient-to-br from-[#0a141980] to-[#05080a80] backdrop-blur-sm rounded-xl p-4 shadow-xl border border-[#02b36d20] relative overflow-hidden">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
               {/* Cleaner Button */}
               <button
@@ -502,7 +501,6 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
                 </div>
                 <span className="text-xs font-mono tracking-wider text-[#7ddfbd] uppercase">Stagger</span>
               </button>
-            </div>
           </div>
           
           {/* Live Data Section */}

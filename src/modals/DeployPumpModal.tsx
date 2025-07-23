@@ -4,6 +4,8 @@ import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, Dolla
 import { getWallets } from '../Utils';
 import { useToast } from "../Notifications";
 import { executePumpCreate, WalletForPumpCreate, TokenCreationConfig } from '../utils/pumpcreate';
+import { Keypair } from '@solana/web3.js';
+import bs58 from 'bs58';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -52,17 +54,54 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State to store wallet keypair for token creation
+  const [mintKeypair, setMintKeypair] = useState<Keypair | null>(null);
+  
   const generateMintPubkey = async () => {
     setIsGenerating(true);
     try {
       const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
       const mintResponse = await fetch(`${baseUrl}/api/utilities/generate-mint`);
       const data = await mintResponse.json();
-      setMintPubkey(data.pubkey);
-      showToast("Mint pubkey generated successfully", "success");
+      
+      // Check if the API returned a valid pubkey
+      if (data.pubkey && data.pubkey.trim() !== '') {
+        setMintPubkey(data.pubkey);
+        showToast("Mint pubkey generated successfully", "success");
+      } else {
+        // If API returned empty pubkey, create a new Solana wallet locally
+        const keypair = Keypair.generate();
+        const publicKey = keypair.publicKey.toString();
+        const privateKey = bs58.encode(keypair.secretKey);
+        
+        // Store the keypair for later use
+        setMintKeypair(keypair);
+        
+        // Display the public key to the user
+        setMintPubkey(publicKey);
+        
+        showToast(`Generated local mint key successfully: ${publicKey.slice(0, 8)}...${publicKey.slice(-8)}`, "success");
+      }
     } catch (error) {
       console.error('Error generating mint pubkey:', error);
-      showToast("Failed to generate mint pubkey", "error");
+      
+      // On any error, fallback to local wallet generation
+      try {
+        const keypair = Keypair.generate();
+        const publicKey = keypair.publicKey.toString();
+        const privateKey = bs58.encode(keypair.secretKey);
+        
+        // Store the keypair for later use
+        setMintKeypair(keypair);
+        
+        // Display the public key to the user
+        setMintPubkey(publicKey);
+        
+        showToast(`Generated local mint key successfully: ${publicKey.slice(0, 8)}...${publicKey.slice(-8)}`, "success");
+      } catch (fallbackError) {
+        console.error('Error generating local mint key:', fallbackError);
+        showToast("Failed to generate mint pubkey", "error");
+      }
     }
     setIsGenerating(false);
   };
@@ -271,7 +310,9 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       
       // Create token configuration object
       const tokenCreationConfig: TokenCreationConfig = {
-        mintPubkey: mintPubkey,
+        // If we have a locally generated keypair, use its private key (bs58 encoded)
+        // Otherwise use the mintPubkey from the API
+        mintPubkey: mintKeypair ? bs58.encode(mintKeypair.secretKey) : mintPubkey,
         config: {
           tokenCreation: {
             metadata: {
@@ -304,6 +345,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
         setSelectedWallets([]);
         setWalletAmounts({});
         setMintPubkey('');
+        setMintKeypair(null); // Reset the stored keypair
         setTokenData({
           name: '',
           symbol: '',
@@ -375,7 +417,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-[#7ddfbd] font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Mint Pubkey <span className="text-[#02b36d]">&#60;</span>
+                    <span className="text-[#02b36d]">&#62;</span> Token Mint <span className="text-[#02b36d]">&#60;</span>
                   </label>
                   <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
                     <Info size={14} className="text-[#7ddfbd] cursor-help" />
