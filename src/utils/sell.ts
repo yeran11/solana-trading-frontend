@@ -23,10 +23,10 @@ export type BundleMode = 'single' | 'batch' | 'all-in-one';
 
 export interface SellConfig {
   tokenAddress: string;
-  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'jupiter' | 'boopfun' | 'auto';
+  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'auto';
   sellPercent: number; // Percentage of tokens to sell (1-100)
   slippageBps?: number; // Slippage tolerance in basis points (e.g., 100 = 1%)
-  outputMint?: string; // Output token (usually SOL) - mainly for Jupiter
+  outputMint?: string; // Output token (usually SOL) - mainly for Auto
   jitoTipLamports?: number; // Custom Jito tip in lamports
   bundleMode?: BundleMode; // Bundle execution mode: 'single', 'batch', or 'all-in-one'
   batchDelay?: number; // Delay between batches in milliseconds (for batch mode)
@@ -140,8 +140,8 @@ const getPartiallyPreparedSellTransactions = async (
       }
     }
 
-    // Add Jupiter-specific parameters if needed
-    if (sellConfig.protocol === 'jupiter' || sellConfig.protocol === 'auto') {
+    // Add Auto-specific parameters if needed
+    if (sellConfig.protocol === 'auto' || sellConfig.protocol === 'auto') {
       if (sellConfig.outputMint) {
         requestBody.outputMint = sellConfig.outputMint;
       }
@@ -544,7 +544,7 @@ export const validateSellInputs = (
     return { valid: false, error: 'Protocol is required' };
   }
   
-  const validProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'jupiter', 'boopfun', 'auto'];
+  const validProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'auto', 'boopfun', 'auto'];
   if (!validProtocols.includes(sellConfig.protocol)) {
     return { valid: false, error: `Invalid protocol. Must be one of: ${validProtocols.join(', ')}` };
   }
@@ -553,8 +553,8 @@ export const validateSellInputs = (
     return { valid: false, error: 'Invalid sell percentage (must be between 1-100)' };
   }
   
-  // Validate Jupiter-specific parameters
-  if ((sellConfig.protocol === 'jupiter' || sellConfig.protocol === 'auto') && sellConfig.slippageBps !== undefined) {
+  // Validate Auto-specific parameters
+  if ((sellConfig.protocol === 'auto' || sellConfig.protocol === 'auto') && sellConfig.slippageBps !== undefined) {
     if (isNaN(sellConfig.slippageBps) || sellConfig.slippageBps < 0) {
       return { valid: false, error: 'Invalid slippage value' };
     }

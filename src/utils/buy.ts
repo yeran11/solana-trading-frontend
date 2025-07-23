@@ -23,7 +23,7 @@ export type BundleMode = 'single' | 'batch' | 'all-in-one';
 
 export interface BuyConfig {
   tokenAddress: string;
-  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'jupiter' | 'boopfun' | 'auto';
+  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'auto';
   solAmount: number;
   amounts?: number[]; // Optional custom amounts per wallet
   slippageBps?: number; // Slippage in basis points (e.g., 100 = 1%)
@@ -550,7 +550,7 @@ export const validateBuyInputs = (
     return { valid: false, error: 'Protocol is required' };
   }
   
-  const supportedProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'jupiter', 'boopfun', 'auto'];
+  const supportedProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'auto', 'boopfun', 'auto'];
   if (!supportedProtocols.includes(config.protocol)) {
     return { valid: false, error: `Unsupported protocol: ${config.protocol}. Supported protocols: ${supportedProtocols.join(', ')}` };
   }

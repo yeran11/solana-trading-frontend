@@ -282,7 +282,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       // Create buy configuration using the unified system
       const buyConfig = createBuyConfig({
         tokenAddress,
-        protocol: 'jupiter', // Use Jupiter for quick buy
+        protocol: 'auto', // Use Auto for quick buy
         solAmount: solAmountToUse
         // slippageBps will be automatically set from config in the buy.ts file
       });

@@ -215,8 +215,8 @@ export const executeRaydiumTrade = async (
   }
 };
 
-// Jupiter trading functions
-export const executeJupiterTrade = async (
+// Auto trading functions
+export const executeAutoTrade = async (
   wallets: FormattedWallet[],
   config: TradingConfig,
   isBuyMode: boolean,
@@ -224,7 +224,7 @@ export const executeJupiterTrade = async (
 ): Promise<TradingResult> => {
   try {
     if (isBuyMode) {
-      return await executeUnifiedBuy(wallets, config, 'jupiter');
+      return await executeUnifiedBuy(wallets, config, 'auto');
     } else {
       return await executeUnifiedSell(
         wallets, 
@@ -311,12 +311,12 @@ export const executeTrade = async (
     case 'raydium':
       return await executeRaydiumTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'auto':
-      return await executeJupiterTrade(formattedWallets, config, isBuyMode, walletBalances);
+      return await executeAutoTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'launchpad':
       return await executeLaunchpadTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'pumpswap':
       return await executePumpSwapTrade(formattedWallets, config, isBuyMode, walletBalances);
     default:
-      return await executeJupiterTrade(formattedWallets, config, isBuyMode, walletBalances);
+      return await executeAutoTrade(formattedWallets, config, isBuyMode, walletBalances);
   }
 };

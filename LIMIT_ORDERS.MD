@@ -1,6 +1,6 @@
 # Trigger Orders API Documentation
 
-This document describes the API endpoints for managing Jupiter trigger orders (limit orders) on Solana.
+This document describes the API endpoints for managing Auto trigger orders (limit orders) on Solana.
 
 ## Overview
 
@@ -218,6 +218,6 @@ if (data.success) {
 - All amounts should be provided in the smallest unit of the token (e.g., lamports for SOL)
 - Transactions returned by the API are unsigned and need to be signed by the client
 - The API automatically adds custom fees, burn instructions, and Jito tips as configured
-- Use the `executeTransaction` endpoint to submit signed transactions through Jupiter
+- Use the `executeTransaction` endpoint to submit signed transactions through Auto
 - Orders can have expiration times set via the `expiredAt` parameter (Unix timestamp)
 - The API supports both authenticated and non-authenticated fee structures
