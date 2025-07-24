@@ -233,25 +233,25 @@ const DataBox: React.FC<{
             </div>
             <div className="flex items-center gap-2">
               <div className={`text-lg font-bold font-mono tracking-tight ${
-                tradingStats && tradingStats.net >= 0 ? 'color-primary' : 'text-warning'
+                tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'color-primary' : 'text-warning'
               }`}>
                 {tradingStats ? (
                   <div>
-                    {tradingStats.net >= 0 ? '+' : ''}{tradingStats.net.toFixed(2)}
+                    {(tradingStats.net + holdingsValue) >= 0 ? '+' : ''}{(tradingStats.net + holdingsValue).toFixed(2)}
                   </div>
                 ) : (
-                  <div>+0.00</div>
+                  <div>+{holdingsValue.toFixed(2)}</div>
                 )}
               </div>
               <div className="flex flex-col gap-0.5">
                 <div className={`w-2 h-0.5 rounded opacity-80 group-hover:opacity-100 transition-opacity ${
-                  tradingStats && tradingStats.net >= 0 ? 'bg-app-primary-color' : 'bg-warning'
+                  tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
                 }`}></div>
                 <div className={`w-2 h-0.5 rounded opacity-60 group-hover:opacity-100 transition-opacity ${
-                  tradingStats && tradingStats.net >= 0 ? 'bg-app-primary-color' : 'bg-warning'
+                  tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
                 }`}></div>
                 <div className={`w-2 h-0.5 rounded opacity-40 group-hover:opacity-100 transition-opacity ${
-                  tradingStats && tradingStats.net >= 0 ? 'bg-app-primary-color' : 'bg-warning'
+                  tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
                 }`}></div>
               </div>
             </div>
