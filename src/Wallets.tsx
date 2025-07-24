@@ -44,7 +44,7 @@ export const Tooltip = ({
       </div>
       {isVisible && (
         <div className={`absolute z-50 ${positionClasses[position]}`}>
-          <div className="bg-[#051014] cyberpunk-border text-[#02b36d] text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+          <div className="bg-app-quaternary cyberpunk-border color-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
             {content}
           </div>
         </div>
@@ -310,14 +310,14 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-[#050a0e] relative cyberpunk-bg">
+    <div className="flex-1 bg-app-primary relative cyberpunk-bg">
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
       <div className="absolute top-0 left-0 w-full h-full cyberpunk-scanline pointer-events-none z-1 opacity-30"></div>
       
       {/* Enhanced header */}
-      <div className="top-0 sticky bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
+      <div className="top-0 sticky bg-app-primary-99 backdrop-blur-sm border-b border-app-primary-40 z-10 shadow-sm">
         {/* Compact buttons row */}
-        <div className="px-2 py-1 border-b border-[#02b36d20]">
+        <div className="px-2 py-1 border-b border-app-primary-20">
           <WalletOperationsButtons
             wallets={wallets}
             solBalances={solBalances}
@@ -346,25 +346,25 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         </div>
         
         {/* Improved balance info */}
-        <div className="py-2 px-3 bg-[#0a141980]">
+        <div className="py-2 px-3 bg-app-secondary-80-solid">
           <div className="flex justify-between text-sm">
             <div>
-              <div className="text-[#7ddfbd] font-mono flex items-center gap-2">
-                <DollarSign size={14} className="text-[#02b36d]" />
+              <div className="text-app-secondary font-mono flex items-center gap-2">
+                <DollarSign size={14} className="color-primary" />
                 <span>
-                  <span className="text-[#e4fbf2]">{totalSol.toFixed(2)}</span> (
-                  <span className="text-[#02b36d]">{activeSol.toFixed(2)}</span>) SOL
+                  <span className="text-app-primary">{totalSol.toFixed(2)}</span> (
+                  <span className="color-primary">{activeSol.toFixed(2)}</span>) SOL
                 </span>
               </div>
             </div>
             {tokenAddress && (
               <div className="text-right">
-                <div className="text-[#7ddfbd] font-mono flex items-center justify-end gap-2">
+                <div className="text-app-secondary font-mono flex items-center justify-end gap-2">
                   <span>
-                    <span className="text-[#e4fbf2]">{formatTokenBalance(totalTokens)}</span> (
-                    <span className="text-[#02b36d]">{formatTokenBalance(activeTokens)}</span>) Tokens
+                    <span className="text-app-primary">{formatTokenBalance(totalTokens)}</span> (
+                    <span className="color-primary">{formatTokenBalance(activeTokens)}</span>) Tokens
                   </span>
-                  <Activity size={14} className="text-[#02b36d]" />
+                  <Activity size={14} className="color-primary" />
                 </div>
               </div>
             )}
@@ -390,11 +390,11 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   className={`
                     border-b transition-all duration-300 cursor-pointer group
                     ${wallet.isActive 
-                      ? 'border-[#02b36d60] bg-gradient-to-r from-[#02b36d20] via-[#02b36d15] to-[#02b36d10] border-l-4 border-l-[#02b36d] shadow-lg shadow-[#02b36d20]' 
-                      : 'border-[#02b36d15] hover:border-[#02b36d30]'
+                      ? 'border-app-primary-60 bg-gradient-to-r from-app-primary-20 via-primary-15 to-primary-10 border-l-4 border-l-app-primary shadow-lg shadow-app-primary-20' 
+                      : 'border-app-primary-15 hover-border-primary-30'
                     }
-                    ${hoverRow === wallet.id && !wallet.isActive ? 'bg-[#02b36d08] border-[#02b36d30]' : ''}
-                    ${recentlyUpdatedWallets.has(wallet.address) ? 'animate-pulse border-l-2 border-l-[#00ff88]' : ''}
+                    ${hoverRow === wallet.id && !wallet.isActive ? 'bg-primary-08 border-app-primary-30' : ''}
+                    ${recentlyUpdatedWallets.has(wallet.address) ? 'animate-pulse border-l-2 border-l-success' : ''}
                   `}
                 >
                   {/* Enhanced Selection Indicator */}
@@ -417,20 +417,20 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                             className={`
                               w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
                               ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
-                                ? 'bg-[#091217] border border-[#02b36d20] cursor-not-allowed opacity-50'
+                                ? 'bg-app-tertiary border border-app-primary-20 cursor-not-allowed opacity-50'
                                 : buyingWalletId === wallet.id
-                                ? 'bg-[#02b36d] border border-[#02b36d] shadow-lg shadow-[#02b36d40] animate-pulse'
-                                : 'bg-[#02b36d30] border border-[#02b36d80] hover:bg-[#02b36d] hover:border-[#02b36d] hover:shadow-lg hover:shadow-[#02b36d40] cursor-pointer'
+                                ? 'bg-app-primary-color border border-app-primary-color shadow-lg shadow-app-primary-40 animate-pulse'
+                                : 'bg-primary-30 border border-app-primary-80 hover:bg-app-primary-color hover-border-primary hover:shadow-lg hover:shadow-app-primary-40 cursor-pointer'
                               }
                             `}
                           >
                             {buyingWalletId === wallet.id ? (
-                              <RefreshCw size={10} className="text-[#051014] animate-spin" />
+                              <RefreshCw size={10} className="text-app-quaternary animate-spin" />
                             ) : (
                               <Zap size={10} className={`
                                 ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
-                                  ? 'text-[#02b36d40]'
-                                  : 'text-[#051014] group-hover:text-[#051014]'
+                                  ? 'text-app-primary-40'
+                                  : 'text-app-quaternary group-hover:text-app-quaternary'
                                 }
                               `} />
                             )}
@@ -450,8 +450,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         <span 
                           className={`text-sm font-mono cursor-pointer transition-all duration-300 tracking-wide font-medium
                             ${wallet.isActive 
-                              ? 'text-[#00ff88] drop-shadow-sm' 
-                              : 'text-[#e4fbf2] hover:text-[#02b36d]'
+                              ? 'text-success drop-shadow-sm' 
+                              : 'text-app-primary hover:color-primary'
                             }
                           `}
                           onClick={async (e) => {
@@ -465,7 +465,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         >
                           {getWalletDisplayName(wallet)}
                           {copiedAddress === wallet.address && (
-                            <span className="ml-2 text-xs text-[#02b36d] animate-pulse bg-[#02b36d20] px-1 py-0.5 rounded">
+                            <span className="ml-2 text-xs color-primary animate-pulse bg-primary-20 px-1 py-0.5 rounded">
                               ✓
                             </span>
                           )}
@@ -479,8 +479,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     <div className="flex items-center justify-end gap-1">
                       <span className={`font-medium transition-colors duration-300 ${
                         wallet.isActive
-                          ? ((solBalances.get(wallet.address) || 0) > 0 ? 'text-[#00ff88]' : 'text-[#ff6b6b]')
-                          : ((solBalances.get(wallet.address) || 0) > 0 ? 'text-[#7ddfbd]' : 'text-[#7ddfbd60]')
+                          ? ((solBalances.get(wallet.address) || 0) > 0 ? 'text-success' : 'text-warning')
+                          : ((solBalances.get(wallet.address) || 0) > 0 ? 'text-app-secondary' : 'text-app-secondary-60')
                       }`}>
                         {(solBalances.get(wallet.address) || 0).toFixed(3)}
                       </span>
@@ -493,8 +493,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                       <div className="flex items-center justify-end gap-1">
                         <span className={`font-medium transition-colors duration-300 ${
                           wallet.isActive
-                            ? ((tokenBalances.get(wallet.address) || 0) > 0 ? 'text-[#00ff88]' : 'text-[#ff6b6b40]')
-                            : ((tokenBalances.get(wallet.address) || 0) > 0 ? 'text-[#02b36d]' : 'text-[#02b36d40]')
+                            ? ((tokenBalances.get(wallet.address) || 0) > 0 ? 'text-success' : 'text-warning-60')
+                            : ((tokenBalances.get(wallet.address) || 0) > 0 ? 'color-primary' : 'text-app-primary-40')
                         }`}>
                           {formatTokenBalance(tokenBalances.get(wallet.address) || 0)}
                         </span>
@@ -512,8 +512,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                       className={`
                         transition-all duration-200 p-1 rounded
                         ${wallet.isActive 
-                          ? 'text-[#00ff88] hover:text-[#02b36d] hover:bg-[#02b36d20]' 
-                          : 'text-[#7ddfbd60] hover:text-[#02b36d] hover:bg-[#02b36d10]'
+                          ? 'text-success hover:color-primary hover-bg-primary-20' 
+                          : 'text-app-secondary-60 hover:color-primary hover:bg-primary-10'
                         }
                       `}
                     >

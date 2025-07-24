@@ -137,9 +137,9 @@ const IconButton: React.FC<{
   className?: string;
 }> = ({ icon, onClick, title, variant = 'primary', className = '' }) => {
   const variants = {
-    primary: 'bg-[#87D693]/20 hover:bg-[#87D693]/30 text-[#87D693]',
-    secondary: 'bg-neutral-800/40 hover:bg-neutral-700/50 text-white',
-    solid: 'bg-[#87D693] hover:bg-[#87D693]/90 text-black shadow-lg shadow-[#87D693]/25'
+    primary: 'bg-primary-20 hover:bg-primary-30 text-app-tertiary',
+    secondary: 'bg-app-secondary hover:bg-app-tertiary text-app-primary',
+    solid: 'bg-app-primary-color hover:bg-primary-90 text-app-primary shadow-app-primary-20'
   };
   
   return (
@@ -378,14 +378,14 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     <AnimatePresence>
       {loading && (
         <motion.div 
-          className="absolute inset-0 flex flex-col items-center justify-center bg-[#0f0f0f]/90 z-10"
+          className="absolute inset-0 flex flex-col items-center justify-center bg-app-primary-90 z-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
           <motion.div 
-            className="w-12 h-12 rounded-full border-2 border-t-transparent border-[#87D693]/30"
+            className="w-12 h-12 rounded-full border-2 border-t-transparent border-app-primary-30"
             variants={loaderVariants}
             animate="animate"
           />
@@ -438,31 +438,31 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         variants={pulseVariants}
         initial="initial"
         animate="animate" 
-        className="rounded-full bg-gradient-to-br from-[#1a1a1a] to-[#101010] p-4 mb-6"
+        className="rounded-full bg-gradient-to-br from-app-secondary to-app-primary p-4 mb-6"
       >
-        <Search className="h-10 w-10 text-gray-600 opacity-50" />
+        <Search className="h-10 w-10 text-app-muted opacity-50" />
       </motion.div>
       
       <motion.h3 
         variants={itemVariants}
-        className="text-lg font-medium text-gray-400 mb-2"
+        className="text-lg font-medium text-app-muted mb-2"
       >
         Set token address
       </motion.h3>
       
       <motion.p 
         variants={itemVariants}
-        className="text-gray-500 text-sm max-w-md text-center"
+        className="text-app-secondary-60 text-sm max-w-md text-center"
       >
         Enter a valid token address in the search bar above to view the token frame
       </motion.p>
       
       <motion.div
         variants={itemVariants}
-        className="mt-6 flex items-center gap-2 px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20"
+        className="mt-6 flex items-center gap-2 px-4 py-3 rounded-lg bg-primary-10 border border-app-primary-20"
       >
-        <AlertCircle size={16} className="text-green-400" />
-        <span className="text-green-300 text-sm">No token selected</span>
+        <AlertCircle size={16} className="color-primary-light" />
+        <span className="text-app-tertiary text-sm">No token selected</span>
       </motion.div>
     </motion.div>
   );
@@ -472,15 +472,14 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="relative w-full rounded-lg overflow-hidden h-full md:h-full min-h-[calc(100vh-4rem)] md:min-h-full"
+      className="relative w-full rounded-lg overflow-hidden h-full md:h-full min-h-[calc(100vh-4rem)] md:min-h-full bg-gradient-to-br from-app-primary to-app-secondary"
       style={{
-        background: "linear-gradient(145deg, #0f0f0f 0%, #141414 100%)",
         touchAction: 'manipulation',
         WebkitOverflowScrolling: 'touch'
       }}
     >
       {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a]/10 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-app-secondary-80 to-transparent pointer-events-none" />
       
 
       
@@ -491,7 +490,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
               animate={{ rotate: 360 }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
             >
-              <BarChart size={24} className="text-[#87D693]" />
+              <BarChart size={24} className="color-primary-light" />
             </motion.div>
           </div>
         ) : !tokenAddress ? (

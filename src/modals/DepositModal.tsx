@@ -203,9 +203,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   const modalStyleElement = document.createElement('style');
   modalStyleElement.textContent = `
     @keyframes modal-pulse {
-      0% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), 0 0 15px rgba(2, 179, 109, 0.2); }
-      50% { box-shadow: 0 0 15px rgba(2, 179, 109, 0.8), 0 0 25px rgba(2, 179, 109, 0.4); }
-      100% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), 0 0 15px rgba(2, 179, 109, 0.2); }
+      0% { box-shadow: 0 0 5px var(--color-primary-50), 0 0 15px var(--color-primary-20); }
+      50% { box-shadow: 0 0 15px var(--color-primary-80), 0 0 25px var(--color-primary-40); }
+      100% { box-shadow: 0 0 5px var(--color-primary-50), 0 0 15px var(--color-primary-20); }
     }
     
     @keyframes modal-fade-in {
@@ -239,7 +239,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       height: 5px;
       background: linear-gradient(to bottom, 
         transparent 0%,
-        rgba(2, 179, 109, 0.2) 50%,
+        var(--color-primary-20) 50%,
         transparent 100%);
       z-index: 10;
       animation: modal-scan-line 8s linear infinite;
@@ -251,7 +251,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     }
     
     .modal-input-cyberpunk:focus {
-      box-shadow: 0 0 0 1px rgba(2, 179, 109, 0.7), 0 0 15px rgba(2, 179, 109, 0.5);
+      box-shadow: 0 0 0 1px var(--color-primary-70), 0 0 15px var(--color-primary-50);
       transition: all 0.3s ease;
     }
     
@@ -270,9 +270,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       height: 200%;
       background: linear-gradient(
         to bottom right,
-        rgba(2, 179, 109, 0) 0%,
-        rgba(2, 179, 109, 0.3) 50%,
-        rgba(2, 179, 109, 0) 100%
+        transparent 0%,
+        var(--color-primary-30) 50%,
+        transparent 100%
       );
       transform: rotate(45deg);
       transition: all 0.5s ease;
@@ -303,7 +303,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(2, 179, 109, 0.7) 50%,
+        var(--color-primary-70) 50%,
         transparent 100%
       );
       width: 100%;
@@ -319,7 +319,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     }
     
     .glitch-text:hover {
-      text-shadow: 0 0 2px #02b36d, 0 0 4px #02b36d;
+      text-shadow: 0 0 2px var(--color-primary), 0 0 4px var(--color-primary);
       animation: glitch 2s infinite;
     }
     
@@ -333,39 +333,34 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   document.head.appendChild(modalStyleElement);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container" style={{backgroundColor: 'rgba(5, 10, 14, 0.85)'}}>
-      <div className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-md overflow-hidden transform modal-cyberpunk-content modal-glow">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container bg-app-primary-85">
+      <div className="relative bg-app-primary border border-app-primary-40 rounded-lg shadow-lg w-full max-w-md overflow-hidden transform modal-cyberpunk-content modal-glow">
         {/* Ambient grid background */}
-        <div className="absolute inset-0 z-0 opacity-10"
-             style={{
-               backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-               backgroundSize: '20px 20px',
-               backgroundPosition: 'center center',
-             }}>
+        <div className="absolute inset-0 z-0 opacity-10 bg-cyberpunk-grid">
         </div>
 
         {/* Header */}
-        <div className="relative z-10 p-4 flex justify-between items-center border-b border-[#02b36d40]">
+        <div className="relative z-10 p-4 flex justify-between items-center border-b border-app-primary-40">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
-              <DollarSign size={16} className="text-[#02b36d]" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary-20 mr-3">
+              <DollarSign size={16} className="color-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> DEPOSIT SOL <span className="text-[#02b36d]">/</span>
+            <h2 className="text-lg font-semibold text-app-primary font-mono">
+              <span className="color-primary">/</span> DEPOSIT SOL <span className="color-primary">/</span>
             </h2>
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
+            className="text-app-secondary hover:color-primary transition-colors p-1 hover:bg-primary-20 rounded"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Progress Indicator */}
-        <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
+        <div className="relative w-full h-1 bg-app-tertiary progress-bar-cyberpunk">
           <div 
-            className="h-full bg-[#02b36d] transition-all duration-300"
+            className="h-full bg-app-primary-color transition-all duration-300"
             style={{ width: currentStep === 0 ? '50%' : '100%' }}
           ></div>
         </div>
@@ -377,7 +372,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               <div>
                 <button
                   onClick={connectPhantomWallet}
-                  className="w-full px-4 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] text-[#e4fbf2] rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-[#02b36d40] transform hover:-translate-y-0.5 modal-btn-cyberpunk"
+                  className="w-full px-4 py-3 bg-app-tertiary border border-app-primary-40 hover-border-primary text-app-primary rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-app-primary-40 transform hover:-translate-y-0.5 modal-btn-cyberpunk"
                 >
                   <svg width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect width="128" height="128" rx="64" fill="#050a0e"/>
@@ -393,8 +388,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   <span className="font-mono tracking-wider">CONNECT PHANTOM</span>
                 </button>
                 {publicKey && (
-                  <div className="mt-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30] text-sm font-mono text-[#e4fbf2] break-all shadow-inner animate-[fadeIn_0.3s_ease]">
-                    <div className="text-xs text-[#7ddfbd] mb-1 font-mono uppercase">Connected:</div>
+                  <div className="mt-3 p-3 bg-app-tertiary rounded-lg border border-app-primary-30 text-sm font-mono text-app-primary break-all shadow-inner animate-[fadeIn_0.3s_ease]">
+                    <div className="text-xs text-app-secondary mb-1 font-mono uppercase">Connected:</div>
                     {publicKey}
                   </div>
                 )}
@@ -402,13 +397,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               
               <div className="group mt-5">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Select Recipient <span className="text-[#02b36d]">&#60;</span>
+                  <label className="text-sm font-medium text-app-secondary group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                    <span className="color-primary">&#62;</span> Select Recipient <span className="color-primary">&#60;</span>
                   </label>
                   {selectedWallet && (
                     <div className="flex items-center gap-1 text-xs">
-                      <DollarSign size={10} className="text-[#7ddfbd]" />
-                      <span className="text-[#02b36d] font-medium font-mono">
+                      <DollarSign size={10} className="text-app-secondary" />
+                      <span className="color-primary font-medium font-mono">
                         {formatSolBalance(getWalletBalance(selectedWallet))} SOL
                       </span>
                     </div>
@@ -418,18 +413,18 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 {/* Search, Sort, and Filter Options */}
                 <div className="mb-2 flex space-x-2">
                   <div className="relative flex-grow">
-                    <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7ddfbd]" />
+                    <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-secondary" />
                     <input
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                      className="w-full pl-9 pr-4 py-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-sm text-app-primary focus:outline-none focus-border-primary transition-all modal-input-cyberpunk font-mono"
                       placeholder="SEARCH WALLETS..."
                     />
                   </div>
                   
                   <select 
-                    className="bg-[#091217] border border-[#02b36d30] rounded-lg px-2 text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                    className="bg-app-tertiary border border-app-primary-30 rounded-lg px-2 text-sm text-app-primary focus:outline-none focus-border-primary modal-input-cyberpunk font-mono"
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value)}
                   >
@@ -438,62 +433,62 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   </select>
                   
                   <button
-                    className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] transition-all modal-btn-cyberpunk"
+                    className="p-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-secondary hover:color-primary hover-border-primary transition-all modal-btn-cyberpunk"
                     onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                   >
                     {sortDirection === 'asc' ? '↑' : '↓'}
                   </button>
                 </div>
 
-                <div className="max-h-40 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 group-hover:border-[#02b36d40] scrollbar-thin">
+                <div className="max-h-40 overflow-y-auto border border-app-primary-20 rounded-lg shadow-inner bg-app-tertiary transition-all duration-200 group-hover:border-app-primary-40 scrollbar-thin">
                   {filterWallets(wallets, searchTerm).length > 0 ? (
                     filterWallets(wallets, searchTerm).map((wallet) => (
                       <div 
                         key={wallet.id}
-                        className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer transition-all duration-200 border-b border-[#02b36d20] last:border-b-0
-                                  ${selectedWallet === wallet.address ? 'bg-[#02b36d10] border-[#02b36d30]' : ''}`}
+                        className={`flex items-center p-2.5 hover:bg-app-secondary cursor-pointer transition-all duration-200 border-b border-app-primary-20 last:border-b-0
+                                  ${selectedWallet === wallet.address ? 'bg-primary-10 border-app-primary-30' : ''}`}
                         onClick={() => setSelectedWallet(wallet.address)}
                       >
                         <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center transition-all duration-300
                                         ${selectedWallet === wallet.address
-                                          ? 'bg-[#02b36d] shadow-md shadow-[#02b36d40]' 
-                                          : 'border border-[#02b36d30] bg-[#091217]'}`}>
+                                          ? 'bg-app-primary-color shadow-md shadow-app-primary-40' 
+                                          : 'border border-app-primary-30 bg-app-tertiary'}`}>
                           {selectedWallet === wallet.address && (
-                            <CheckCircle size={14} className="text-[#050a0e] animate-[fadeIn_0.2s_ease]" />
+                            <CheckCircle size={14} className="text-app-primary animate-[fadeIn_0.2s_ease]" />
                           )}
                         </div>
                         <div className="flex-1 flex flex-col">
-                          <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
+                          <span className="font-mono text-sm text-app-primary glitch-text">{getWalletDisplayName(wallet)}</span>
                           <div className="flex items-center mt-0.5">
-                            <DollarSign size={12} className="text-[#7ddfbd] mr-1" />
-                            <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
+                            <DollarSign size={12} className="text-app-secondary mr-1" />
+                            <span className="text-xs text-app-secondary font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
                           </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="p-3 text-sm text-[#7ddfbd] text-center font-mono">
+                    <div className="p-3 text-sm text-app-secondary text-center font-mono">
                       {searchTerm ? "NO WALLETS FOUND" : "NO WALLETS AVAILABLE"}
                     </div>
                   )}
                 </div>
                 {selectedWallet && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium pl-1">
-                    <span className="text-[#7ddfbd] font-mono">CURRENT BALANCE:</span>
-                    <span className="text-[#02b36d] font-semibold font-mono">{formatSolBalance(getWalletBalance(selectedWallet) || 0)} SOL</span>
+                    <span className="text-app-secondary font-mono">CURRENT BALANCE:</span>
+                    <span className="color-primary font-semibold font-mono">{formatSolBalance(getWalletBalance(selectedWallet) || 0)} SOL</span>
                   </div>
                 )}
               </div>
               
               <div className="group mt-5">
                 <div className="flex items-center gap-1 mb-2">
-                  <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> Amount (SOL) <span className="text-[#02b36d]">&#60;</span>
+                  <label className="text-sm font-medium text-app-secondary group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                    <span className="color-primary">&#62;</span> Amount (SOL) <span className="color-primary">&#60;</span>
                   </label>
                   <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
-                    <Info size={14} className="text-[#7ddfbd] cursor-help" />
+                    <Info size={14} className="text-app-secondary cursor-help" />
                     {showInfoTip && (
-                      <div className="absolute left-0 bottom-full mb-2 p-2 bg-[#091217] border border-[#02b36d30] rounded shadow-lg text-xs text-[#e4fbf2] w-48 z-10 font-mono">
+                      <div className="absolute left-0 bottom-full mb-2 p-2 bg-app-tertiary border border-app-primary-30 rounded shadow-lg text-xs text-app-primary w-48 z-10 font-mono">
                         Enter the amount of SOL to deposit
                       </div>
                     )}
@@ -509,15 +504,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                         setAmount(value);
                       }
                     }}
-                    className="w-full px-4 py-2.5 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                    className="w-full px-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary shadow-inner focus-border-primary focus:ring-1 focus:ring-primary-50 focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
                     placeholder="ENTER AMOUNT TO DEPOSIT"
                   />
-                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-[#02b36d30] transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-lg pointer-events-none border border-transparent group-hover:border-app-primary-30 transition-all duration-300"></div>
                 </div>
                 {selectedWallet && amount && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium pl-1">
-                    <span className="text-[#7ddfbd] font-mono">NEW BALANCE AFTER DEPOSIT:</span>
-                    <span className="text-[#02b36d] font-semibold font-mono">
+                    <span className="text-app-secondary font-mono">NEW BALANCE AFTER DEPOSIT:</span>
+                    <span className="color-primary font-semibold font-mono">
                       {(parseFloat(formatSolBalance(getWalletBalance(selectedWallet) || 0)) + parseFloat(amount || '0')).toFixed(4)} SOL
                     </span>
                   </div>
@@ -527,17 +522,17 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={onClose}
-                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                  className="px-5 py-2.5 text-app-primary bg-app-tertiary border border-app-primary-30 hover:bg-app-secondary hover-border-primary rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                 >
                   CANCEL
                 </button>
                 <button
                   onClick={() => setCurrentStep(1)}
                   disabled={!publicKey || !selectedWallet || !amount}
-                  className={`px-5 py-2.5 text-[#050a0e] rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider 
+                  className={`px-5 py-2.5 text-app-primary rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider 
                             ${!publicKey || !selectedWallet || !amount
-                              ? 'bg-[#02b36d50] cursor-not-allowed opacity-50' 
-                              : 'bg-[#02b36d] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                              ? 'bg-primary-50 cursor-not-allowed opacity-50' 
+                              : 'bg-app-primary-color hover:bg-app-primary-dark transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
                 >
                   <span>REVIEW</span>
                   <ChevronRight size={16} className="ml-1" />
@@ -549,37 +544,37 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           {currentStep === 1 && (
             <div className="animate-[fadeIn_0.3s_ease]">
               {/* Review Summary */}
-              <div className="bg-[#091217] border border-[#02b36d30] rounded-lg p-4 mb-5">
-                <h3 className="text-base font-semibold text-[#e4fbf2] mb-3 font-mono tracking-wider">TRANSACTION SUMMARY</h3>
+              <div className="bg-app-tertiary border border-app-primary-30 rounded-lg p-4 mb-5">
+                <h3 className="text-base font-semibold text-app-primary mb-3 font-mono tracking-wider">TRANSACTION SUMMARY</h3>
                 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">FROM:</span>
-                    <div className="flex items-center bg-[#0a1419] px-2 py-1 rounded border border-[#02b36d20]">
-                      <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(publicKey)}</span>
+                    <span className="text-sm text-app-secondary font-mono">FROM:</span>
+                    <div className="flex items-center bg-app-secondary px-2 py-1 rounded border border-app-primary-20">
+                      <span className="text-sm font-mono text-app-primary glitch-text">{formatAddress(publicKey)}</span>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">TO WALLET:</span>
-                    <div className="flex items-center bg-[#0a1419] px-2 py-1 rounded border border-[#02b36d20]">
-                      <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(selectedWallet)}</span>
+                    <span className="text-sm text-app-secondary font-mono">TO WALLET:</span>
+                    <div className="flex items-center bg-app-secondary px-2 py-1 rounded border border-app-primary-20">
+                      <span className="text-sm font-mono text-app-primary glitch-text">{formatAddress(selectedWallet)}</span>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">RECIPIENT BALANCE:</span>
-                    <span className="text-sm text-[#e4fbf2] font-mono">{formatSolBalance(getWalletBalance(selectedWallet) || 0)} SOL</span>
+                    <span className="text-sm text-app-secondary font-mono">RECIPIENT BALANCE:</span>
+                    <span className="text-sm text-app-primary font-mono">{formatSolBalance(getWalletBalance(selectedWallet) || 0)} SOL</span>
                   </div>
                   
-                  <div className="pt-2 border-t border-[#02b36d20] flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#7ddfbd] font-mono">AMOUNT TO DEPOSIT:</span>
-                    <span className="text-sm font-semibold text-[#02b36d] font-mono">{parseFloat(amount).toFixed(4)} SOL</span>
+                  <div className="pt-2 border-t border-app-primary-20 flex items-center justify-between">
+                    <span className="text-sm font-medium text-app-secondary font-mono">AMOUNT TO DEPOSIT:</span>
+                    <span className="text-sm font-semibold color-primary font-mono">{parseFloat(amount).toFixed(4)} SOL</span>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#7ddfbd] font-mono">NEW BALANCE:</span>
-                    <span className="text-sm text-[#e4fbf2] font-mono">
+                    <span className="text-sm text-app-secondary font-mono">NEW BALANCE:</span>
+                    <span className="text-sm text-app-primary font-mono">
                       {(getWalletBalance(selectedWallet) + parseFloat(amount)).toFixed(4)} SOL
                     </span>
                   </div>
@@ -588,16 +583,16 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               
               {/* Confirmation Checkbox */}
               <div 
-                className="flex items-center px-3 py-3 bg-[#091217] rounded-lg border border-[#02b36d30] mb-5 cursor-pointer"
+                className="flex items-center px-3 py-3 bg-app-tertiary rounded-lg border border-app-primary-30 mb-5 cursor-pointer"
                 onClick={() => setIsConfirmed(!isConfirmed)}
               >
                 <div className="relative mx-1">
                   <div 
-                    className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                    className={`w-5 h-5 border border-app-primary-40 rounded transition-all ${isConfirmed ? 'bg-app-primary-color border-0' : ''}`}
                   ></div>
-                  <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                  <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-app-primary transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                 </div>
-                <span className="text-[#e4fbf2] text-sm ml-2 select-none font-mono">
+                <span className="text-app-primary text-sm ml-2 select-none font-mono">
                   I CONFIRM THIS DEPOSIT TRANSACTION
                 </span>
               </div>
@@ -606,7 +601,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setCurrentStep(0)}
-                  className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                  className="px-5 py-2.5 text-app-primary bg-app-tertiary border border-app-primary-30 hover:bg-app-secondary hover-border-primary rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
                 >
                   BACK
                 </button>
@@ -615,12 +610,12 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   disabled={!isConfirmed || isSubmitting}
                   className={`px-5 py-2.5 rounded-lg shadow-lg flex items-center transition-all duration-300 font-mono tracking-wider
                             ${!isConfirmed || isSubmitting
-                              ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                              : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                              ? 'bg-primary-50 text-app-primary-80 cursor-not-allowed opacity-50' 
+                              : 'bg-app-primary-color text-app-primary hover:bg-app-primary-dark transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                      <div className="h-4 w-4 rounded-full border-2 border-app-primary-80 border-t-transparent animate-spin mr-2"></div>
                       PROCESSING...
                     </>
                   ) : (
@@ -633,10 +628,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({
         </div>
         
         {/* Cyberpunk decorative corner elements */}
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#02b36d] opacity-70"></div>
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-app-primary opacity-70"></div>
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-app-primary opacity-70"></div>
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-app-primary opacity-70"></div>
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-app-primary opacity-70"></div>
       </div>
     </div>,
     document.body

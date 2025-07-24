@@ -524,9 +524,9 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
   const modalStyleElement = document.createElement('style');
   modalStyleElement.textContent = `
     @keyframes modal-pulse {
-      0% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), 0 0 15px rgba(2, 179, 109, 0.2); }
-      50% { box-shadow: 0 0 15px rgba(2, 179, 109, 0.8), 0 0 25px rgba(2, 179, 109, 0.4); }
-      100% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), 0 0 15px rgba(2, 179, 109, 0.2); }
+      0% { box-shadow: 0 0 5px var(--color-primary-50), 0 0 15px var(--color-primary-20); }
+      50% { box-shadow: 0 0 15px var(--color-primary-80), 0 0 25px var(--color-primary-40); }
+      100% { box-shadow: 0 0 5px var(--color-primary-50), 0 0 15px var(--color-primary-20); }
     }
     
     @keyframes modal-fade-in {
@@ -560,7 +560,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       height: 5px;
       background: linear-gradient(to bottom, 
         transparent 0%,
-        rgba(2, 179, 109, 0.2) 50%,
+        var(--color-primary-20) 50%,
         transparent 100%);
       z-index: 10;
       animation: modal-scan-line 8s linear infinite;
@@ -572,7 +572,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
     }
     
     .modal-input-cyberpunk:focus {
-      box-shadow: 0 0 0 1px rgba(2, 179, 109, 0.7), 0 0 15px rgba(2, 179, 109, 0.5);
+      box-shadow: 0 0 0 1px var(--color-primary-70), 0 0 15px var(--color-primary-50);
       transition: all 0.3s ease;
     }
     
@@ -591,9 +591,9 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       height: 200%;
       background: linear-gradient(
         to bottom right,
-        rgba(2, 179, 109, 0) 0%,
-        rgba(2, 179, 109, 0.3) 50%,
-        rgba(2, 179, 109, 0) 100%
+        transparent 0%,
+        var(--color-primary-30) 50%,
+        transparent 100%
       );
       transform: rotate(45deg);
       transition: all 0.5s ease;
@@ -624,7 +624,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(2, 179, 109, 0.7) 50%,
+        var(--color-primary-70) 50%,
         transparent 100%
       );
       width: 100%;
@@ -640,7 +640,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
     }
     
     .glitch-text:hover {
-      text-shadow: 0 0 2px #02b36d, 0 0 4px #02b36d;
+      text-shadow: 0 0 2px var(--color-primary), 0 0 4px var(--color-primary);
       animation: glitch 2s infinite;
     }
     
@@ -664,8 +664,8 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
       left: 0;
       width: 100%;
       height: 2px;
-      background: #02b36d;
-      box-shadow: 0 0 10px #02b36d, 0 0 20px #02b36d;
+      background: var(--color-primary);
+      box-shadow: 0 0 10px var(--color-primary), 0 0 20px var(--color-primary);
     }
     
     /* Cyberpunk scrollbar */
@@ -675,17 +675,17 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
     }
     
     .cyberpunk-scrollbar::-webkit-scrollbar-track {
-      background: #091217;
+      background: var(--color-bg-tertiary);
       border-radius: 3px;
     }
     
     .cyberpunk-scrollbar::-webkit-scrollbar-thumb {
-      background: #02b36d50;
+      background: var(--color-primary-50);
       border-radius: 3px;
     }
     
     .cyberpunk-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #02b36d;
+      background: var(--color-primary);
     }
     
     /* Responsive styles */
@@ -709,39 +709,33 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
   document.head.appendChild(modalStyleElement);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container" style={{backgroundColor: 'rgba(5, 10, 14, 0.85)'}}>
-      <div className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-6xl overflow-hidden transform modal-cyberpunk-content modal-glow">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container bg-app-primary-85">
+      <div className="relative bg-app-primary border border-app-primary-40 rounded-lg shadow-lg w-full max-w-6xl overflow-hidden transform modal-cyberpunk-content modal-glow">
         {/* Ambient grid background */}
-        <div className="absolute inset-0 z-0 opacity-10"
-             style={{
-               backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-               backgroundSize: '20px 20px',
-               backgroundPosition: 'center center',
-             }}>
-        </div>
+        <div className="absolute inset-0 z-0 opacity-10 bg-cyberpunk-grid"></div>
 
         {/* Header */}
-        <div className="relative z-10 p-4 flex justify-between items-center border-b border-[#02b36d40]">
+        <div className="relative z-10 p-4 flex justify-between items-center border-b border-app-primary-40">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
-              <ArrowDown size={16} className="text-[#02b36d]" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary-20 mr-3">
+              <ArrowDown size={16} className="text-app-primary color-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> MULTI-WALLET TOKEN OPERATIONS <span className="text-[#02b36d]">/</span>
+            <h2 className="text-lg font-semibold text-app-primary font-mono">
+              <span className="color-primary">/</span> MULTI-WALLET TOKEN OPERATIONS <span className="color-primary">/</span>
             </h2>
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
+            className="text-app-secondary hover:color-primary transition-colors p-1 hover:bg-primary-20 rounded"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Progress Indicator */}
-        <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
+        <div className="relative w-full h-1 bg-app-tertiary progress-bar-cyberpunk">
           <div 
-            className="h-full bg-[#02b36d] transition-all duration-300"
+            className="h-full bg-app-primary-color transition-all duration-300"
             style={{ width: `${((currentStep + 1) / STEPS_BUYSELL.length) * 100}%` }}
           ></div>
         </div>
@@ -753,9 +747,9 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
             {currentStep === 0 && (
               <div className="animate-[fadeIn_0.3s_ease]">
                 <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-[#02b36d20]">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary-20">
                     <svg
-                      className="w-4 h-4 text-[#02b36d]"
+                      className="w-4 h-4 color-primary"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -765,7 +759,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       <path d="M16 10h2M6 14h12" />
                     </svg>
                   </div>
-                  <h3 className="text-base md:text-lg font-medium text-[#e4fbf2] font-mono tracking-wide">
+                  <h3 className="text-base md:text-lg font-medium text-app-primary font-mono tracking-wide">
                     CONFIGURE SELLERS
                   </h3>
                 </div>
@@ -776,18 +770,18 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                     {/* Seller Search and Filters */}
                     <div className="mb-2 flex flex-wrap gap-2">
                       <div className="relative flex-grow">
-                        <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7ddfbd]" />
+                        <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-secondary" />
                         <input
                           type="text"
                           value={sellerSearchTerm}
                           onChange={(e) => setSellerSearchTerm(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                          className="w-full pl-9 pr-4 py-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-sm text-app-primary focus:outline-none focus:border-app-primary transition-all modal-input-cyberpunk font-mono"
                           placeholder="SEARCH WALLETS..."
                         />
                       </div>
                       
                       <select 
-                        className="bg-[#091217] border border-[#02b36d30] rounded-lg px-2 text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                        className="bg-app-tertiary border border-app-primary-30 rounded-lg px-2 text-sm text-app-primary focus:outline-none focus:border-app-primary modal-input-cyberpunk font-mono"
                         value={sortOption}
                         onChange={(e) => setSortOption(e.target.value)}
                       >
@@ -798,14 +792,14 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       
                       <button
                         type="button"
-                        className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] transition-all modal-btn-cyberpunk"
+                        className="p-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-secondary hover:color-primary hover:border-app-primary transition-all modal-btn-cyberpunk"
                         onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                       >
                         {sortDirection === 'asc' ? '↑' : '↓'}
                       </button>
                       
                       <select 
-                        className="bg-[#091217] border border-[#02b36d30] rounded-lg px-2 text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                        className="bg-app-tertiary border border-app-primary-30 rounded-lg px-2 text-sm text-app-primary focus:outline-none focus:border-app-primary modal-input-cyberpunk font-mono"
                         value={balanceFilter}
                         onChange={(e) => setBalanceFilter(e.target.value)}
                       >
@@ -817,35 +811,35 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       </select>
                     </div>
                     
-                    <div className="max-h-60 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 hover:border-[#02b36d40] cyberpunk-scrollbar">
+                    <div className="max-h-60 overflow-y-auto border border-app-primary-20 rounded-lg shadow-inner bg-app-tertiary transition-all duration-200 hover:border-app-primary-40 cyberpunk-scrollbar">
                       {filterWallets(getAvailableSellerWallets(), sellerSearchTerm).length > 0 ? (
                         filterWallets(getAvailableSellerWallets(), sellerSearchTerm).map((wallet) => (
                           <div
                             key={wallet.id}
                             onClick={() => addSeller(wallet.privateKey)}
-                            className="flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer border-b border-[#02b36d20] last:border-b-0 transition-all duration-150"
+                            className="flex items-center p-2.5 hover:bg-app-secondary cursor-pointer border-b border-app-primary-20 last:border-b-0 transition-all duration-150"
                           >
-                            <div className="w-5 h-5 rounded flex items-center justify-center border border-[#02b36d30] bg-[#091217] mr-2">
-                              <Plus size={10} className="text-[#02b36d]" />
+                            <div className="w-5 h-5 rounded flex items-center justify-center border border-app-primary-30 bg-app-tertiary mr-2">
+                              <Plus size={10} className="color-primary" />
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between items-center">
-                                <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
+                                <span className="font-mono text-sm text-app-primary glitch-text">{getWalletDisplayName(wallet)}</span>
                                 <div className="flex items-center space-x-2">
-                                  <span className={`text-xs ${hasInsufficientSOL(wallet.address) ? 'text-red-400' : 'text-[#7ddfbd]'} font-mono`}>
+                                  <span className={`text-xs ${hasInsufficientSOL(wallet.address) ? 'text-red-400' : 'text-app-secondary'} font-mono`}>
                                     {formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL
                                     {hasInsufficientSOL(wallet.address) && (
                                       <span className="ml-1">⚠️</span>
                                     )}
                                   </span>
-                                  <span className="text-xs text-[#02b36d] font-mono">{formatTokenBalance(getWalletTokenBalance(wallet.address) || 0)} TOKENS</span>
+                                  <span className="text-xs color-primary font-mono">{formatTokenBalance(getWalletTokenBalance(wallet.address) || 0)} TOKENS</span>
                                 </div>
                               </div>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="p-3 text-sm text-[#7ddfbd] text-center font-mono">
+                        <div className="p-3 text-sm text-app-secondary text-center font-mono">
                           {sellerSearchTerm ? "NO WALLETS FOUND MATCHING FILTERS" : "NO WALLETS AVAILABLE WITH TOKEN BALANCE"}
                         </div>
                       )}
@@ -855,48 +849,48 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                   {/* Right Side - Selected Sellers */}
                   <div className="w-full md:w-1/2 cyberpunk-column">
                     <div className="mb-2 flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-[#7ddfbd] font-mono tracking-wider">
-                        <span className="text-[#02b36d]">&#62;</span> SELECTED SELLERS <span className="text-[#02b36d]">&#60;</span>
+                      <h4 className="text-sm font-medium text-app-secondary font-mono tracking-wider">
+                        <span className="color-primary">&#62;</span> SELECTED SELLERS <span className="color-primary">&#60;</span>
                       </h4>
-                      <span className="text-xs text-[#7ddfbd] font-mono">{sellers.length} SELLER(S) SELECTED</span>
+                      <span className="text-xs text-app-secondary font-mono">{sellers.length} SELLER(S) SELECTED</span>
                     </div>
                     
                     {/* List of selected sellers */}
-                    <div className="max-h-60 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 hover:border-[#02b36d40] cyberpunk-scrollbar">
+                    <div className="max-h-60 overflow-y-auto border border-app-primary-20 rounded-lg shadow-inner bg-app-tertiary transition-all duration-200 hover:border-app-primary-40 cyberpunk-scrollbar">
                       {sellers.length > 0 ? (
                         sellers.map((seller, index) => {
                           const sellerAddress = getWalletByPrivateKey(seller.privateKey)?.address || '';
                           const lowSOL = hasInsufficientSOL(sellerAddress);
                           
                           return (
-                            <div key={index} className={`p-3 border-b border-[#02b36d20] last:border-b-0 ${lowSOL ? 'bg-[#5f020230]' : ''}`}>
+                            <div key={index} className={`p-3 border-b border-app-primary-20 last:border-b-0 ${lowSOL ? 'bg-error-alt-20' : ''}`}>
                               <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center">
-                                  <div className={`w-5 h-5 rounded-full ${lowSOL ? 'bg-[#5f0202]' : 'bg-[#02b36d20]'} flex items-center justify-center mr-2`}>
+                                  <div className={`w-5 h-5 rounded-full ${lowSOL ? 'bg-error-alt' : 'bg-primary-20'} flex items-center justify-center mr-2`}>
                                     {lowSOL ? (
                                       <Info size={12} className="text-red-400" />
                                     ) : (
-                                      <CheckCircle size={12} className="text-[#02b36d]" />
+                                      <CheckCircle size={12} className="color-primary" />
                                     )}
                                   </div>
-                                  <span className="font-mono text-sm text-[#e4fbf2] glitch-text">
+                                  <span className="font-mono text-sm text-app-primary glitch-text">
                                     {formatAddress(sellerAddress)}
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-3">
                                   <div className="flex items-center space-x-2">
-                                    <span className={`text-xs ${lowSOL ? 'text-red-400' : 'text-[#7ddfbd]'} font-mono`}>
+                                    <span className={`text-xs ${lowSOL ? 'text-red-400' : 'text-app-secondary'} font-mono`}>
                                       {formatSolBalance(getWalletBalance(sellerAddress) || 0)} SOL
                                       {lowSOL && <span className="ml-1">⚠️</span>}
                                     </span>
-                                    <span className="text-xs text-[#02b36d] font-mono">
+                                    <span className="text-xs color-primary font-mono">
                                       {formatTokenBalance(getWalletTokenBalance(sellerAddress) || 0)} TOKENS
                                     </span>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => removeSeller(index)}
-                                    className="text-[#7ddfbd50] hover:text-red-400 transition-colors"
+                                    className="text-app-muted hover:text-red-400 transition-colors"
                                   >
                                     <Trash2 size={14} />
                                   </button>
@@ -905,7 +899,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                               
                               {/* Sell percentage input */}
                               <div className="flex items-center mt-2">
-                                <div className="text-xs text-[#7ddfbd] mr-2 w-24 font-mono">SELL PERCENTAGE:</div>
+                                <div className="text-xs text-app-secondary mr-2 w-24 font-mono">SELL PERCENTAGE:</div>
                                 <div className="relative flex-1">
                                   <input
                                     type="text"
@@ -916,17 +910,17 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                         updateSellerPercentage(index, value);
                                       }
                                     }}
-                                    className="w-full pl-2 pr-8 py-1 bg-[#091217] border border-[#02b36d30] rounded text-[#e4fbf2] text-sm focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                                    className="w-full pl-2 pr-8 py-1 bg-app-tertiary border border-app-primary-30 rounded text-app-primary text-sm focus:outline-none focus:border-app-primary modal-input-cyberpunk font-mono"
                                   />
                                   <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                    <span className="text-xs text-[#7ddfbd] font-mono">%</span>
+                                    <span className="text-xs text-app-secondary font-mono">%</span>
                                   </div>
                                 </div>
                               </div>
                               
                               {/* Estimated SOL value display */}
                               {seller.estimatedSolValue > 0 && (
-                                <div className="mt-2 p-1.5 bg-[#02b36d20] border border-[#02b36d30] rounded text-xs text-[#02b36d] font-mono">
+                                <div className="mt-2 p-1.5 bg-primary-20 border border-app-primary-30 rounded text-xs color-primary font-mono">
                                   <div className="flex items-center justify-between">
                                     <span>ESTIMATED SOL VALUE:</span>
                                     <span className="font-bold">{seller.estimatedSolValue.toFixed(6)} SOL</span>
@@ -936,7 +930,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                               
                               {/* Warning for low SOL */}
                               {lowSOL && (
-                                <div className="mt-2 p-1.5 bg-[#5f020230] border border-[#5f020250] rounded text-xs text-red-400 font-mono">
+                                <div className="mt-2 p-1.5 bg-error-alt-20 border border-error-alt-40 rounded text-xs text-red-400 font-mono">
                                   <div className="flex items-center">
                                     <Info size={10} className="mr-1" />
                                     <span>INSUFFICIENT SOL BALANCE FOR TRANSACTION</span>
@@ -947,17 +941,17 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                           );
                         })
                       ) : (
-                        <div className="p-4 text-sm text-[#7ddfbd] text-center font-mono">
+                        <div className="p-4 text-sm text-app-secondary text-center font-mono">
                           NO SELLERS SELECTED. CLICK ON A WALLET FROM THE LEFT TO ADD IT AS A SELLER.
                         </div>
                       )}
                     </div>
                     
                     {/* Token info */}
-                    <div className="mt-4 p-3 bg-[#091217] rounded-lg border border-[#02b36d30]">
+                    <div className="mt-4 p-3 bg-app-tertiary rounded-lg border border-app-primary-30">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-[#7ddfbd] font-mono">TOKEN ADDRESS:</span>
-                        <span className="text-sm font-mono text-[#e4fbf2] glitch-text">{formatAddress(tokenAddress)}</span>
+                        <span className="text-sm text-app-secondary font-mono">TOKEN ADDRESS:</span>
+                        <span className="text-sm font-mono text-app-primary glitch-text">{formatAddress(tokenAddress)}</span>
                       </div>
                     </div>
                   </div>
@@ -969,9 +963,9 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
             {currentStep === 1 && (
               <div className="animate-[fadeIn_0.3s_ease]">
                 <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-[#02b36d20]">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary-20">
                     <svg
-                      className="w-4 h-4 text-[#02b36d]"
+                      className="w-4 h-4 color-primary"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -980,13 +974,13 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       <path d="M12 4v16m8-8H4" />
                     </svg>
                   </div>
-                  <h3 className="text-base md:text-lg font-medium text-[#e4fbf2] font-mono tracking-wide">
+                  <h3 className="text-base md:text-lg font-medium text-app-primary font-mono tracking-wide">
                     CONFIGURE BUYERS
                   </h3>
                 </div>
 
                 {/* Seller tabs */}
-                <div className="mb-4 border-b border-[#02b36d30] overflow-x-auto cyberpunk-scrollbar">
+                <div className="mb-4 border-b border-app-primary-30 overflow-x-auto cyberpunk-scrollbar">
                   <div className="flex pb-1 min-w-max">
                     {sellers.map((seller, index) => {
                       const sellerAddress = getWalletByPrivateKey(seller.privateKey)?.address || '';
@@ -999,8 +993,8 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                           onClick={() => setCurrentSellerIndex(index)}
                           className={`px-3 py-2 rounded-t-lg text-sm whitespace-nowrap cyberpunk-tab font-mono ${
                             currentSellerIndex === index 
-                              ? 'bg-[#091217] text-[#e4fbf2] border-t border-l border-r border-[#02b36d40] cyberpunk-tab-active' 
-                              : 'text-[#7ddfbd] hover:text-[#e4fbf2]'
+                              ? 'bg-app-tertiary text-app-primary border-t border-l border-r border-app-primary-40 cyberpunk-tab-active' 
+                              : 'text-app-secondary hover:text-app-primary'
                           } ${lowSOL ? 'text-red-400' : ''}`}
                         >
                           SELLER {index + 1}: {formatAddress(sellerAddress)}
@@ -1016,28 +1010,28 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                     {/* Left Side - Buyer Selection */}
                     <div className="w-full md:w-1/2 cyberpunk-column">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium text-[#7ddfbd] font-mono tracking-wider">
-                          <span className="text-[#02b36d]">&#62;</span> SELECT BUYERS FOR SELLER {currentSellerIndex + 1} <span className="text-[#02b36d]">&#60;</span>
+                        <h4 className="text-sm font-medium text-app-secondary font-mono tracking-wider">
+                          <span className="color-primary">&#62;</span> SELECT BUYERS FOR SELLER {currentSellerIndex + 1} <span className="color-primary">&#60;</span>
                         </h4>
-                        <span className="text-xs text-[#7ddfbd] font-mono">
+                        <span className="text-xs text-app-secondary font-mono">
                           {sellers[currentSellerIndex].buyers.length} BUYER(S)
                         </span>
                       </div>
                       
                       {/* Buyer Search */}
                       <div className="mb-2 relative">
-                        <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7ddfbd]" />
+                        <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-secondary" />
                         <input
                           type="text"
                           value={buyerSearchTerm}
                           onChange={(e) => setBuyerSearchTerm(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                          className="w-full pl-9 pr-4 py-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-sm text-app-primary focus:outline-none focus:border-app-primary transition-all modal-input-cyberpunk font-mono"
                           placeholder="SEARCH BUYER WALLETS..."
                         />
                       </div>
                       
                       {/* Buyer list */}
-                      <div className="max-h-60 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 hover:border-[#02b36d40] cyberpunk-scrollbar">
+                      <div className="max-h-60 overflow-y-auto border border-app-primary-20 rounded-lg shadow-inner bg-app-tertiary transition-all duration-200 hover:border-app-primary-40 cyberpunk-scrollbar">
                         {filterWallets(
                           getAvailableBuyerWallets(sellers[currentSellerIndex].privateKey), 
                           buyerSearchTerm
@@ -1049,18 +1043,18 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                             <div
                               key={wallet.id}
                               onClick={() => addBuyer(currentSellerIndex, wallet.privateKey)}
-                              className="flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer border-b border-[#02b36d20] last:border-b-0 transition-all duration-150"
+                              className="flex items-center p-2.5 hover:bg-app-secondary cursor-pointer border-b border-app-primary-20 last:border-b-0 transition-all duration-150"
                             >
-                              <div className="w-5 h-5 rounded flex items-center justify-center border border-[#02b36d30] bg-[#091217] mr-2">
-                                <Plus size={10} className="text-[#02b36d]" />
+                              <div className="w-5 h-5 rounded flex items-center justify-center border border-app-primary-30 bg-app-tertiary mr-2">
+                                <Plus size={10} className="color-primary" />
                               </div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-center">
-                                  <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
+                                  <span className="font-mono text-sm text-app-primary glitch-text">{getWalletDisplayName(wallet)}</span>
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
+                                    <span className="text-xs text-app-secondary font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
                                     {(getWalletTokenBalance(wallet.address) || 0) > 0 && (
-                                      <span className="text-xs text-[#02b36d] font-mono">{formatTokenBalance(getWalletTokenBalance(wallet.address) || 0)} TOKENS</span>
+                                      <span className="text-xs color-primary font-mono">{formatTokenBalance(getWalletTokenBalance(wallet.address) || 0)} TOKENS</span>
                                     )}
                                   </div>
                                 </div>
@@ -1068,7 +1062,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                             </div>
                           ))
                         ) : (
-                          <div className="p-3 text-sm text-[#7ddfbd] text-center font-mono">
+                          <div className="p-3 text-sm text-app-secondary text-center font-mono">
                             {buyerSearchTerm ? "NO WALLETS FOUND MATCHING FILTERS" : "NO WALLETS AVAILABLE"}
                           </div>
                         )}
@@ -1078,37 +1072,37 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                     {/* Right Side - Selected Buyers */}
                     <div className="w-full md:w-1/2 cyberpunk-column">
                       <div className="mb-2">
-                        <h4 className="text-sm font-medium text-[#7ddfbd] font-mono tracking-wider">
-                          <span className="text-[#02b36d]">&#62;</span> SELECTED BUYERS <span className="text-[#02b36d]">&#60;</span>
+                        <h4 className="text-sm font-medium text-app-secondary font-mono tracking-wider">
+                          <span className="color-primary">&#62;</span> SELECTED BUYERS <span className="color-primary">&#60;</span>
                         </h4>
                       </div>
                       
                       {/* Current seller info */}
-                      <div className="mb-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30]">
+                      <div className="mb-3 p-3 bg-app-tertiary rounded-lg border border-app-primary-30">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-[#7ddfbd] font-mono">SELLER:</span>
-                          <span className="text-sm font-mono text-[#e4fbf2] glitch-text">
+                          <span className="text-sm text-app-secondary font-mono">SELLER:</span>
+                          <span className="text-sm font-mono text-app-primary glitch-text">
                             {formatAddress(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '')}
                           </span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-sm text-[#7ddfbd] font-mono">SELL PERCENTAGE:</span>
-                          <span className="text-sm text-[#02b36d] font-mono">{sellers[currentSellerIndex].sellPercentage}%</span>
+                          <span className="text-sm text-app-secondary font-mono">SELL PERCENTAGE:</span>
+                          <span className="text-sm color-primary font-mono">{sellers[currentSellerIndex].sellPercentage}%</span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-sm text-[#7ddfbd] font-mono">ESTIMATED SOL VALUE:</span>
-                          <span className="text-sm text-[#02b36d] font-mono font-bold">
+                          <span className="text-sm text-app-secondary font-mono">ESTIMATED SOL VALUE:</span>
+                          <span className="text-sm color-primary font-mono font-bold">
                             {sellers[currentSellerIndex].estimatedSolValue.toFixed(6)} SOL
                           </span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-sm text-[#7ddfbd] font-mono">TOKEN BALANCE:</span>
-                          <span className="text-sm text-[#02b36d] font-mono">
+                          <span className="text-sm text-app-secondary font-mono">TOKEN BALANCE:</span>
+                          <span className="text-sm color-primary font-mono">
                             {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') || 0)} TOKENS
                           </span>
                         </div>
                         {hasInsufficientSOL(getWalletByPrivateKey(sellers[currentSellerIndex].privateKey)?.address || '') && (
-                          <div className="mt-2 p-1.5 bg-[#5f020230] border border-[#5f020250] rounded text-xs text-red-400 font-mono">
+                          <div className="mt-2 p-1.5 bg-error-alt-20 border border-error-alt-40 rounded text-xs text-red-400 font-mono">
                             <div className="flex items-center">
                               <Info size={10} className="mr-1" />
                               <span>INSUFFICIENT SOL BALANCE</span>
@@ -1118,32 +1112,32 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       </div>
                       
                       {/* List of selected buyers */}
-                      <div className="max-h-60 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 hover:border-[#02b36d40] cyberpunk-scrollbar">
+                      <div className="max-h-60 overflow-y-auto border border-app-primary-20 rounded-lg shadow-inner bg-app-tertiary transition-all duration-200 hover:border-app-primary-40 cyberpunk-scrollbar">
                         {sellers[currentSellerIndex].buyers.length > 0 ? (
                           sellers[currentSellerIndex].buyers.map((buyer, buyerIndex) => (
-                            <div key={buyerIndex} className="p-3 border-b border-[#02b36d20] last:border-b-0">
+                            <div key={buyerIndex} className="p-3 border-b border-app-primary-20 last:border-b-0">
                               <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center">
-                                  <div className="w-5 h-5 rounded-full bg-[#02b36d20] flex items-center justify-center mr-2">
-                                    <CheckCircle size={12} className="text-[#02b36d]" />
+                                  <div className="w-5 h-5 rounded-full bg-primary-20 flex items-center justify-center mr-2">
+                                    <CheckCircle size={12} className="color-primary" />
                                   </div>
-                                  <span className="font-mono text-sm text-[#e4fbf2] glitch-text">
+                                  <span className="font-mono text-sm text-app-primary glitch-text">
                                     {formatAddress(getWalletByPrivateKey(buyer.privateKey)?.address || '')}
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-3">
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-xs text-[#7ddfbd] font-mono">
+                                    <span className="text-xs text-app-secondary font-mono">
                                       {formatSolBalance(getWalletBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} SOL
                                     </span>
-                                    <span className="text-xs text-[#02b36d] font-mono">
+                                    <span className="text-xs color-primary font-mono">
                                       {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} TOKENS
                                     </span>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => removeBuyer(currentSellerIndex, buyerIndex)}
-                                    className="text-[#7ddfbd50] hover:text-red-400 transition-colors"
+                                    className="text-app-muted hover:text-red-400 transition-colors"
                                   >
                                     <Trash2 size={14} />
                                   </button>
@@ -1152,7 +1146,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                               
                               {/* Buy amount input - Changed from percentage to direct SOL amount */}
                               <div className="flex items-center mt-2">
-                                <div className="text-xs text-[#7ddfbd] mr-2 w-24 font-mono">BUY AMOUNT:</div>
+                                <div className="text-xs text-app-secondary mr-2 w-24 font-mono">BUY AMOUNT:</div>
                                 <div className="relative flex-1">
                                   <input
                                     type="text"
@@ -1163,18 +1157,18 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                         updateBuyerAmount(currentSellerIndex, buyerIndex, value);
                                       }
                                     }}
-                                    className="w-full pl-2 pr-8 py-1 bg-[#091217] border border-[#02b36d30] rounded text-[#e4fbf2] text-sm focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                                    className="w-full pl-2 pr-8 py-1 bg-app-tertiary border border-app-primary-30 rounded text-app-primary text-sm focus:outline-none focus:border-app-primary modal-input-cyberpunk font-mono"
                                     placeholder="0.1"
                                   />
                                   <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                    <span className="text-xs text-[#7ddfbd] font-mono">SOL</span>
+                                    <span className="text-xs text-app-secondary font-mono">SOL</span>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div className="p-4 text-sm text-[#7ddfbd] text-center font-mono">
+                          <div className="p-4 text-sm text-app-secondary text-center font-mono">
                             NO BUYERS SELECTED. CLICK ON A WALLET FROM THE LEFT TO ADD IT AS A BUYER.
                           </div>
                         )}
@@ -1182,24 +1176,24 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       
                       {/* Distribution info */}
                       {sellers[currentSellerIndex].buyers.length > 0 && (
-                        <div className="mt-3 p-3 bg-[#091217] rounded-lg border border-[#02b36d30]">
-                          <div className="text-xs text-[#7ddfbd] mb-2 font-mono">
+                        <div className="mt-3 p-3 bg-app-tertiary rounded-lg border border-app-primary-30">
+                          <div className="text-xs text-app-secondary mb-2 font-mono">
                             DISTRIBUTION CALCULATION
                           </div>
                           <div className="space-y-1">
                             <div className="flex justify-between items-center text-sm">
-                              <span className="text-[#7ddfbd] font-mono">TOTAL BUY AMOUNT:</span>
-                              <span className="text-[#e4fbf2] font-mono">
+                              <span className="text-app-secondary font-mono">TOTAL BUY AMOUNT:</span>
+                              <span className="text-app-primary font-mono">
                                 {sellers[currentSellerIndex].buyers.reduce((sum, buyer) => sum + parseFloat(buyer.buyAmount || '0'), 0).toFixed(3)} SOL
                               </span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
-                              <span className="text-[#7ddfbd] font-mono">EXTRA DISTRIBUTION:</span>
-                              <span className="text-[#e4fbf2] font-mono">0.050 SOL</span>
+                              <span className="text-app-secondary font-mono">EXTRA DISTRIBUTION:</span>
+                              <span className="text-app-primary font-mono">0.050 SOL</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm border-t border-[#02b36d30] pt-1">
-                              <span className="text-[#02b36d] font-mono font-bold">TOTAL DISTRIBUTION:</span>
-                              <span className="text-[#02b36d] font-mono font-bold">
+                            <div className="flex justify-between items-center text-sm border-t border-app-primary-30 pt-1">
+                              <span className="color-primary font-mono font-bold">TOTAL DISTRIBUTION:</span>
+                              <span className="color-primary font-mono font-bold">
                                 {getTotalDistributionAmount(sellers[currentSellerIndex]).toFixed(3)} SOL
                               </span>
                             </div>
@@ -1216,9 +1210,9 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
             {currentStep === 2 && (
               <div className="space-y-4 md:space-y-6 animate-[fadeIn_0.3s_ease]">
                 <div className="flex items-center space-x-2 mb-4">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-[#02b36d20]">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary-20">
                     <svg
-                      className="w-4 h-4 text-[#02b36d]"
+                      className="w-4 h-4 color-primary"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -1227,7 +1221,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </div>
-                  <h3 className="text-base md:text-lg font-medium text-[#e4fbf2] font-mono tracking-wide">
+                  <h3 className="text-base md:text-lg font-medium text-app-primary font-mono tracking-wide">
                     REVIEW OPERATIONS
                   </h3>
                 </div>
@@ -1236,7 +1230,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                 {sellers.some(seller => 
                   hasInsufficientSOL(getWalletByPrivateKey(seller.privateKey)?.address || '')
                 ) && (
-                  <div className="p-3 bg-[#5f020230] border border-[#5f020250] rounded-lg mb-4">
+                  <div className="p-3 bg-error-alt-20 border border-error-alt-40 rounded-lg mb-4">
                     <div className="flex items-center">
                       <Info size={16} className="text-red-400 mr-2 flex-shrink-0" />
                       <span className="text-sm text-red-400 font-mono">
@@ -1249,47 +1243,47 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
 
                 <div className="grid grid-cols-1 gap-4">
                   {/* Operations summary */}
-                  <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d30] modal-glow">
-                    <h4 className="text-base font-medium text-[#02b36d] mb-3 font-mono tracking-wider">OPERATION SUMMARY</h4>
+                  <div className="bg-app-tertiary rounded-lg p-4 border border-app-primary-30 modal-glow">
+                    <h4 className="text-base font-medium color-primary mb-3 font-mono tracking-wider">OPERATION SUMMARY</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-[#7ddfbd] font-mono">TOTAL SELLERS:</span>
-                        <span className="text-sm text-[#e4fbf2] font-medium font-mono">{sellers.length}</span>
+                        <span className="text-sm text-app-secondary font-mono">TOTAL SELLERS:</span>
+                        <span className="text-sm text-app-primary font-medium font-mono">{sellers.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-[#7ddfbd] font-mono">TOTAL BUYERS:</span>
-                        <span className="text-sm text-[#e4fbf2] font-medium font-mono">
+                        <span className="text-sm text-app-secondary font-mono">TOTAL BUYERS:</span>
+                        <span className="text-sm text-app-primary font-medium font-mono">
                           {sellers.reduce((total, seller) => total + seller.buyers.length, 0)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-[#7ddfbd] font-mono">TOTAL OPERATIONS:</span>
-                        <span className="text-sm text-[#e4fbf2] font-medium font-mono">{getTotalOperationsCount()}</span>
+                        <span className="text-sm text-app-secondary font-mono">TOTAL OPERATIONS:</span>
+                        <span className="text-sm text-app-primary font-medium font-mono">{getTotalOperationsCount()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-[#7ddfbd] font-mono">TOKEN ADDRESS:</span>
-                        <span className="text-sm text-[#e4fbf2] font-mono glitch-text">{formatAddress(tokenAddress)}</span>
+                        <span className="text-sm text-app-secondary font-mono">TOKEN ADDRESS:</span>
+                        <span className="text-sm text-app-primary font-mono glitch-text">{formatAddress(tokenAddress)}</span>
                       </div>
                     </div>
                     
                     {/* Batch structure explanation */}
-                    <div className="mt-4 p-3 bg-[#0a1419] rounded border border-[#02b36d20]">
-                      <div className="text-xs text-[#7ddfbd] mb-1 font-mono font-bold">BATCH STRUCTURE:</div>
-                      <div className="text-xs text-[#7ddfbd] font-mono">
+                    <div className="mt-4 p-3 bg-app-secondary rounded border border-app-primary-20">
+                      <div className="text-xs text-app-secondary mb-1 font-mono font-bold">BATCH STRUCTURE:</div>
+                      <div className="text-xs text-app-secondary font-mono">
                         • Each seller's FIRST buyer gets: SELL + DISTRIBUTION + BUY transactions
                       </div>
-                      <div className="text-xs text-[#7ddfbd] font-mono">
+                      <div className="text-xs text-app-secondary font-mono">
                         • Each seller's SUBSEQUENT buyers get: DISTRIBUTION + BUY transactions only
                       </div>
-                      <div className="text-xs text-[#02b36d] font-mono mt-1">
+                      <div className="text-xs color-primary font-mono mt-1">
                         This ensures each seller only sells their tokens once.
                       </div>
                     </div>
                   </div>
                   
                   {/* Detailed breakdown */}
-                  <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d30] modal-glow">
-                    <h4 className="text-base font-medium text-[#02b36d] mb-3 font-mono tracking-wider">OPERATION DETAILS</h4>
+                  <div className="bg-app-tertiary rounded-lg p-4 border border-app-primary-30 modal-glow">
+                    <h4 className="text-base font-medium color-primary mb-3 font-mono tracking-wider">OPERATION DETAILS</h4>
                     
                     <div className="space-y-4 max-h-60 overflow-y-auto cyberpunk-scrollbar">
                       {sellers.map((seller, sellerIndex) => {
@@ -1297,25 +1291,25 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                         const lowSOL = hasInsufficientSOL(sellerAddress);
                         
                         return (
-                          <div key={sellerIndex} className={`border-t border-[#02b36d30] pt-3 first:border-t-0 first:pt-0 ${lowSOL ? 'bg-[#5f020220] p-2 rounded-lg -mt-2 first:mt-0' : ''}`}>
+                          <div key={sellerIndex} className={`border-t border-app-primary-30 pt-3 first:border-t-0 first:pt-0 ${lowSOL ? 'bg-error-alt-20 p-2 rounded-lg -mt-2 first:mt-0' : ''}`}>
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                               <div className="flex items-center">
-                                <span className="text-sm font-medium text-[#7ddfbd] mr-2 font-mono">SELLER {sellerIndex + 1}:</span>
-                                <span className="text-sm font-mono text-[#e4fbf2] glitch-text">
+                                <span className="text-sm font-medium text-app-secondary mr-2 font-mono">SELLER {sellerIndex + 1}:</span>
+                                <span className="text-sm font-mono text-app-primary glitch-text">
                                   {formatAddress(sellerAddress)}
                                 </span>
                                 {lowSOL && (
-                                  <span className="ml-2 px-1.5 py-0.5 bg-[#5f020240] rounded text-xs text-red-400 font-mono">
+                                  <span className="ml-2 px-1.5 py-0.5 bg-error-alt-40 rounded text-xs text-red-400 font-mono">
                                     LOW SOL
                                   </span>
                                 )}
                               </div>
                               <div className="flex flex-col items-start sm:items-end">
-                                <span className="text-xs text-[#02b36d] font-mono">SELLING {seller.sellPercentage}%</span>
-                                <span className="text-xs text-[#7ddfbd] font-mono">
+                                <span className="text-xs color-primary font-mono">SELLING {seller.sellPercentage}%</span>
+                                <span className="text-xs text-app-secondary font-mono">
                                   {formatTokenBalance(getWalletTokenBalance(sellerAddress) || 0)} TOKENS
                                 </span>
-                                <span className="text-xs text-[#02b36d] font-mono font-bold">
+                                <span className="text-xs color-primary font-mono font-bold">
                                   EST: {seller.estimatedSolValue.toFixed(6)} SOL
                                 </span>
                               </div>
@@ -1326,34 +1320,34 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                 seller.buyers.map((buyer, buyerIndex) => {
                                   const isFirstBuyer = buyerIndex === 0;
                                   return (
-                                    <div key={buyerIndex} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-[#0a1419] p-2 rounded border border-[#02b36d20]">
+                                    <div key={buyerIndex} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-app-secondary p-2 rounded border border-app-primary-20">
                                       <div className="flex items-center">
-                                        <span className="text-xs text-[#7ddfbd] mr-2 font-mono">
+                                        <span className="text-xs text-app-secondary mr-2 font-mono">
                                           {isFirstBuyer ? 'BUYER #1 (WITH SELL):' : `BUYER #${buyerIndex + 1}:`}
                                         </span>
-                                        <span className="text-xs font-mono text-[#e4fbf2] glitch-text">
+                                        <span className="text-xs font-mono text-app-primary glitch-text">
                                           {formatAddress(getWalletByPrivateKey(buyer.privateKey)?.address || '')}
                                         </span>
                                       </div>
                                       <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
                                         <div className="flex items-center space-x-2">
-                                          <span className="text-xs text-[#7ddfbd] font-mono">
+                                          <span className="text-xs text-app-secondary font-mono">
                                             {formatSolBalance(getWalletBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} SOL
                                           </span>
-                                          <span className="text-xs text-[#02b36d] font-mono">
+                                          <span className="text-xs color-primary font-mono">
                                             {formatTokenBalance(getWalletTokenBalance(getWalletByPrivateKey(buyer.privateKey)?.address || '') || 0)} TOKENS
                                           </span>
                                         </div>
                                         <div className="flex items-center space-x-2">
                                           {isFirstBuyer && (
-                                            <span className="text-xs px-1.5 py-0.5 bg-[#5f020240] rounded text-red-300 font-mono">
+                                            <span className="text-xs px-1.5 py-0.5 bg-error-alt-40 rounded text-red-300 font-mono">
                                               SELL: {seller.sellPercentage}%
                                             </span>
                                           )}
-                                          <span className="text-xs px-1.5 py-0.5 bg-[#02b36d20] rounded text-[#02b36d] font-mono">
+                                          <span className="text-xs px-1.5 py-0.5 bg-primary-20 rounded color-primary font-mono">
                                             BUY: {buyer.buyAmount} SOL
                                           </span>
-                                          <span className="text-xs px-1.5 py-0.5 bg-[#091217] rounded text-[#e4fbf2] font-mono">
+                                          <span className="text-xs px-1.5 py-0.5 bg-app-tertiary rounded text-app-primary font-mono">
                                             DIST: {(parseFloat(buyer.buyAmount) + 0.05).toFixed(3)} SOL
                                           </span>
                                         </div>
@@ -1362,7 +1356,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                                   );
                                 })
                               ) : (
-                                <div className="text-xs text-[#7ddfbd] italic font-mono">NO BUYERS CONFIGURED</div>
+                                <div className="text-xs text-app-secondary italic font-mono">NO BUYERS CONFIGURED</div>
                               )}
                             </div>
                           </div>
@@ -1372,18 +1366,18 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                   </div>
                   
                   {/* Confirmation checkbox */}
-                  <div className="bg-[#091217] rounded-lg p-4 border border-[#02b36d30] modal-glow">
+                  <div className="bg-app-tertiary rounded-lg p-4 border border-app-primary-30 modal-glow">
                     <div 
-                      className="flex items-center px-3 py-3 bg-[#0a1419] rounded-lg border border-[#02b36d20] cursor-pointer"
+                      className="flex items-center px-3 py-3 bg-app-secondary rounded-lg border border-app-primary-20 cursor-pointer"
                       onClick={() => setIsConfirmed(!isConfirmed)}
                     >
                       <div className="relative mx-1">
                         <div 
-                          className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                          className={`w-5 h-5 border border-app-primary-40 rounded transition-all ${isConfirmed ? 'bg-app-primary-color border-0' : ''}`}
                         ></div>
-                        <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                        <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-app-primary transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                       </div>
-                      <span className="text-[#e4fbf2] text-sm ml-2 select-none font-mono">
+                      <span className="text-app-primary text-sm ml-2 select-none font-mono">
                         I CONFIRM THAT I WANT TO EXECUTE {getTotalOperationsCount()} OPERATIONS AS DETAILED ABOVE. THIS ACTION CANNOT BE UNDONE.
                       </span>
                     </div>
@@ -1397,7 +1391,7 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
               <button
                 type="button"
                 onClick={currentStep === 0 ? onClose : handleBack}
-                className="px-5 py-2.5 text-[#e4fbf2] bg-[#091217] border border-[#02b36d30] hover:bg-[#0a1419] hover:border-[#02b36d] rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
+                className="px-5 py-2.5 text-app-primary bg-app-tertiary border border-app-primary-30 hover:bg-app-secondary hover:border-app-primary rounded-lg transition-all duration-200 shadow-md font-mono tracking-wider modal-btn-cyberpunk"
               >
                 {currentStep === 0 ? 'CANCEL' : 'BACK'}
               </button>
@@ -1417,13 +1411,13 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
                             (currentStep === STEPS_BUYSELL.length - 1 && !isConfirmed) || 
                             sellers.some(seller => hasInsufficientSOL(getWalletByPrivateKey(seller.privateKey)?.address || '')) ||
                             isSubmitting
-                            ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                            : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                            ? 'bg-primary-50 text-app-primary-80 cursor-not-allowed opacity-50' 
+                            : 'bg-app-primary-color text-app-primary hover:bg-app-primary-dark transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
               >
                 {currentStep === STEPS_BUYSELL.length - 1 ? (
                   isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                      <div className="h-4 w-4 rounded-full border-2 border-app-primary-80 border-t-transparent animate-spin mr-2"></div>
                       PROCESSING...
                     </>
                   ) : (
@@ -1441,10 +1435,10 @@ export const CleanerTokensModal: React.FC<CleanerTokensModalProps> = ({
         </div>
         
         {/* Cyberpunk decorative corner elements */}
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#02b36d] opacity-70"></div>
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-app-primary opacity-70"></div>
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-app-primary opacity-70"></div>
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-app-primary opacity-70"></div>
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-app-primary opacity-70"></div>
       </div>
     </div>,
     document.body

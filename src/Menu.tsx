@@ -31,7 +31,7 @@ export const Tooltip = ({
       </div>
       {isVisible && (
         <div className={`absolute z-50 ${positionClasses[position]}`}>
-          <div className="bg-[#051014] cyberpunk-border text-[#02b36d] text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+          <div className="bg-app-quaternary cyberpunk-border color-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
             {content}
           </div>
         </div>
@@ -67,18 +67,21 @@ const CyberpunkServiceButton = ({
       <motion.div 
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="flex flex-col items-center w-20 p-2 hover:bg-[#02b36d20] border border-[#02b36d30] 
-                  hover:border-[#02b36d60] rounded-lg cursor-pointer transition-all duration-300"
+        className="flex flex-col items-center w-20 p-2 hover:bg-primary-20 border border-app-primary-30 
+                  hover-border-primary-60 rounded-lg cursor-pointer transition-all duration-300"
         onClick={handleClick}
       >
         <motion.div 
           className="w-10 h-10 rounded-full flex items-center justify-center mb-2 
-                    bg-[#051014] border border-[#02b36d40] overflow-hidden"
-          whileHover={{ borderColor: "#02b36d", boxShadow: "0 0 8px rgba(2,179,109,0.4)" }}
+                    bg-app-quaternary border border-app-primary-40 overflow-hidden"
+          whileHover={{ 
+            borderColor: "var(--color-primary)", 
+            boxShadow: "0 0 8px var(--color-primary-40)" 
+          }}
         >
           {icon}
         </motion.div>
-        <span className="text-[#7ddfbd] text-xs font-mono tracking-wider">{label}</span>
+        <span className="text-app-secondary text-xs font-mono tracking-wider">{label}</span>
       </motion.div>
     </Tooltip>
   );
@@ -148,12 +151,11 @@ const ServiceSelector = () => {
   return (
     <div className="relative inline-block">
       {/* Main button to open the selector */}
-      <Tooltip content="Services" position="bottom">
         <button
           ref={buttonRef}
           onClick={toggleSelector}
           className="flex items-center justify-center p-2 overflow-hidden
-                  border border-[#02b36d30] hover:border-[#02b36d60] rounded 
+                  border border-app-primary-30 hover-border-primary-60 rounded 
                   transition-all duration-300 cyberpunk-btn"
         >
         <motion.div 
@@ -164,11 +166,10 @@ const ServiceSelector = () => {
           <img 
             src="https://app.raze.bot/logo.png" 
             alt="Raze Bundler" 
-            className="h-8 filter drop-shadow-[0_0_8px_rgba(2,179,109,0.7)]" 
+            className="h-8 filter drop-shadow-[0_0_8px_var(--color-primary-70)]" 
           />
         </motion.div>
         </button>
-      </Tooltip>
 
       {/* Service selector modal using portal */}
       <AnimatePresence>
@@ -183,8 +184,8 @@ const ServiceSelector = () => {
               animate={{ opacity: 1, y: 10, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="mt-2 bg-[#050a0e] rounded-lg p-4 shadow-lg 
-                        w-80 border border-[#02b36d40] cyberpunk-border
+              className="mt-2 bg-app-primary rounded-lg p-4 shadow-lg 
+                        w-80 border border-app-primary-40 cyberpunk-border
                         backdrop-blur-sm"
             >
               <div className="relative">
@@ -192,8 +193,8 @@ const ServiceSelector = () => {
                 <div className="absolute top-0 left-0 w-full h-full cyberpunk-scanline pointer-events-none z-10 opacity-30"></div>
                 
                 {/* Glow accents in corners */}
-                <div className="absolute top-0 right-0 w-3 h-3 bg-[#02b36d] opacity-50 rounded-full blur-md"></div>
-                <div className="absolute bottom-0 left-0 w-3 h-3 bg-[#02b36d] opacity-50 rounded-full blur-md"></div>
+                <div className="absolute top-0 right-0 w-3 h-3 bg-app-primary-color opacity-50 rounded-full blur-md"></div>
+                <div className="absolute bottom-0 left-0 w-3 h-3 bg-app-primary-color opacity-50 rounded-full blur-md"></div>
                 
                 <motion.div 
                   className="flex flex-wrap justify-center gap-3 relative z-20"
@@ -280,7 +281,4 @@ const ServiceSelector = () => {
     </div>
   );
 };
-
-// Export both names for compatibility
-export { ServiceSelector as CyberpunkServiceSelector };
 export default ServiceSelector;

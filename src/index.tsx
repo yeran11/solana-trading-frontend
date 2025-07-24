@@ -6,7 +6,7 @@ import { Buffer as NodeBuffer } from 'buffer';
 import Cookies from 'js-cookie';
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
-import './styles/globals.css';
+import './styles/raze.css';
 import { ToastProvider } from "./Notifications";
 import ServerConfig from './ServerConfig';
 import IntroModal from './modals/IntroModal';
@@ -44,8 +44,8 @@ const DEFAULT_REGIONAL_SERVERS: ServerInfo[] = [
 
 const ServerCheckLoading = () => {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-neutral-900">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-green-500"></div>
+    <div className="flex items-center justify-center min-h-screen bg-app-primary">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 spinner-app-primary"></div>
     </div>
   );
 };
@@ -108,7 +108,7 @@ const ModalPortal: React.FC<ModalPortalProps> = ({ isOpen, onComplete, onSkip })
   
   // Create our portal
   return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center"
+    <div className="fixed inset-0 bg-app-overlay backdrop-blur-sm flex items-center justify-center"
          style={{ zIndex: 99999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div className="relative z-[99999]">
         <IntroModal 

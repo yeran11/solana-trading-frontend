@@ -403,9 +403,9 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   const modalStyleElement = document.createElement('style');
   modalStyleElement.textContent = `
     @keyframes modal-pulse {
-      0% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), 0 0 15px rgba(2, 179, 109, 0.2); }
-      50% { box-shadow: 0 0 15px rgba(2, 179, 109, 0.8), 0 0 25px rgba(2, 179, 109, 0.4); }
-      100% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), 0 0 15px rgba(2, 179, 109, 0.2); }
+      0% { box-shadow: 0 0 5px var(--color-primary-50), 0 0 15px var(--color-primary-20); }
+      50% { box-shadow: 0 0 15px var(--color-primary-80), 0 0 25px var(--color-primary-40); }
+      100% { box-shadow: 0 0 5px var(--color-primary-50), 0 0 15px var(--color-primary-20); }
     }
     
     @keyframes modal-fade-in {
@@ -439,7 +439,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       height: 5px;
       background: linear-gradient(to bottom, 
         transparent 0%,
-        rgba(2, 179, 109, 0.2) 50%,
+        var(--color-primary-20) 50%,
         transparent 100%);
       z-index: 10;
       animation: modal-scan-line 8s linear infinite;
@@ -451,7 +451,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
     }
     
     .modal-input-cyberpunk:focus {
-      box-shadow: 0 0 0 1px rgba(2, 179, 109, 0.7), 0 0 15px rgba(2, 179, 109, 0.5);
+      box-shadow: 0 0 0 1px var(--color-primary-70), 0 0 15px var(--color-primary-50);
       transition: all 0.3s ease;
     }
     
@@ -470,9 +470,9 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       height: 200%;
       background: linear-gradient(
         to bottom right,
-        rgba(2, 179, 109, 0) 0%,
-        rgba(2, 179, 109, 0.3) 50%,
-        rgba(2, 179, 109, 0) 100%
+        var(--color-primary-05) 0%,
+        var(--color-primary-30) 50%,
+        var(--color-primary-05) 100%
       );
       transform: rotate(45deg);
       transition: all 0.5s ease;
@@ -503,7 +503,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(2, 179, 109, 0.7) 50%,
+        var(--color-primary-70) 50%,
         transparent 100%
       );
       width: 100%;
@@ -519,7 +519,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
     }
     
     .glitch-text:hover {
-      text-shadow: 0 0 2px #02b36d, 0 0 4px #02b36d;
+      text-shadow: 0 0 2px var(--color-primary), 0 0 4px var(--color-primary);
       animation: glitch 2s infinite;
     }
     
@@ -545,54 +545,48 @@ export const TransferModal: React.FC<TransferModalProps> = ({
     }
     
     .scrollbar-thin::-webkit-scrollbar-track {
-      background: #091217;
+      background: var(--color-bg-tertiary);
     }
     
     .scrollbar-thin::-webkit-scrollbar-thumb {
-      background: #02b36d;
+      background: var(--color-primary);
       border-radius: 2px;
     }
     
     .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-      background: #01a35f;
+      background: var(--color-primary-dark);
     }
   `;
   document.head.appendChild(modalStyleElement);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container" style={{backgroundColor: 'rgba(5, 10, 14, 0.85)'}}>
-      <div className="relative bg-[#050a0e] border border-[#02b36d40] rounded-lg shadow-lg w-full max-w-7xl max-h-[90vh] overflow-hidden transform modal-cyberpunk-content modal-glow">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm modal-cyberpunk-container bg-app-primary-85">
+      <div className="relative bg-app-primary border border-app-primary-40 rounded-lg shadow-lg w-full max-w-7xl max-h-[90vh] overflow-hidden transform modal-cyberpunk-content modal-glow">
         {/* Ambient grid background */}
-        <div className="absolute inset-0 z-0 opacity-10"
-             style={{
-               backgroundImage: 'linear-gradient(rgba(2, 179, 109, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(2, 179, 109, 0.2) 1px, transparent 1px)',
-               backgroundSize: '20px 20px',
-               backgroundPosition: 'center center',
-             }}>
-        </div>
+        <div className="absolute inset-0 z-0 opacity-10 bg-cyberpunk-grid"></div>
 
         {/* Header */}
-        <div className="relative z-10 p-4 flex justify-between items-center border-b border-[#02b36d40]">
+        <div className="relative z-10 p-4 flex justify-between items-center border-b border-app-primary-40">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#02b36d20] mr-3">
-              <ArrowUpDown size={16} className="text-[#02b36d]" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary-20 mr-3">
+              <ArrowUpDown size={16} className="color-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-[#e4fbf2] font-mono">
-              <span className="text-[#02b36d]">/</span> TRANSFER CONSOLE <span className="text-[#02b36d]">/</span>
+            <h2 className="text-lg font-semibold text-app-primary font-mono">
+              <span className="color-primary">/</span> TRANSFER CONSOLE <span className="color-primary">/</span>
             </h2>
           </div>
           <button 
             onClick={onClose}
-            className="text-[#7ddfbd] hover:text-[#02b36d] transition-colors p-1 hover:bg-[#02b36d20] rounded"
+            className="text-app-secondary hover:color-primary transition-colors p-1 hover:bg-primary-20 rounded"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Progress Indicator */}
-        <div className="relative w-full h-1 bg-[#091217] progress-bar-cyberpunk">
+        <div className="relative w-full h-1 bg-app-tertiary progress-bar-cyberpunk">
           <div 
-            className="h-full bg-[#02b36d] transition-all duration-300"
+            className="h-full bg-app-primary-color transition-all duration-300"
             style={{ width: currentStep === 0 ? '50%' : '100%' }}
           ></div>
         </div>
@@ -601,13 +595,13 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         <div className="relative z-10 h-[calc(90vh-120px)] overflow-hidden">
           <div className="h-full flex">
             {/* Left Panel - Configuration */}
-            <div className="flex-1 border-r border-[#02b36d20] overflow-y-auto">
+            <div className="flex-1 border-r border-app-primary-20 overflow-y-auto">
               <div className="p-5 space-y-4">
                 <div className="animate-[fadeIn_0.3s_ease]">
                   {/* Transfer Type Selection */}
                   <div className="group mb-4">
-                    <label className="block text-sm font-medium text-[#7ddfbd] mb-2 group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                      <span className="text-[#02b36d]">&#62;</span> Transfer Type <span className="text-[#02b36d]">&#60;</span>
+                    <label className="block text-sm font-medium text-app-secondary mb-2 group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                      <span className="color-primary">&#62;</span> Transfer Type <span className="color-primary">&#60;</span>
                     </label>
                     <div className="flex space-x-3">
                       <button
@@ -615,8 +609,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                         onClick={() => setTransferType('SOL')}
                         className={`flex-1 flex items-center justify-center p-3 rounded-lg border transition-all duration-200 font-mono modal-btn-cyberpunk ${
                           transferType === 'SOL'
-                            ? 'bg-[#02b36d20] border-[#02b36d] text-[#02b36d] shadow-md shadow-[#02b36d40]'
-                            : 'bg-[#091217] border-[#02b36d30] text-[#7ddfbd] hover:border-[#02b36d] hover:text-[#02b36d]'
+                            ? 'bg-primary-20 border-app-primary color-primary shadow-md shadow-app-primary-40'
+                            : 'bg-app-tertiary border-app-primary-30 text-app-secondary hover-border-primary hover:color-primary'
                         }`}
                       >
                         <DollarSign size={16} className="mr-2" />
@@ -628,10 +622,10 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                         disabled={!tokenAddress}
                         className={`flex-1 flex items-center justify-center p-3 rounded-lg border transition-all duration-200 font-mono modal-btn-cyberpunk ${
                           transferType === 'TOKEN'
-                            ? 'bg-[#02b36d20] border-[#02b36d] text-[#02b36d] shadow-md shadow-[#02b36d40]'
+                            ? 'bg-primary-20 border-app-primary color-primary shadow-md shadow-app-primary-40'
                             : tokenAddress
-                              ? 'bg-[#091217] border-[#02b36d30] text-[#7ddfbd] hover:border-[#02b36d] hover:text-[#02b36d]'
-                              : 'bg-[#091217] border-[#02b36d20] text-[#7ddfbd50] cursor-not-allowed'
+                              ? 'bg-app-tertiary border-app-primary-30 text-app-secondary hover-border-primary hover:color-primary'
+                              : 'bg-app-tertiary border-app-primary-20 text-app-secondary-40 cursor-not-allowed'
                         }`}
                       >
                         <Coins size={16} className="mr-2" />
@@ -639,14 +633,14 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                       </button>
                     </div>
                     {!tokenAddress && (
-                      <div className="mt-2 text-xs text-[#7ddfbd] font-mono">
+                      <div className="mt-2 text-xs text-app-secondary font-mono">
                         <Info size={12} className="inline mr-1" />
                         Set a token address in the main app to enable token transfers
                       </div>
                     )}
                     {tokenAddress && transferType === 'TOKEN' && (
-                      <div className="mt-2 text-xs text-[#02b36d] font-mono">
-                        <span className="text-[#7ddfbd]">TOKEN:</span> {formatAddress(tokenAddress)}
+                      <div className="mt-2 text-xs color-primary font-mono">
+                        <span className="text-app-secondary">TOKEN:</span> {formatAddress(tokenAddress)}
                       </div>
                     )}
                   </div>
@@ -654,26 +648,26 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                   {/* Source Wallets */}
                   <div className="group mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                        <span className="text-[#02b36d]">&#62;</span> Source Wallets ({sourceWallets.length} selected) <span className="text-[#02b36d]">&#60;</span>
+                      <label className="text-sm font-medium text-app-secondary group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                        <span className="color-primary">&#62;</span> Source Wallets ({sourceWallets.length} selected) <span className="color-primary">&#60;</span>
                       </label>
                     </div>
 
                     {/* Source Search and Filters */}
                     <div className="mb-2 flex space-x-2">
                       <div className="relative flex-grow">
-                        <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7ddfbd]" />
+                        <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-secondary" />
                         <input
                           type="text"
                           value={sourceSearchTerm}
                           onChange={(e) => setSourceSearchTerm(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] transition-all modal-input-cyberpunk font-mono"
+                          className="w-full pl-9 pr-4 py-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-sm text-app-primary focus:outline-none focus-border-primary transition-all modal-input-cyberpunk font-mono"
                           placeholder="SEARCH WALLETS..."
                         />
                       </div>
                       
                       <select 
-                        className="bg-[#091217] border border-[#02b36d30] rounded-lg px-2 text-sm text-[#e4fbf2] focus:outline-none focus:border-[#02b36d] modal-input-cyberpunk font-mono"
+                        className="bg-app-tertiary border border-app-primary-30 rounded-lg px-2 text-sm text-app-primary focus:outline-none focus-border-primary modal-input-cyberpunk font-mono"
                         value={sortOption}
                         onChange={(e) => setSortOption(e.target.value)}
                       >
@@ -682,42 +676,42 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                       </select>
                       
                       <button
-                        className="p-2 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#7ddfbd] hover:text-[#02b36d] hover:border-[#02b36d] transition-all modal-btn-cyberpunk"
+                        className="p-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-secondary hover:color-primary hover-border-primary transition-all modal-btn-cyberpunk"
                         onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                       >
                         {sortDirection === 'asc' ? '↑' : '↓'}
                       </button>
                     </div>
 
-                    <div className="h-48 overflow-y-auto border border-[#02b36d20] rounded-lg shadow-inner bg-[#091217] transition-all duration-200 group-hover:border-[#02b36d40] scrollbar-thin">
+                    <div className="h-48 overflow-y-auto border border-app-primary-20 rounded-lg shadow-inner bg-app-tertiary transition-all duration-200 group-hover:border-app-primary-40 scrollbar-thin">
                       {filterWallets(wallets, sourceSearchTerm).length > 0 ? (
                         filterWallets(wallets, sourceSearchTerm).map((wallet) => (
                           <div 
                             key={wallet.id}
-                            className={`flex items-center p-2.5 hover:bg-[#0a1419] cursor-pointer transition-all duration-200 border-b border-[#02b36d20] last:border-b-0
-                                      ${sourceWallets.includes(wallet.privateKey) ? 'bg-[#02b36d10] border-[#02b36d30]' : ''}`}
+                            className={`flex items-center p-2.5 hover-bg-secondary cursor-pointer transition-all duration-200 border-b border-app-primary-20 last:border-b-0
+                                      ${sourceWallets.includes(wallet.privateKey) ? 'bg-primary-10 border-app-primary-30' : ''}`}
                             onClick={() => toggleSourceWallet(wallet.privateKey)}
                           >
                             <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center transition-all duration-300
                                             ${sourceWallets.includes(wallet.privateKey)
-                                              ? 'bg-[#02b36d] shadow-md shadow-[#02b36d40]' 
-                                              : 'border border-[#02b36d30] bg-[#091217]'}`}>
+                                              ? 'bg-app-primary-color shadow-md shadow-app-primary-40' 
+                                              : 'border border-app-primary-30 bg-app-tertiary'}`}>
                               {sourceWallets.includes(wallet.privateKey) && (
-                                <CheckCircle size={14} className="text-[#050a0e] animate-[fadeIn_0.2s_ease]" />
+                                <CheckCircle size={14} className="text-app-primary animate-[fadeIn_0.2s_ease]" />
                               )}
                             </div>
                             <div className="flex-1 flex flex-col">
-                              <span className="font-mono text-sm text-[#e4fbf2] glitch-text">{getWalletDisplayName(wallet)}</span>
+                              <span className="font-mono text-sm text-app-primary glitch-text">{getWalletDisplayName(wallet)}</span>
                               <div className="flex items-center mt-0.5">
                                 {transferType === 'SOL' ? (
                                   <>
-                                    <DollarSign size={12} className="text-[#7ddfbd] mr-1" />
-                                    <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
+                                    <DollarSign size={12} className="text-app-secondary mr-1" />
+                                    <span className="text-xs text-app-secondary font-mono">{formatSolBalance(getWalletBalance(wallet.address) || 0)} SOL</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Coins size={12} className="text-[#7ddfbd] mr-1" />
-                                    <span className="text-xs text-[#7ddfbd] font-mono">{formatTokenBalance(getWalletTokenBalance(wallet.address) || 0)} TKN</span>
+                                    <Coins size={12} className="text-app-secondary mr-1" />
+                                    <span className="text-xs text-app-secondary font-mono">{formatTokenBalance(getWalletTokenBalance(wallet.address) || 0)} TKN</span>
                                   </>
                                 )}
                               </div>
@@ -725,7 +719,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                           </div>
                         ))
                       ) : (
-                        <div className="p-3 text-sm text-[#7ddfbd] text-center font-mono">
+                        <div className="p-3 text-sm text-app-secondary text-center font-mono">
                           {sourceSearchTerm 
                             ? `NO WALLETS FOUND WITH ${transferType} BALANCE > 0` 
                             : `NO WALLETS AVAILABLE WITH ${transferType} BALANCE > 0`}
@@ -737,8 +731,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                   {/* Recipient Addresses */}
                   <div className="group">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-[#7ddfbd] group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                        <span className="text-[#02b36d]">&#62;</span> Recipients ({receiverAddresses.length}) <span className="text-[#02b36d]">&#60;</span>
+                      <label className="text-sm font-medium text-app-secondary group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                        <span className="color-primary">&#62;</span> Recipients ({receiverAddresses.length}) <span className="color-primary">&#60;</span>
                       </label>
                     </div>
 
@@ -753,7 +747,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                             addRecipientAddress(newRecipientAddress.trim());
                           }
                         }}
-                        className="w-full px-4 py-2.5 pr-16 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                        className="w-full px-4 py-2.5 pr-16 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary shadow-inner focus-border-primary focus:ring-1 ring-primary-50 focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
                         placeholder="ENTER RECIPIENT ADDRESS"
                       />
                       <button
@@ -764,43 +758,43 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                           }
                         }}
                         disabled={!newRecipientAddress.trim()}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-[#02b36d] text-[#050a0e] text-xs font-bold rounded hover:bg-[#02b36d]/90 disabled:bg-[#02b36d30] disabled:text-[#7ddfbd] disabled:cursor-not-allowed transition-all duration-200 font-mono tracking-wider"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-app-primary-color text-app-primary text-xs font-bold rounded hover:bg-app-primary-dark disabled:bg-primary-30 disabled:text-app-secondary disabled:cursor-not-allowed transition-all duration-200 font-mono tracking-wider"
                       >
                         ADD
                       </button>
                     </div>
 
                     {/* Recipients list */}
-                    <div className="h-32 overflow-y-auto border border-[#02b36d20] rounded-lg bg-[#091217] scrollbar-thin">
+                    <div className="h-32 overflow-y-auto border border-app-primary-20 rounded-lg bg-app-tertiary scrollbar-thin">
                       {receiverAddresses.length > 0 ? (
                         receiverAddresses.map((address, index) => (
-                          <div key={index} className="flex items-center justify-between p-2.5 border-b border-[#02b36d20] last:border-b-0 hover:bg-[#0a1419] transition-all duration-200">
+                          <div key={index} className="flex items-center justify-between p-2.5 border-b border-app-primary-20 last:border-b-0 hover-bg-secondary transition-all duration-200">
                             <div className="flex-1">
-                              <span className="font-mono text-sm text-[#e4fbf2]">{formatAddress(address)}</span>
+                              <span className="font-mono text-sm text-app-primary">{formatAddress(address)}</span>
                               {transferType === 'SOL' && solBalances.has(address) && (
                                 <div className="flex items-center mt-0.5">
-                                  <DollarSign size={12} className="text-[#7ddfbd] mr-1" />
-                                  <span className="text-xs text-[#7ddfbd] font-mono">{formatSolBalance(getWalletBalance(address) || 0)} SOL</span>
+                                  <DollarSign size={12} className="text-app-secondary mr-1" />
+                                  <span className="text-xs text-app-secondary font-mono">{formatSolBalance(getWalletBalance(address) || 0)} SOL</span>
                                 </div>
                               )}
                               {transferType === 'TOKEN' && tokenBalances.has(address) && (
                                 <div className="flex items-center mt-0.5">
-                                  <Coins size={12} className="text-[#7ddfbd] mr-1" />
-                                  <span className="text-xs text-[#7ddfbd] font-mono">{formatTokenBalance(getWalletTokenBalance(address) || 0)} TKN</span>
+                                  <Coins size={12} className="text-app-secondary mr-1" />
+                                  <span className="text-xs text-app-secondary font-mono">{formatTokenBalance(getWalletTokenBalance(address) || 0)} TKN</span>
                                 </div>
                               )}
                             </div>
                             <button
                               type="button"
                               onClick={() => removeRecipientAddress(address)}
-                              className="ml-2 p-1 text-[#ff6b6b] hover:text-[#ff5252] hover:bg-[#ff525220] rounded transition-all duration-200"
+                              className="ml-2 p-1 text-warning hover:text-error-alt hover:bg-error-alt-20 rounded transition-all duration-200"
                             >
                               <X size={14} />
                             </button>
                           </div>
                         ))
                       ) : (
-                        <div className="p-3 text-sm text-[#7ddfbd] text-center font-mono">
+                        <div className="p-3 text-sm text-app-secondary text-center font-mono">
                           NO RECIPIENTS ADDED YET
                         </div>
                       )}
@@ -816,8 +810,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                 {/* Distribution Mode */}
                 {sourceWallets.length > 0 && receiverAddresses.length > 0 && (
                   <div className="group">
-                    <label className="block text-sm font-medium text-[#7ddfbd] mb-2 group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                      <span className="text-[#02b36d]">&#62;</span> Distribution Mode <span className="text-[#02b36d]">&#60;</span>
+                    <label className="block text-sm font-medium text-app-secondary mb-2 group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                      <span className="color-primary">&#62;</span> Distribution Mode <span className="color-primary">&#60;</span>
                     </label>
                     <div className="space-y-2">
                       <button
@@ -825,8 +819,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                         onClick={() => setDistributionMode('amount')}
                         className={`w-full p-3 rounded-lg border transition-all duration-200 font-mono text-sm ${
                           distributionMode === 'amount'
-                            ? 'bg-[#02b36d10] border-[#02b36d] text-[#02b36d]'
-                            : 'bg-[#091217] border-[#02b36d30] text-[#7ddfbd] hover:border-[#02b36d] hover:text-[#02b36d]'
+                            ? 'bg-primary-10 border-app-primary color-primary'
+                            : 'bg-app-tertiary border-app-primary-30 text-app-secondary hover-border-primary hover:color-primary'
                         }`}
                       >
                         <div className="font-semibold mb-1">FIXED AMOUNT</div>
@@ -837,8 +831,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                         onClick={() => setDistributionMode('percentage')}
                         className={`w-full p-3 rounded-lg border transition-all duration-200 font-mono text-sm ${
                           distributionMode === 'percentage'
-                            ? 'bg-[#02b36d10] border-[#02b36d] text-[#02b36d]'
-                            : 'bg-[#091217] border-[#02b36d30] text-[#7ddfbd] hover:border-[#02b36d] hover:text-[#02b36d]'
+                            ? 'bg-primary-10 border-app-primary color-primary'
+                            : 'bg-app-tertiary border-app-primary-30 text-app-secondary hover-border-primary hover:color-primary'
                         }`}
                       >
                         <div className="font-semibold mb-1">PERCENTAGE</div>
@@ -850,17 +844,17 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
                 {/* Amount Input */}
                 <div className="group">
-                  <label className="block text-sm font-medium text-[#7ddfbd] mb-1.5 group-hover:text-[#02b36d] transition-colors duration-200 font-mono uppercase tracking-wider">
-                    <span className="text-[#02b36d]">&#62;</span> 
+                  <label className="block text-sm font-medium text-app-secondary mb-1.5 group-hover:color-primary transition-colors duration-200 font-mono uppercase tracking-wider">
+                    <span className="color-primary">&#62;</span> 
                     {distributionMode === 'percentage' ? 'Percentage (%)' : `Amount (${transferType})`} 
-                    <span className="text-[#02b36d]">&#60;</span>
+                    <span className="color-primary">&#60;</span>
                   </label>
                   <div className="relative">
                     <input
                       type="number"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full px-4 py-2.5 pr-16 bg-[#091217] border border-[#02b36d30] rounded-lg text-[#e4fbf2] shadow-inner focus:border-[#02b36d] focus:ring-1 focus:ring-[#02b36d50] focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
+                      className="w-full px-4 py-2.5 pr-16 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary shadow-inner focus-border-primary focus:ring-1 ring-primary-50 focus:outline-none transition-all duration-200 modal-input-cyberpunk font-mono tracking-wider"
                       placeholder={distributionMode === 'percentage' ? 'ENTER %' : `ENTER ${transferType}`}
                       step={distributionMode === 'percentage' ? '0.1' : (transferType === 'SOL' ? '0.0001' : '1')}
                       min="0"
@@ -885,7 +879,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                         }
                       }}
                       disabled={sourceWallets.length === 0}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-[#02b36d] text-[#050a0e] text-xs font-bold rounded hover:bg-[#02b36d]/90 disabled:bg-[#02b36d30] disabled:text-[#7ddfbd] disabled:cursor-not-allowed transition-all duration-200 font-mono tracking-wider"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-app-primary-color text-app-primary text-xs font-bold rounded hover:bg-app-primary-dark disabled:bg-primary-30 disabled:text-app-secondary disabled:cursor-not-allowed transition-all duration-200 font-mono tracking-wider"
                     >
                       MAX
                     </button>
@@ -894,32 +888,32 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
                 {/* Transfer Summary */}
                 {sourceWallets.length > 0 && receiverAddresses.length > 0 && amount && (
-                  <div className="bg-[#091217] border border-[#02b36d30] rounded-lg p-4">
-                    <h3 className="text-base font-semibold text-[#e4fbf2] mb-3 font-mono tracking-wider">TRANSFER SUMMARY</h3>
+                  <div className="bg-app-tertiary border border-app-primary-30 rounded-lg p-4">
+                    <h3 className="text-base font-semibold text-app-primary mb-3 font-mono tracking-wider">TRANSFER SUMMARY</h3>
                     
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                         <div>
-                          <span className="text-[#7ddfbd]">SOURCES:</span>
-                          <span className="text-[#02b36d] ml-1 font-semibold">{sourceWallets.length}</span>
+                          <span className="text-app-secondary">SOURCES:</span>
+                          <span className="color-primary ml-1 font-semibold">{sourceWallets.length}</span>
                         </div>
                         <div>
-                          <span className="text-[#7ddfbd]">RECIPIENTS:</span>
-                          <span className="text-[#02b36d] ml-1 font-semibold">{receiverAddresses.length}</span>
+                          <span className="text-app-secondary">RECIPIENTS:</span>
+                          <span className="color-primary ml-1 font-semibold">{receiverAddresses.length}</span>
                         </div>
                         <div>
-                          <span className="text-[#7ddfbd]">AMOUNT:</span>
-                          <span className="text-[#02b36d] ml-1 font-semibold">
+                          <span className="text-app-secondary">AMOUNT:</span>
+                          <span className="color-primary ml-1 font-semibold">
                             {distributionMode === 'percentage' ? `${amount}%` : `${amount} ${transferType}`}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[#7ddfbd]">TOTAL TXN:</span>
-                          <span className="text-[#02b36d] ml-1 font-semibold">{sourceWallets.length * receiverAddresses.length}</span>
+                          <span className="text-app-secondary">TOTAL TXN:</span>
+                          <span className="color-primary ml-1 font-semibold">{sourceWallets.length * receiverAddresses.length}</span>
                         </div>
                       </div>
 
-                      <div className="text-xs font-mono text-[#7ddfbd]">
+                      <div className="text-xs font-mono text-app-secondary">
                         {distributionMode === 'percentage' ? (
                           `${amount}% of each wallet's balance to each of ${receiverAddresses.length} recipient(s)`
                         ) : (
@@ -928,25 +922,25 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                       </div>
 
                       {transferType === 'TOKEN' && selectedToken && (
-                        <div className="p-2 bg-[#050a0e] rounded border border-[#02b36d20]">
-                          <p className="text-xs text-[#7ddfbd] font-mono mb-1">TOKEN:</p>
-                          <p className="text-xs text-[#e4fbf2] font-mono break-all">{selectedToken}</p>
+                        <div className="p-2 bg-app-primary rounded border border-app-primary-20">
+                          <p className="text-xs text-app-secondary font-mono mb-1">TOKEN:</p>
+                          <p className="text-xs text-app-primary font-mono break-all">{selectedToken}</p>
                         </div>
                       )}
                     </div>
 
                     {/* Confirmation Checkbox */}
                     <div 
-                      className="flex items-center px-3 py-3 bg-[#050a0e] rounded-lg border border-[#02b36d40] mt-4 cursor-pointer"
+                      className="flex items-center px-3 py-3 bg-app-primary rounded-lg border border-app-primary-40 mt-4 cursor-pointer"
                       onClick={() => setIsConfirmed(!isConfirmed)}
                     >
                       <div className="relative mx-1">
                         <div 
-                          className={`w-5 h-5 border border-[#02b36d40] rounded transition-all ${isConfirmed ? 'bg-[#02b36d] border-0' : ''}`}
+                          className={`w-5 h-5 border border-app-primary-40 rounded transition-all ${isConfirmed ? 'bg-app-primary-color border-0' : ''}`}
                         ></div>
-                        <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-[#050a0e] transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
+                        <CheckCircle size={14} className={`absolute top-0.5 left-0.5 text-app-primary transition-all ${isConfirmed ? 'opacity-100' : 'opacity-0'}`} />
                       </div>
-                      <span className="text-[#e4fbf2] text-sm ml-2 select-none font-mono">
+                      <span className="text-app-primary text-sm ml-2 select-none font-mono">
                         CONFIRM BATCH TRANSFER
                       </span>
                     </div>
@@ -957,12 +951,12 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                       disabled={!isConfirmed || isSubmitting || batchProcessing}
                       className={`w-full mt-4 px-5 py-3 rounded-lg shadow-lg flex items-center justify-center transition-all duration-300 font-mono tracking-wider
                                 ${!isConfirmed || isSubmitting || batchProcessing
-                                  ? 'bg-[#02b36d50] text-[#050a0e80] cursor-not-allowed opacity-50' 
-                                  : 'bg-[#02b36d] text-[#050a0e] hover:bg-[#01a35f] transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
+                                  ? 'bg-primary-50 text-app-secondary-80 cursor-not-allowed opacity-50' 
+                                  : 'bg-app-primary-color text-app-primary hover:bg-app-primary-dark transform hover:-translate-y-0.5 modal-btn-cyberpunk'}`}
                     >
                       {isSubmitting || batchProcessing ? (
                         <>
-                          <div className="h-4 w-4 rounded-full border-2 border-[#050a0e80] border-t-transparent animate-spin mr-2"></div>
+                          <div className="h-4 w-4 rounded-full border-2 border-app-secondary-80 border-t-transparent animate-spin mr-2"></div>
                           {batchProcessing ? 'PROCESSING...' : 'INITIALIZING...'}
                         </>
                       ) : (
@@ -974,31 +968,31 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
                 {/* Processing Progress */}
                 {batchProcessing && transferQueue.length > 0 && (
-                  <div className="bg-[#071612] border border-[#02b36d40] rounded-lg p-4">
-                    <p className="text-sm text-[#02b36d] font-medium mb-3 font-mono">PROCESSING PROGRESS</p>
+                  <div className="bg-app-quaternary border border-app-primary-40 rounded-lg p-4">
+                    <p className="text-sm color-primary font-medium mb-3 font-mono">PROCESSING PROGRESS</p>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-[#7ddfbd]">CURRENT:</span>
-                        <span className="text-[#02b36d]">{currentTransferIndex + 1} / {transferQueue.length}</span>
+                        <span className="text-app-secondary">CURRENT:</span>
+                        <span className="color-primary">{currentTransferIndex + 1} / {transferQueue.length}</span>
                       </div>
-                      <div className="w-full bg-[#091217] rounded-full h-2">
+                      <div className="w-full bg-app-tertiary rounded-full h-2">
                         <div 
-                          className="bg-[#02b36d] h-2 rounded-full transition-all duration-300"
+                          className="bg-app-primary-color h-2 rounded-full transition-all duration-300"
                           style={{ width: `${((currentTransferIndex + 1) / transferQueue.length) * 100}%` }}
                         ></div>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-xs font-mono mt-2">
                         <div className="text-center">
-                          <span className="text-[#7ddfbd]">DONE:</span>
-                          <span className="text-[#02b36d] ml-1">{transferQueue.filter(t => t.status === 'completed').length}</span>
+                          <span className="text-app-secondary">DONE:</span>
+                          <span className="color-primary ml-1">{transferQueue.filter(t => t.status === 'completed').length}</span>
                         </div>
                         <div className="text-center">
-                          <span className="text-[#7ddfbd]">ACTIVE:</span>
-                          <span className="text-[#ffa500] ml-1">{transferQueue.filter(t => t.status === 'processing').length}</span>
+                          <span className="text-app-secondary">ACTIVE:</span>
+                          <span className="text-warning ml-1">{transferQueue.filter(t => t.status === 'processing').length}</span>
                         </div>
                         <div className="text-center">
-                          <span className="text-[#7ddfbd]">FAILED:</span>
-                          <span className="text-[#ff6b6b] ml-1">{transferQueue.filter(t => t.status === 'failed').length}</span>
+                          <span className="text-app-secondary">FAILED:</span>
+                          <span className="text-warning ml-1">{transferQueue.filter(t => t.status === 'failed').length}</span>
                         </div>
                       </div>
                     </div>
@@ -1010,10 +1004,10 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         </div>
         
         {/* Cyberpunk decorative corner elements */}
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#02b36d] opacity-70"></div>
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#02b36d] opacity-70"></div>
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-app-primary opacity-70"></div>
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-app-primary opacity-70"></div>
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-app-primary opacity-70"></div>
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-app-primary opacity-70"></div>
       </div>
     </div>,
     document.body
