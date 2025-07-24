@@ -6,7 +6,7 @@ import { Buffer as NodeBuffer } from 'buffer';
 import Cookies from 'js-cookie';
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
-import './styles/betterskill.css';
+import './styles/globals.css';
 import { ToastProvider } from "./Notifications";
 import ServerConfig from './ServerConfig';
 import IntroModal from './modals/IntroModal';
@@ -128,6 +128,67 @@ const Root = () => {
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showIntroModal, setShowIntroModal] = useState(false);
+
+  // Disable right-click and text selection globally
+  useEffect(() => {
+    // Add global styles to disable text selection
+    const style = document.createElement('style');
+    style.textContent = `
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      
+      /* Allow selection for input fields and textareas */
+      input, textarea, [contenteditable="true"] {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Disable right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable text selection with mouse
+    const handleSelectStart = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Allow selection in input fields and textareas
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return true;
+      }
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable drag and drop
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+
+    // Cleanup function
+    return () => {
+      document.head.removeChild(style);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, []);
   
   const measurePing = async (url: string): Promise<number> => {
     const startTime = Date.now();
