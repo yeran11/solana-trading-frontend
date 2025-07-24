@@ -44,7 +44,8 @@ export default defineConfig({
             './src/modals/DeployModal.tsx',
             './src/modals/CleanerModal.tsx',
             './src/modals/CustomBuyModal.tsx',
-            './src/modals/SettingsModal.tsx'
+            './src/modals/SettingsModal.tsx',
+            './src/modals/WalletsModal.tsx'
           ],
           
           // Page components
@@ -57,7 +58,6 @@ export default defineConfig({
           
           // Core components
           'components': [
-            './src/WalletOverview.tsx',
             './src/FloatingTradingCard.tsx',
             './src/TradingForm.tsx',
             './src/PnlCard.tsx'
