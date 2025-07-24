@@ -70,16 +70,77 @@ Visit: `http://localhost:5173`
 ## 🗂 Project Structure
 
 ```
-solana-ui/
-├── public/             # Static assets
+raze.bot/
 ├── src/                # Source code
-│   ├── components/     # React components
-│   ├── pages/          # Next.js pages
-│   └── styles/         # Tailwind CSS styles
+│   ├── modals/         # Modal components
+│   │   ├── BurnModal.tsx
+│   │   ├── CalculatePNLModal.tsx
+│   │   ├── CleanerModal.tsx
+│   │   ├── ConsolidateModal.tsx
+│   │   ├── CustomBuyModal.tsx
+│   │   ├── DeployBonkModal.tsx
+│   │   ├── DeployBoopModal.tsx
+│   │   ├── DeployCookModal.tsx
+│   │   ├── DeployModal.tsx
+│   │   ├── DeployMoonModal.tsx
+│   │   ├── DeployPumpModal.tsx
+│   │   ├── DepositModal.tsx
+│   │   ├── DistributeModal.tsx
+│   │   ├── IntroModal.tsx
+│   │   ├── MixerModal.tsx
+│   │   ├── SettingsModal.tsx
+│   │   ├── TransferModal.tsx
+│   │   └── WalletsModal.tsx
+│   ├── styles/         # CSS and styling
+│   │   ├── Styles.tsx
+│   │   ├── betterskill.css
+│   │   ├── raze.css
+│   │   ├── yellow.css
+│   │   └── globals.css
+│   ├── utils/          # Utility functions
+│   │   ├── bonkcreate.ts
+│   │   ├── boopcreate.ts
+│   │   ├── buy.ts
+│   │   ├── cleaner.ts
+│   │   ├── consolidate.ts
+│   │   ├── cookcreate.ts
+│   │   ├── distribute.ts
+│   │   ├── jitoService.ts
+│   │   ├── limitorders.ts
+│   │   ├── mixer.ts
+│   │   ├── mooncreate.ts
+│   │   ├── pumpcreate.ts
+│   │   ├── sell.ts
+│   │   ├── trading.ts
+│   │   └── wallets.ts
+│   ├── types/          # TypeScript type definitions
+│   ├── Actions.tsx     # Action components
+│   ├── App.tsx         # Main application component
+│   ├── Chart.tsx       # Chart component
+│   ├── Config.tsx      # Configuration component
+│   ├── FloatingTradingCard.tsx
+│   ├── Manager.tsx     # Manager component
+│   ├── Menu.tsx        # Menu component
+│   ├── Mobile.tsx      # Mobile-specific components
+│   ├── Notifications.tsx
+│   ├── OperationsWallets.tsx
+│   ├── PnlCard.tsx     # P&L card component
+│   ├── ServerConfig.tsx
+│   ├── StepVisualizations.tsx
+│   ├── TradingForm.tsx # Trading form component
+│   ├── Utils.tsx       # Utility functions
+│   ├── Wallets.tsx     # Wallet management
+│   └── index.tsx       # Entry point
+├── index.html          # HTML template
+├── manifest.json       # Web app manifest
 ├── tailwind.config.js  # Tailwind CSS configuration
 ├── postcss.config.js   # PostCSS configuration
+├── vite.config.js      # Vite configuration
 ├── package.json        # Project metadata and scripts
-└── README.md           # Project documentation
+├── AUDIT.md           # Security audit documentation
+├── SECURITY.md        # Security guidelines
+├── README-IFRAME-INTEGRATION.md
+└── README.md          # Project documentation
 ```
 
 ---
