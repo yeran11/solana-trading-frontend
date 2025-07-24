@@ -627,23 +627,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       High slippage tolerance for volatile tokens (recommended: 99%)
                     </div>
                   </div>
-                  
-                  {/* Only show API key input if it's not hardcoded (empty by default) */}
-                  {!config.apiKey && (
-                    <div>
-                      <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
-                        API Key (Optional)
-                      </label>
-                      <input
-                        type="password"
-                        value={config.apiKey}
-                        onChange={(e) => onConfigChange('apiKey', e.target.value)}
-                        className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
-                        placeholder="Enter API key"
-                      />
-                    </div>
-                  )}
-                  
+                                
                   <div className="bg-app-tertiary border border-app-primary-20 rounded p-4">
                     <h4 className="text-sm font-bold text-app-primary font-mono mb-2">SYSTEM INFORMATION</h4>
                     <div className="space-y-2 text-sm font-mono">
