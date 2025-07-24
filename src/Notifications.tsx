@@ -41,25 +41,25 @@ const cyberpunkAnimations = `
 
   @keyframes cyberpunk-glow {
     0% {
-      box-shadow: 0 0 5px rgba(2, 179, 109, 0.7);
+      box-shadow: 0 0 5px var(--color-primary-70);
     }
     50% {
-      box-shadow: 0 0 15px rgba(2, 179, 109, 0.9), 0 0 30px rgba(2, 179, 109, 0.5);
+      box-shadow: 0 0 15px var(--color-primary-90), 0 0 30px var(--color-primary-50);
     }
     100% {
-      box-shadow: 0 0 5px rgba(2, 179, 109, 0.7);
+      box-shadow: 0 0 5px var(--color-primary-70);
     }
   }
 
   @keyframes cyberpunk-error-glow {
     0% {
-      box-shadow: 0 0 5px rgba(255, 48, 92, 0.7);
+      box-shadow: 0 0 5px var(--color-error-70);
     }
     50% {
-      box-shadow: 0 0 15px rgba(255, 48, 92, 0.9), 0 0 30px rgba(255, 48, 92, 0.5);
+      box-shadow: 0 0 15px var(--color-error-90), 0 0 30px var(--color-error-50);
     }
     100% {
-      box-shadow: 0 0 5px rgba(255, 48, 92, 0.7);
+      box-shadow: 0 0 5px var(--color-error-70);
     }
   }
   
@@ -74,37 +74,37 @@ const cyberpunkAnimations = `
 
   @keyframes cyberpunk-text-glitch {
     0% {
-      text-shadow: 0 0 0 rgba(125, 223, 189, 0.9);
+      text-shadow: 0 0 0 var(--color-text-secondary-90);
     }
     5% {
       text-shadow: -2px 0 0 rgba(255, 0, 128, 0.8), 2px 0 0 rgba(0, 255, 255, 0.8);
     }
     10% {
-      text-shadow: 0 0 0 rgba(125, 223, 189, 0.9);
+      text-shadow: 0 0 0 var(--color-text-secondary-90);
     }
     15% {
       text-shadow: -2px 0 0 rgba(255, 0, 128, 0.8), 2px 0 0 rgba(0, 255, 255, 0.8);
     }
     20% {
-      text-shadow: 0 0 0 rgba(125, 223, 189, 0.9);
+      text-shadow: 0 0 0 var(--color-text-secondary-90);
     }
     100% {
-      text-shadow: 0 0 0 rgba(125, 223, 189, 0.9);
+      text-shadow: 0 0 0 var(--color-text-secondary-90);
     }
   }
 `
 
 // CSS classes for cyberpunk styling
 const cyberpunkClasses = {
-  successToast: "relative bg-[#050a0e] border border-[#02b36d] text-[#e4fbf2] animate-[cyberpunk-glow_2s_infinite]",
-  errorToast: "relative bg-[#050a0e] border border-[#ff305c] text-[#e4fbf2] animate-[cyberpunk-error-glow_2s_infinite]",
-  scanline: "absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,rgba(2,179,109,0)_50%,rgba(2,179,109,0.1)_50%)] bg-[size:100%_4px] animate-[cyberpunk-scanline_4s_linear_infinite] opacity-40",
-  errorScanline: "absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,rgba(255,48,92,0)_50%,rgba(255,48,92,0.1)_50%)] bg-[size:100%_4px] animate-[cyberpunk-scanline_4s_linear_infinite] opacity-40",
-  icon: "h-5 w-5 text-[#02b36d]",
-  errorIcon: "h-5 w-5 text-[#ff305c]",
+  successToast: "relative bg-app-primary border border-app-primary text-app-primary animate-[cyberpunk-glow_2s_infinite]",
+  errorToast: "relative bg-app-primary border border-error text-app-primary animate-[cyberpunk-error-glow_2s_infinite]",
+  scanline: "absolute inset-0 pointer-events-none bg-gradient-scanline-primary bg-[size:100%_4px] animate-[cyberpunk-scanline_4s_linear_infinite] opacity-40",
+  errorScanline: "absolute inset-0 pointer-events-none bg-gradient-scanline-error bg-[size:100%_4px] animate-[cyberpunk-scanline_4s_linear_infinite] opacity-40",
+  icon: "h-5 w-5 color-primary",
+  errorIcon: "h-5 w-5 text-error",
   message: "font-mono tracking-wider animate-[cyberpunk-text-glitch_3s_infinite]",
-  closeButton: "ml-2 rounded-full p-1 hover:bg-[#02b36d40] text-[#7ddfbd] transition-colors duration-300",
-  errorCloseButton: "ml-2 rounded-full p-1 hover:bg-[#ff305c40] text-[#ff8fa7] transition-colors duration-300"
+  closeButton: "ml-2 rounded-full p-1 hover:bg-primary-40 text-app-secondary transition-colors duration-300",
+  errorCloseButton: "ml-2 rounded-full p-1 hover:bg-error-40 text-error-light transition-colors duration-300"
 }
 
 export const ToastContext = createContext<{
@@ -153,10 +153,10 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
             <div className={toast.type === 'success' ? cyberpunkClasses.scanline : cyberpunkClasses.errorScanline}></div>
             
             {/* Corner accents for cyberpunk border effect */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#02b36d]"></div>
-            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#02b36d]"></div>
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#02b36d]"></div>
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#02b36d]"></div>
+            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-app-primary"></div>
+            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-app-primary"></div>
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-app-primary"></div>
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-app-primary"></div>
             
             {/* Icon and content */}
             {toast.type === 'success' ? (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Settings, Rocket, BarChart3, DollarSign } from 'lucide-react';
-import { StepVisualization, StylesAppender } from './StepVisualizations';
+import { StepVisualization, StylesAppender } from '../StepVisualizations';
 
 // Updated Types for our component - removed action props
 interface IntroductionModalProps {
@@ -181,25 +181,6 @@ const IntroductionModal: React.FC<IntroductionModalProps> = ({
                 {currentStep < steps.length - 1 ? "Next" : "Finish"}
               </span>
             </button>
-          </div>
-
-          {/* Don't show again checkbox */}
-          <div className="mt-6 flex items-center">
-            <input
-              type="checkbox"
-              id="dont-show-again"
-              checked={dontShowAgain}
-              onChange={() => setDontShowAgain(!dontShowAgain)}
-              className="mr-2 cyberpunk-input"
-              style={{ 
-                accentColor: '#02b36d',
-                width: '16px',
-                height: '16px'
-              }}
-            />
-            <label htmlFor="dont-show-again" className="text-sm text-[#7ddfbd] cursor-pointer">
-              Don't show this again
-            </label>
           </div>
         </div>
       </div>

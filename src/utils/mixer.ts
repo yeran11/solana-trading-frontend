@@ -1,13 +1,5 @@
 import { Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-const MAX_BUNDLES_PER_SECOND = 2;
-
-// Rate limiting state
-const rateLimitState = {
-  count: 0,
-  lastReset: Date.now(),
-  maxBundlesPerSecond: MAX_BUNDLES_PER_SECOND
-};
 
 interface WalletMixing {
   address: string;

@@ -38,7 +38,7 @@ export const handleApiKeyFromUrl = (
 };
 
 /**
- * Fetch SOL balances for all wallets
+ * Fetch SOL balances for all wallets with 100ms delay between each wallet
  */
 export const fetchSolBalances = async (
   connection: Connection,
@@ -47,7 +47,10 @@ export const fetchSolBalances = async (
 ) => {
   const newBalances = new Map<string, number>();
   
-  const promises = wallets.map(async (wallet) => {
+  // Process wallets sequentially with delay
+  for (let i = 0; i < wallets.length; i++) {
+    const wallet = wallets[i];
+    
     try {
       const balance = await fetchSolBalance(connection, wallet.address);
       newBalances.set(wallet.address, balance);
@@ -55,10 +58,15 @@ export const fetchSolBalances = async (
       console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
       newBalances.set(wallet.address, 0);
     }
-  });
+    
+    // Update balances after each wallet to show progress
+    setSolBalances(new Map(newBalances));
+    // Add 100ms delay between wallets (except for the last one)
+    if (i < wallets.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
   
-  await Promise.all(promises);
-  setSolBalances(newBalances);
   return newBalances;
 };
 

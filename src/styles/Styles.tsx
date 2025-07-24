@@ -29,7 +29,7 @@ export const WalletTooltip: React.FC<{
       </div>
       {isVisible && (
         <div className={`absolute z-50 ${positionClasses[position]}`}>
-          <div className="bg-[#051014] cyberpunk-border text-[#02b36d] text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+          <div className="bg-app-quaternary cyberpunk-border color-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
             {content}
           </div>
         </div>
@@ -49,10 +49,10 @@ export const initStyles = () => {
   }
 
   .cyberpunk-bg {
-    background-color: #050a0e;
+    background-color: var(--color-bg-primary);
     background-image: 
-      linear-gradient(rgba(2, 179, 109, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(2, 179, 109, 0.05) 1px, transparent 1px);
+      linear-gradient(var(--color-primary-05) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-primary-05) 1px, transparent 1px);
     background-size: 20px 20px;
     background-position: center center;
     position: relative;
@@ -67,8 +67,8 @@ export const initStyles = () => {
     right: 0;
     bottom: 0;
     background-image: 
-      linear-gradient(rgba(2, 179, 109, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(2, 179, 109, 0.05) 1px, transparent 1px);
+      linear-gradient(var(--color-primary-05) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-primary-05) 1px, transparent 1px);
     background-size: 20px 20px;
     background-position: center center;
     animation: grid-pulse 4s infinite;
@@ -77,22 +77,22 @@ export const initStyles = () => {
 
   /* Glowing border effect */
   @keyframes border-glow {
-    0% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), inset 0 0 5px rgba(2, 179, 109, 0.2); }
-    50% { box-shadow: 0 0 10px rgba(2, 179, 109, 0.8), inset 0 0 10px rgba(2, 179, 109, 0.3); }
-    100% { box-shadow: 0 0 5px rgba(2, 179, 109, 0.5), inset 0 0 5px rgba(2, 179, 109, 0.2); }
+    0% { box-shadow: 0 0 5px var(--color-primary-50), inset 0 0 5px var(--color-primary-20); }
+    50% { box-shadow: 0 0 10px var(--color-primary-80), inset 0 0 10px var(--color-primary-30); }
+    100% { box-shadow: 0 0 5px var(--color-primary-50), inset 0 0 5px var(--color-primary-20); }
   }
 
   .cyberpunk-border {
-    border: 1px solid rgba(2, 179, 109, 0.5);
+    border: 1px solid var(--color-primary-50);
     border-radius: 4px;
     animation: border-glow 4s infinite;
   }
 
   /* Button hover animations */
   @keyframes btn-glow {
-    0% { box-shadow: 0 0 5px #02b36d; }
-    50% { box-shadow: 0 0 15px #02b36d; }
-    100% { box-shadow: 0 0 5px #02b36d; }
+    0% { box-shadow: 0 0 5px var(--color-primary); }
+    50% { box-shadow: 0 0 15px var(--color-primary); }
+    100% { box-shadow: 0 0 5px var(--color-primary); }
   }
 
   .cyberpunk-btn {
@@ -114,9 +114,9 @@ export const initStyles = () => {
     height: 200%;
     background: linear-gradient(
       to bottom right,
-      rgba(2, 179, 109, 0) 0%,
-      rgba(2, 179, 109, 0.3) 50%,
-      rgba(2, 179, 109, 0) 100%
+      transparent 0%,
+      var(--color-primary-30) 50%,
+      transparent 100%
     );
     transform: rotate(45deg);
     transition: all 0.5s ease;
@@ -146,7 +146,7 @@ export const initStyles = () => {
 
   /* Input focus effect */
   .cyberpunk-input:focus {
-    box-shadow: 0 0 0 1px rgba(2, 179, 109, 0.7), 0 0 15px rgba(2, 179, 109, 0.5);
+    box-shadow: 0 0 0 1px var(--color-primary-70), 0 0 15px var(--color-primary-50);
     transition: all 0.3s ease;
   }
 
@@ -157,7 +157,7 @@ export const initStyles = () => {
 
   .cyberpunk-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3), 0 0 15px rgba(2, 179, 109, 0.3);
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3), 0 0 15px var(--color-primary-30);
   }
 
   /* Scan line effect */
@@ -184,7 +184,7 @@ export const initStyles = () => {
     height: 10px;
     background: linear-gradient(to bottom, 
       transparent 0%,
-      rgba(2, 179, 109, 0.2) 50%,
+      var(--color-primary-20) 50%,
       transparent 100%);
     z-index: 10;
     animation: scanline 8s linear infinite;
@@ -202,7 +202,7 @@ export const initStyles = () => {
   }
 
   .split-custom .gutter-horizontal:hover {
-    background-color: rgba(2, 179, 109, 0.3);
+    background-color: var(--color-primary-30);
   }
 
   .split-custom .gutter-horizontal::before,
@@ -211,7 +211,7 @@ export const initStyles = () => {
     position: absolute;
     width: 1px;
     height: 15px;
-    background-color: rgba(2, 179, 109, 0.7);
+    background-color: var(--color-primary-70);
     left: 50%;
     transform: translateX(-50%);
     transition: all 0.3s ease;
@@ -227,8 +227,8 @@ export const initStyles = () => {
 
   .split-custom .gutter-horizontal:hover::before,
   .split-custom .gutter-horizontal:hover::after {
-    background-color: #02b36d;
-    box-shadow: 0 0 10px rgba(2, 179, 109, 0.7);
+    background-color: var(--color-primary);
+    box-shadow: 0 0 10px var(--color-primary-70);
   }
 
   /* Neo-futuristic table styling */
@@ -238,8 +238,8 @@ export const initStyles = () => {
   }
 
   .cyberpunk-table thead th {
-    background-color: rgba(2, 179, 109, 0.1);
-    border-bottom: 2px solid rgba(2, 179, 109, 0.5);
+    background-color: var(--color-primary-10);
+    border-bottom: 2px solid var(--color-primary-50);
   }
 
   .cyberpunk-table tbody tr {
@@ -247,13 +247,13 @@ export const initStyles = () => {
   }
 
   .cyberpunk-table tbody tr:hover {
-    background-color: rgba(2, 179, 109, 0.05);
+    background-color: var(--color-primary-05);
   }
 
   /* Neon text effect */
   .neon-text {
-    color: #02b36d;
-    text-shadow: 0 0 5px rgba(2, 179, 109, 0.7);
+    color: var(--color-primary);
+    text-shadow: 0 0 5px var(--color-primary-70);
   }
 
   /* Notification animation */
@@ -282,13 +282,13 @@ export const initStyles = () => {
   /* Button click effect */
   .cyberpunk-btn:active {
     transform: scale(0.95);
-    box-shadow: 0 0 15px rgba(2, 179, 109, 0.7);
+    box-shadow: 0 0 15px var(--color-primary-70);
   }
 
   /* Menu active state */
   .menu-item-active {
-    border-left: 3px solid #02b36d;
-    background-color: rgba(2, 179, 109, 0.1);
+    border-left: 3px solid var(--color-primary);
+    background-color: var(--color-primary-10);
   }
 
   /* Angle brackets for headings */
@@ -302,7 +302,7 @@ export const initStyles = () => {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    color: #02b36d;
+    color: var(--color-primary);
     font-weight: bold;
   }
 

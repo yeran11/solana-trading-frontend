@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Plus, Upload, FileUp, Download, Trash2, Settings, Globe, Zap, Wallet, Key, Save } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
-import { WalletTooltip } from './Styles';
+import { WalletTooltip } from '../styles/Styles';
 import { 
   createNewWallet,
   importWallet,
@@ -11,8 +11,8 @@ import {
   WalletType,
   ConfigType,
   copyToClipboard
-} from './Utils';
-import { handleCleanupWallets } from './Manager';
+} from '../Utils';
+import { handleCleanupWallets } from '../Manager';
 
 interface EnhancedSettingsModalProps {
   isOpen: boolean;
@@ -29,8 +29,8 @@ interface EnhancedSettingsModalProps {
   setTokenBalances: (balances: Map<string, number>) => void;
   tokenAddress: string;
   showToast: (message: string, type: 'success' | 'error') => void;
-  activeTab: 'network' | 'wallets' | 'advanced';
-  setActiveTab: (tab: 'network' | 'wallets' | 'advanced') => void;
+  activeTab: 'wallets' | 'advanced';
+  setActiveTab: (tab: 'wallets' | 'advanced') => void;
 }
 
 const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
@@ -265,26 +265,25 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[#091217] border border-[#02b36d40] cyberpunk-border rounded-lg w-[90vw] max-w-4xl h-[85vh] p-6 mx-4 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-app-overlay backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-app-tertiary border border-app-primary-40 cyberpunk-border rounded-lg w-[90vw] max-w-4xl h-[85vh] p-6 mx-4 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 pb-4 border-b border-[#02b36d40]">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-app-primary-40">
           <div className="flex items-center gap-3">
-            <Settings className="text-[#02b36d]" size={24} />
-            <h2 className="text-xl font-bold text-[#e4fbf2] font-mono tracking-wider">SYSTEM SETTINGS</h2>
+            <Settings className="color-primary" size={24} />
+            <h2 className="text-xl font-bold text-app-primary font-mono tracking-wider">SYSTEM SETTINGS</h2>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-[#ff224420] border border-[#ff224440] hover:border-[#ff2244] rounded transition-all duration-300"
+            className="p-2 hover:bg-error-20 border border-error-alt-40 hover-border-error-alt rounded transition-all duration-300"
           >
-            <X size={20} className="text-[#ff2244]" />
+            <X size={20} className="text-error-alt" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-6 bg-[#0a1419] rounded-lg p-1">
+        <div className="flex space-x-1 mb-6 bg-app-secondary rounded-lg p-1">
           {([
-            { id: 'network', label: 'NETWORK', icon: Globe },
             { id: 'wallets', label: 'WALLETS', icon: Wallet },
             { id: 'advanced', label: 'ADVANCED', icon: Zap }
           ] as const).map(({ id, label, icon: Icon }) => (
@@ -293,8 +292,8 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
               onClick={() => setActiveTab(id)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-all duration-300 font-mono text-sm ${
                 activeTab === id
-                  ? 'bg-[#02b36d] text-black font-bold'
-                  : 'text-[#7ddfbd] hover:text-[#e4fbf2] hover:bg-[#02b36d20]'
+                  ? 'bg-app-primary-color text-black font-bold'
+                  : 'text-app-secondary hover:text-app-primary hover:bg-primary-20'
               }`}
             >
               <Icon size={16} />
@@ -305,57 +304,18 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
-          {activeTab === 'network' && (
-            <div className="space-y-6">
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Globe size={20} className="text-[#02b36d]" />
-                  NETWORK CONFIGURATION
-                </h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
-                      RPC Endpoint
-                    </label>
-                    <input
-                      type="text"
-                      value={config.rpcEndpoint}
-                      onChange={(e) => onConfigChange('rpcEndpoint', e.target.value)}
-                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
-                      placeholder="Enter RPC endpoint URL"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
-                      Transaction Fee (SOL)
-                    </label>
-                    <input
-                      type="text"
-                      value={config.transactionFee}
-                      onChange={(e) => onConfigChange('transactionFee', e.target.value)}
-                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
-                      placeholder="0.000005"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {activeTab === 'wallets' && (
             <div className="space-y-6">
               {/* Create Wallets Section */}
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Plus size={20} className="text-[#02b36d]" />
+              <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-app-primary font-mono mb-4 flex items-center gap-2">
+                  <Plus size={20} className="color-primary" />
                   CREATE WALLETS
                 </h3>
                 
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
-                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
+                    <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
                       Quantity (1-100)
                     </label>
                     <input
@@ -364,7 +324,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       max="100"
                       value={walletQuantity}
                       onChange={(e) => setWalletQuantity(e.target.value)}
-                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
+                      className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
                       placeholder="1"
                     />
                   </div>
@@ -373,8 +333,8 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                     disabled={isCreatingWallets}
                     className={`px-6 py-3 ${
                       isCreatingWallets 
-                        ? 'bg-[#02b36d50] cursor-not-allowed' 
-                        : 'bg-[#02b36d] hover:bg-[#01a35f] cyberpunk-btn'
+                        ? 'bg-primary-50 cursor-not-allowed' 
+                        : 'bg-app-primary-color hover:bg-app-primary-dark cyberpunk-btn'
                     } text-black font-bold rounded font-mono tracking-wider transition-all duration-300`}
                   >
                     {isCreatingWallets ? 'CREATING...' : 'CREATE'}
@@ -383,17 +343,17 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
               </div>
 
               {/* Wallet Management Actions */}
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Settings size={20} className="text-[#02b36d]" />
+              <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-app-primary font-mono mb-4 flex items-center gap-2">
+                  <Settings size={20} className="color-primary" />
                   WALLET MANAGEMENT
                 </h3>
                 
                 <div className="space-y-6">
                   {/* Import Section */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-bold text-[#e4fbf2] font-mono flex items-center gap-2">
-                      <Key size={16} className="text-[#02b36d]" />
+                    <h4 className="text-md font-bold text-app-primary font-mono flex items-center gap-2">
+                      <Key size={16} className="color-primary" />
                       IMPORT WALLETS
                     </h4>
                     
@@ -407,12 +367,12 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                           setImportKey(e.target.value);
                           setImportError(null);
                         }}
-                        className={`w-full bg-[#091217] border ${
-                          importError ? 'border-[#ff2244]' : 'border-[#02b36d40]'
-                        } rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono`}
+                        className={`w-full bg-app-tertiary border ${
+                          importError ? 'border-error-alt' : 'border-app-primary-40'
+                        } rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono`}
                       />
                       {importError && (
-                        <div className="text-[#ff2244] text-sm font-mono flex items-center">
+                        <div className="text-error-alt text-sm font-mono flex items-center">
                           <span className="mr-1">!</span> {importError}
                         </div>
                       )}
@@ -421,8 +381,8 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         disabled={!importKey.trim()}
                         className={`w-full p-3 ${
                           !importKey.trim()
-                            ? 'bg-[#02b36d20] cursor-not-allowed'
-                            : 'bg-[#02b36d] hover:bg-[#01a35f] cyberpunk-btn'
+                            ? 'bg-primary-20 cursor-not-allowed'
+                            : 'bg-app-primary-color hover:bg-app-primary-dark cyberpunk-btn'
                         } text-black font-bold rounded font-mono tracking-wider transition-all duration-300`}
                       >
                         IMPORT WALLET
@@ -444,9 +404,9 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         disabled={isProcessingFile}
                         className={`w-full p-3 ${
                           isProcessingFile 
-                            ? 'bg-[#02b36d20] cursor-not-allowed' 
-                            : 'bg-[#091217] hover:bg-[#02b36d20] cyberpunk-btn'
-                        } border border-[#02b36d40] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2`}
+                            ? 'bg-primary-20 cursor-not-allowed' 
+                            : 'bg-app-tertiary hover:bg-primary-20 cyberpunk-btn'
+                        } border border-app-primary-40 rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2`}
                       >
                         <FileUp size={16} />
                         {isProcessingFile ? 'PROCESSING FILE...' : 'IMPORT FROM FILE (.txt/.key)'}
@@ -455,12 +415,12 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                   </div>
 
                   {/* Management Actions */}
-                  <div className="border-t border-[#02b36d20] pt-4">
-                    <h4 className="text-md font-bold text-[#e4fbf2] font-mono mb-4">ACTIONS</h4>
+                  <div className="border-t border-app-primary-20 pt-4">
+                    <h4 className="text-md font-bold text-app-primary font-mono mb-4">ACTIONS</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <button
                         onClick={() => downloadAllWallets(wallets)}
-                        className="p-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2"
+                        className="p-3 bg-app-tertiary border border-app-primary-40 hover-border-primary rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2"
                       >
                         <Download size={16} />
                         EXPORT ALL WALLETS
@@ -468,7 +428,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       
                       <button
                         onClick={() => handleCleanupWallets(wallets, solBalances, tokenBalances, setWallets, showToast)}
-                        className="p-3 bg-[#091217] border border-[#ff224440] hover:border-[#ff2244] rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2 text-[#ff2244]"
+                        className="p-3 bg-app-tertiary border border-error-alt-40 hover-border-error-alt rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2 text-error-alt"
                       >
                         <Trash2 size={16} />
                         REMOVE EMPTY WALLETS
@@ -479,30 +439,30 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
               </div>
 
               {/* Wallet Stats */}
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4">WALLET STATISTICS</h3>
+              <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-app-primary font-mono mb-4">WALLET STATISTICS</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#02b36d] font-mono">{wallets.length}</div>
-                    <div className="text-sm text-[#7ddfbd] font-mono">TOTAL WALLETS</div>
+                    <div className="text-2xl font-bold color-primary font-mono">{wallets.length}</div>
+                    <div className="text-sm text-app-secondary font-mono">TOTAL WALLETS</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#02b36d] font-mono">
+                    <div className="text-2xl font-bold color-primary font-mono">
                       {Array.from(solBalances.values()).reduce((sum, balance) => sum + balance, 0).toFixed(4)}
                     </div>
-                    <div className="text-sm text-[#7ddfbd] font-mono">TOTAL SOL</div>
+                    <div className="text-sm text-app-secondary font-mono">TOTAL SOL</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#02b36d] font-mono">
+                    <div className="text-2xl font-bold color-primary font-mono">
                       {Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0).toLocaleString()}
                     </div>
-                    <div className="text-sm text-[#7ddfbd] font-mono">TOTAL TOKENS</div>
+                    <div className="text-sm text-app-secondary font-mono">TOTAL TOKENS</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#02b36d] font-mono">
+                    <div className="text-2xl font-bold color-primary font-mono">
                       {wallets.filter(w => (solBalances.get(w.address) || 0) > 0).length}
                     </div>
-                    <div className="text-sm text-[#7ddfbd] font-mono">ACTIVE WALLETS</div>
+                    <div className="text-sm text-app-secondary font-mono">ACTIVE WALLETS</div>
                   </div>
                 </div>
               </div>
@@ -511,38 +471,174 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
 
           {activeTab === 'advanced' && (
             <div className="space-y-6">
-              <div className="bg-[#0a1419] border border-[#02b36d30] rounded-lg p-6">
-                <h3 className="text-lg font-bold text-[#e4fbf2] font-mono mb-4 flex items-center gap-2">
-                  <Zap size={20} className="text-[#02b36d]" />
-                  ADVANCED SETTINGS
+              {/* Network Configuration Section */}
+              <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-app-primary font-mono mb-4 flex items-center gap-2">
+                  <Globe size={20} className="color-primary" />
+                  NETWORK CONFIGURATION
                 </h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-[#7ddfbd] font-mono mb-2 uppercase tracking-wider">
-                      API Key (Optional)
+                    <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                      RPC Endpoint
                     </label>
                     <input
-                      type="password"
-                      value={config.apiKey}
-                      onChange={(e) => onConfigChange('apiKey', e.target.value)}
-                      className="w-full bg-[#091217] border border-[#02b36d40] rounded p-3 text-sm text-[#e4fbf2] focus:border-[#02b36d] focus:outline-none cyberpunk-input font-mono"
-                      placeholder="Enter API key for enhanced features"
+                      type="text"
+                      value={config.rpcEndpoint}
+                      onChange={(e) => onConfigChange('rpcEndpoint', e.target.value)}
+                      className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
+                      placeholder="Enter RPC endpoint URL"
                     />
                   </div>
                   
-                  <div className="bg-[#091217] border border-[#02b36d20] rounded p-4">
-                    <h4 className="text-sm font-bold text-[#e4fbf2] font-mono mb-2">SYSTEM INFORMATION</h4>
+                  <div>
+                    <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                      Transaction Fee (SOL)
+                    </label>
+                    <input
+                      type="text"
+                      value={config.transactionFee}
+                      onChange={(e) => onConfigChange('transactionFee', e.target.value)}
+                      className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
+                      placeholder="0.000005"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Trading Configuration Section */}
+              <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-app-primary font-mono mb-4 flex items-center gap-2">
+                  <Zap size={20} className="color-primary" />
+                  TRADING CONFIGURATION
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                      Default Bundle Mode
+                    </label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { value: 'single', label: '🔄 Single', description: 'Each wallet sent separately' },
+                        { value: 'batch', label: '📦 Batch', description: '5 wallets per bundle' },
+                        { value: 'all-in-one', label: '🚀 All-in-one', description: 'All wallets prepared first, then sent concurrently' }
+                      ].map(option => (
+                        <div 
+                          key={option.value}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            config.bundleMode === option.value 
+                              ? 'border-app-primary bg-primary-10' 
+                              : 'border-app-primary-30 hover:border-primary-50'
+                          }`}
+                          onClick={() => onConfigChange('bundleMode', option.value)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="text-sm font-medium text-app-primary font-mono">
+                                  {option.label}
+                                </div>
+                                <div className="text-xs text-app-secondary font-mono">
+                                  {option.description}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              config.bundleMode === option.value 
+                                ? 'border-app-primary bg-app-primary-color' 
+                                : 'border-app-primary-30'
+                            }`}>
+                              {config.bundleMode === option.value && (
+                                <div className="w-full h-full rounded-full bg-app-primary-color flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-app-primary"></div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-xs text-app-secondary-80 font-mono mt-2">
+                      This will be the default bundle mode for new trading operations
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                        Single Mode Delay (ms)
+                      </label>
+                      <input
+                        type="number"
+                        min="50"
+                        max="5000"
+                        step="50"
+                        value={config.singleDelay || '200'}
+                        onChange={(e) => onConfigChange('singleDelay', e.target.value)}
+                        className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
+                        placeholder="200"
+                      />
+                      <div className="text-xs text-app-secondary-80 font-mono mt-1">
+                        Delay between wallets in single mode
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                        Batch Mode Delay (ms)
+                      </label>
+                      <input
+                        type="number"
+                        min="100"
+                        max="10000"
+                        step="100"
+                        value={config.batchDelay || '1000'}
+                        onChange={(e) => onConfigChange('batchDelay', e.target.value)}
+                        className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
+                        placeholder="1000"
+                      />
+                      <div className="text-xs text-app-secondary-80 font-mono mt-1">
+                        Delay between batches in batch mode
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                      Default Slippage (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0.1"
+                      max="100"
+                      step="0.1"
+                      value={config.slippageBps ? (parseFloat(config.slippageBps) / 100).toString() : '99'}
+                      onChange={(e) => {
+                        const percentage = parseFloat(e.target.value) || 99;
+                        const bps = Math.round(percentage * 100).toString();
+                        onConfigChange('slippageBps', bps);
+                      }}
+                      className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
+                      placeholder="99.0"
+                    />
+                    <div className="text-xs text-app-secondary-80 font-mono mt-1">
+                      High slippage tolerance for volatile tokens (recommended: 99%)
+                    </div>
+                  </div>  
+                  <div className="bg-app-tertiary border border-app-primary-20 rounded p-4">
+                    <h4 className="text-sm font-bold text-app-primary font-mono mb-2">SYSTEM INFORMATION</h4>
                     <div className="space-y-2 text-sm font-mono">
                       <div className="flex justify-between">
-                        <span className="text-[#7ddfbd]">Connection Status:</span>
-                        <span className={connection ? 'text-[#02b36d]' : 'text-[#ff2244]'}>
+                        <span className="text-app-secondary">Connection Status:</span>
+                        <span className={connection ? 'color-primary' : 'text-error-alt'}>
                           {connection ? 'CONNECTED' : 'DISCONNECTED'}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#7ddfbd]">RPC Endpoint:</span>
-                        <span className="text-[#e4fbf2] truncate ml-2" title={config.rpcEndpoint}>
+                        <span className="text-app-secondary">RPC Endpoint:</span>
+                        <span className="text-app-primary truncate ml-2" title={config.rpcEndpoint}>
                           {config.rpcEndpoint.length > 30 ? config.rpcEndpoint.substring(0, 30) + '...' : config.rpcEndpoint}
                         </span>
                       </div>
@@ -555,16 +651,16 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#02b36d40]">
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-app-primary-40">
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-[#091217] border border-[#02b36d40] hover:border-[#02b36d] rounded font-mono text-sm transition-all duration-300"
+            className="px-6 py-3 bg-app-tertiary border border-app-primary-40 hover-border-primary rounded font-mono text-sm transition-all duration-300"
           >
             CANCEL
           </button>
           <button
             onClick={handleSaveAndClose}
-            className="px-6 py-3 bg-[#02b36d] hover:bg-[#01a35f] text-black font-bold rounded cyberpunk-btn font-mono tracking-wider transition-all duration-300 flex items-center gap-2"
+            className="px-6 py-3 bg-app-primary-color hover:bg-app-primary-dark text-black font-bold rounded cyberpunk-btn font-mono tracking-wider transition-all duration-300 flex items-center gap-2"
           >
             <Save size={16} />
             SAVE SETTINGS

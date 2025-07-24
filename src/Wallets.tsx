@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, ExternalLink, Wallet, CheckSquare, Square, DollarSign, Coins, ArrowDownAZ, ArrowUpAZ, Activity, DollarSignIcon, Zap } from 'lucide-react';
-import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, fetchSolBalance, getWalletDisplayName } from './Utils';
+import { RefreshCw, ExternalLink, DollarSign, Activity, Zap, Check } from 'lucide-react';
+import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, getWalletDisplayName } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
 import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
-import { executeJupSwap, validateJupSwapInputs } from './utils/jupbuy';
+import { executeBuy, createBuyConfig, validateBuyInputs } from './utils/buy';
+import { 
+  ScriptType, 
+  countActiveWallets, 
+  getActiveWallets, 
+  toggleAllWallets, 
+  toggleAllWalletsWithBalance, 
+  toggleWalletsByBalance, 
+  getScriptName 
+} from './utils/wallets';
 
 // Tooltip Component with cyberpunk styling
 export const Tooltip = ({ 
@@ -35,144 +44,13 @@ export const Tooltip = ({
       </div>
       {isVisible && (
         <div className={`absolute z-50 ${positionClasses[position]}`}>
-          <div className="bg-[#051014] cyberpunk-border text-[#02b36d] text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+          <div className="bg-app-quaternary cyberpunk-border color-primary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
             {content}
           </div>
         </div>
       )}
     </div>
   );
-};
-
-// Max wallets configuration
-export const maxWalletsConfig = {
-  'raybuy': 1000,
-  'raysell': 1000,
-  'pumpbuy': 1000,
-  'pumpsell': 1000,
-  'jupbuy': 1000,
-  'swapbuy': 1000,
-  'swapsell': 1000,
-  'jupsell': 1000,
-  'moonbuy': 1000,
-  'launchsell': 1000,
-  'launchbuy': 1000,
-  'moonsell': 1000,
-  'boopbuy': 1000,
-  'boopsell': 1000
-} as const;
-
-// Updated toggle function for wallets based on token and SOL conditions
-export const toggleWalletsByBalance = (
-  wallets: WalletType[], 
-  showWithTokens: boolean,
-  solBalances: Map<string, number>,
-  tokenBalances: Map<string, number>
-): WalletType[] => {
-  return wallets.map(wallet => ({
-    ...wallet,
-    isActive: showWithTokens 
-      ? (tokenBalances.get(wallet.address) || 0) > 0  // Select wallets with tokens
-      : (solBalances.get(wallet.address) || 0) > 0 && (tokenBalances.get(wallet.address) || 0) === 0  // Select wallets with only SOL
-  }));
-};
-
-export type ScriptType = keyof typeof maxWalletsConfig;
-
-/**
- * Counts the number of active wallets in the provided wallet array
- * @param wallets Array of wallet objects
- * @returns Number of active wallets
- */
-export const countActiveWallets = (wallets: WalletType[]): number => {
-  return wallets.filter(wallet => wallet.isActive).length;
-};
-
-/**
- * Returns an array of only the active wallets
- * @param wallets Array of wallet objects
- * @returns Array of active wallets
- */
-export const getActiveWallets = (wallets: WalletType[]): WalletType[] => {
-  return wallets.filter(wallet => wallet.isActive);
-};
-
-/**
- * Checks if the number of active wallets exceeds the maximum allowed for a specific script
- * @param wallets Array of wallet objects
- * @param scriptName Name of the script to check against
- * @returns Object containing validation result and relevant information
- */
-export const validateActiveWallets = (wallets: WalletType[], scriptName: ScriptType) => {
-  const activeCount = countActiveWallets(wallets);
-  const maxAllowed = maxWalletsConfig[scriptName];
-  const isValid = activeCount <= maxAllowed;
-
-  return {
-    isValid,
-    activeCount,
-    maxAllowed,
-    scriptName,
-    message: isValid 
-      ? `Valid: ${activeCount} active wallets (max ${maxAllowed})`
-      : `Error: Too many active wallets (${activeCount}). Maximum allowed for ${scriptName} is ${maxAllowed}`
-  };
-};
-
-// New function to toggle all wallets regardless of balance
-export const toggleAllWallets = (wallets: WalletType[]): WalletType[] => {
-  const allActive = wallets.every(wallet => wallet.isActive);
-  return wallets.map(wallet => ({
-    ...wallet,
-    isActive: !allActive
-  }));
-};
-
-// Updated to use separate SOL balance tracking
-export const toggleAllWalletsWithBalance = (
-  wallets: WalletType[],
-  solBalances: Map<string, number>
-): WalletType[] => {
-  // Check if all wallets with balance are already active
-  const walletsWithBalance = wallets.filter(wallet => 
-    (solBalances.get(wallet.address) || 0) > 0
-  );
-  const allWithBalanceActive = walletsWithBalance.every(wallet => wallet.isActive);
-  
-  // Toggle based on current state
-  return wallets.map(wallet => ({
-    ...wallet,
-    isActive: (solBalances.get(wallet.address) || 0) > 0 
-      ? !allWithBalanceActive 
-      : wallet.isActive
-  }));
-};
-
-/**
- * Gets the appropriate script name based on selected DEX and mode
- * @param selectedDex Selected DEX name
- * @param isBuyMode Whether in buy mode
- * @returns The corresponding script name
- */
-export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptType => {
-  switch(selectedDex) {
-    case 'raydium':
-      return isBuyMode ? 'raybuy' : 'raysell';
-    case 'auto':
-      return isBuyMode ? 'jupbuy' : 'jupsell';
-    case 'pumpfun':
-      return isBuyMode ? 'pumpbuy' : 'pumpsell';
-    case 'pumpswap':
-      return isBuyMode ? 'swapbuy' : 'swapsell';
-    case 'moonshot':
-      return isBuyMode ? 'moonbuy' : 'moonsell';
-    case 'launchpad':
-      return isBuyMode ? 'launchbuy' : 'launchsell';
-    case 'boopfun':
-      return isBuyMode ? 'boopbuy' : 'boopsell';
-    default:
-      return isBuyMode ? 'pumpbuy' : 'pumpsell';
-  }
 };
 
 interface WalletsPageProps {
@@ -210,6 +88,7 @@ interface WalletsPageProps {
   useQuickBuyRange?: boolean;
   setUseQuickBuyRange?: (enabled: boolean) => void;
 }
+
 export const WalletsPage: React.FC<WalletsPageProps> = ({
   wallets,
   setWallets,
@@ -254,7 +133,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   // Use internal state if external state is not provided
   const [internalSolBalances, setInternalSolBalances] = useState<Map<string, number>>(new Map());
   const [internalTokenBalances, setInternalTokenBalances] = useState<Map<string, number>>(new Map());
-  const [refreshingWalletId, setRefreshingWalletId] = useState<number | null>(null);
   
   const solBalances = externalSolBalances || internalSolBalances;
   const setSolBalances = setExternalSolBalances || setInternalSolBalances;
@@ -263,35 +141,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   
   const { showToast } = useToast();
 
-  // Fetch SOL balances for all wallets one by one
-  const fetchSolBalances = async () => {
-    const newBalances = new Map<string, number>(solBalances);
-    
-    // Process wallets sequentially
-    for (const wallet of wallets) {
-      setRefreshingWalletId(wallet.id);
-      try {
-        const balance = await fetchSolBalance(connection, wallet.address);
-        newBalances.set(wallet.address, balance);
-        // Update balances after each wallet to show progress
-        setSolBalances(new Map(newBalances));
-      } catch (error) {
-        console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
-        newBalances.set(wallet.address, 0);
-      }
-      
-      // Add a small delay to make the sequential update visible
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    
-    setRefreshingWalletId(null);
-    return newBalances;
-  };
-
-  // Fetch SOL balances initially and when wallets change
-  useEffect(() => {
-    fetchSolBalances();
-  }, [wallets.length, connection]);
+  // Remove the internal fetchSolBalances function since App.tsx manages balance fetching
+  // The component now relies on external balance props passed from App.tsx
 
   // Use refs to track previous balance values
   const prevSolBalancesRef = useRef<Map<string, number>>(new Map());
@@ -328,7 +179,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       
       if ((solChanged || tokenChanged) && (prevSol > 0 || prevToken > 0)) {
         updatedWallets.add(wallet.address);
-        console.log(`Balance updated for wallet ${wallet.address}: SOL ${prevSol.toFixed(4)} → ${currentSol.toFixed(4)}, Tokens ${prevToken.toFixed(4)} → ${currentToken.toFixed(4)}`);
       }
     });
     
@@ -387,13 +237,10 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   };
 
   const handleRefreshAll = async () => {
-    if (isRefreshing || refreshingWalletId !== null) return;
+    if (isRefreshing) return;
     
-    // Call the parent's refresh handler to indicate the refresh has started
+    // Call the parent's refresh handler which manages all balance fetching
     handleRefresh();
-    
-    // Perform the wallet-by-wallet refresh
-    await fetchSolBalances();
   };
 
   const handleQuickBuy = async (wallet: WalletType, e: React.MouseEvent) => {
@@ -418,16 +265,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         // Round to 3 decimal places
         solAmountToUse = Math.round(solAmountToUse * 1000) / 1000;
       }
-      
-      // Quick buy configuration with calculated amount
-      const swapConfig = {
-        inputMint: 'So11111111111111111111111111111111111111112', // SOL
-        outputMint: tokenAddress,
-        solAmount: solAmountToUse, // Random or fixed amount
-        slippageBps: 300 // 3% slippage
-      };
 
-      const walletForSwap = {
+      // Create wallet for buy
+      const walletForBuy = {
         address: wallet.address,
         privateKey: wallet.privateKey
       };
@@ -439,14 +279,22 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         return;
       }
       
+      // Create buy configuration using the unified system
+      const buyConfig = createBuyConfig({
+        tokenAddress,
+        protocol: 'auto', // Use Auto for quick buy
+        solAmount: solAmountToUse
+        // slippageBps will be automatically set from config in the buy.ts file
+      });
+      
       // Validate inputs
-      const validation = validateJupSwapInputs([walletForSwap], swapConfig, solBalances);
+      const validation = validateBuyInputs([walletForBuy], buyConfig, solBalances);
       if (!validation.valid) {
         showToast(validation.error || 'Validation failed', 'error');
         return;
       }
       
-      const result = await executeJupSwap([walletForSwap], swapConfig);
+      const result = await executeBuy([walletForBuy], buyConfig);
       
       if (result.success) {
         showToast('Quick buy executed successfully!', 'success');
@@ -455,28 +303,29 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       }
     } catch (error) {
       console.error('Quick buy error:', error);
-      showToast('Quick buy failed: ' + (error.message || 'Unknown error'), 'error');
+      showToast('Quick buy failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
     } finally {
       setBuyingWalletId(null);
     }
   };
 
   return (
-    <div className="flex-1 bg-[#050a0e] relative cyberpunk-bg">
+    <div className="flex-1 bg-app-primary relative cyberpunk-bg">
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
       <div className="absolute top-0 left-0 w-full h-full cyberpunk-scanline pointer-events-none z-1 opacity-30"></div>
       
       {/* Enhanced header */}
-      <div className="top-0 sticky bg-[#050a0e99] backdrop-blur-sm border-b border-[#02b36d40] z-10 shadow-sm">
+      <div className="top-0 sticky bg-app-primary-99 backdrop-blur-sm border-b border-app-primary-40 z-10 shadow-sm">
         {/* Compact buttons row */}
-        <div className="px-2 py-1 border-b border-[#02b36d20]">
+        <div className="px-2 py-1 border-b border-app-primary-20">
           <WalletOperationsButtons
             wallets={wallets}
             solBalances={solBalances}
             connection={connection}
             tokenBalances={tokenBalances}
+            tokenAddress={tokenAddress}
             handleRefresh={handleRefreshAll}
-            isRefreshing={isRefreshing || refreshingWalletId !== null}
+            isRefreshing={isRefreshing}
             showingTokenWallets={showingTokenWallets}
             handleBalanceToggle={handleBalanceToggle}
             setWallets={setWallets}
@@ -497,25 +346,25 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         </div>
         
         {/* Improved balance info */}
-        <div className="py-2 px-3 bg-[#0a141980]">
+        <div className="py-2 px-3 bg-app-secondary-80-solid">
           <div className="flex justify-between text-sm">
             <div>
-              <div className="text-[#7ddfbd] font-mono flex items-center gap-2">
-                <DollarSign size={14} className="text-[#02b36d]" />
+              <div className="text-app-secondary font-mono flex items-center gap-2">
+                <DollarSign size={14} className="color-primary" />
                 <span>
-                  <span className="text-[#e4fbf2]">{totalSol.toFixed(2)}</span> (
-                  <span className="text-[#02b36d]">{activeSol.toFixed(2)}</span>) SOL
+                  <span className="text-app-primary">{totalSol.toFixed(2)}</span> (
+                  <span className="color-primary">{activeSol.toFixed(2)}</span>) SOL
                 </span>
               </div>
             </div>
             {tokenAddress && (
               <div className="text-right">
-                <div className="text-[#7ddfbd] font-mono flex items-center justify-end gap-2">
+                <div className="text-app-secondary font-mono flex items-center justify-end gap-2">
                   <span>
-                    <span className="text-[#e4fbf2]">{formatTokenBalance(totalTokens)}</span> (
-                    <span className="text-[#02b36d]">{formatTokenBalance(activeTokens)}</span>) Tokens
+                    <span className="text-app-primary">{formatTokenBalance(totalTokens)}</span> (
+                    <span className="color-primary">{formatTokenBalance(activeTokens)}</span>) Tokens
                   </span>
-                  <Activity size={14} className="text-[#02b36d]" />
+                  <Activity size={14} className="color-primary" />
                 </div>
               </div>
             )}
@@ -523,7 +372,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         </div>
       </div>
       
-      {/* Wallets table with improved row sizing */}
+      {/* Wallets table with enhanced visual selection */}
       <div className="pt-2 relative">
         <div className="min-w-full overflow-auto relative">
           <table className="w-full border-separate border-spacing-0">
@@ -539,73 +388,72 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   onMouseEnter={() => setHoverRow(wallet.id)}
                   onMouseLeave={() => setHoverRow(null)}
                   className={`
-                    border-b border-[#02b36d15] cursor-pointer transition-all duration-500
-                    ${hoverRow === wallet.id ? 'bg-[#02b36d15]' : ''}
-                    ${wallet.isActive ? 'bg-[#02b36d10]' : ''}
-                    ${refreshingWalletId === wallet.id ? 'bg-[#02b36d20]' : ''}
-                    ${recentlyUpdatedWallets.has(wallet.address) ? 'bg-gradient-to-r from-[#02b36d30] to-[#02b36d15] animate-pulse border-l-2 border-l-[#02b36d]' : ''}
+                    border-b transition-all duration-300 cursor-pointer group
+                    ${wallet.isActive 
+                      ? 'border-app-primary-60 bg-gradient-to-r from-app-primary-20 via-primary-15 to-primary-10 border-l-4 border-l-app-primary shadow-lg shadow-app-primary-20' 
+                      : 'border-app-primary-15 hover-border-primary-30'
+                    }
+                    ${hoverRow === wallet.id && !wallet.isActive ? 'bg-primary-08 border-app-primary-30' : ''}
+                    ${recentlyUpdatedWallets.has(wallet.address) ? 'animate-pulse border-l-2 border-l-success' : ''}
                   `}
                 >
-                  {/* Quick Buy Button or Indicator */}
-                  <td className="py-2.5 pl-3 pr-1 w-8">
-                    {quickBuyEnabled ? (
-                      <Tooltip content={
-                        tokenAddress 
-                          ? (useQuickBuyRange 
-                              ? `Quick buy random ${quickBuyMinAmount?.toFixed(3)}-${quickBuyMaxAmount?.toFixed(3)} SOL` 
-                              : `Quick buy ${quickBuyAmount} SOL`
-                            )
-                          : "No token selected"
-                      } position="right">
-                        <button
-                          onClick={(e) => handleQuickBuy(wallet, e)}
-                          disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
-                          className={`
-                            w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
-                            ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
-                              ? 'bg-[#091217] border border-[#02b36d20] cursor-not-allowed'
-                              : buyingWalletId === wallet.id
-                              ? 'bg-[#02b36d40] border border-[#02b36d]'
-                              : 'bg-[#02b36d20] border border-[#02b36d60] hover:bg-[#02b36d30] hover:border-[#02b36d] cursor-pointer'
-                            }
-                          `}
-                        >
-                          {buyingWalletId === wallet.id ? (
-                            <RefreshCw size={10} className="text-[#02b36d] animate-spin" />
-                          ) : (
-                            <Zap size={10} className={`
-                              ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
-                                ? 'text-[#02b36d40]'
-                                : 'text-[#02b36d]'
+                  {/* Enhanced Selection Indicator */}
+                  <td className="py-3 pl-3 pr-1 w-12">
+                    <div className="flex items-center gap-2">
+                      
+                      {/* Quick Buy Button */}
+                      {quickBuyEnabled && (
+                        <Tooltip content={
+                          tokenAddress 
+                            ? (useQuickBuyRange 
+                                ? `Quick buy random ${quickBuyMinAmount?.toFixed(3)}-${quickBuyMaxAmount?.toFixed(3)} SOL` 
+                                : `Quick buy ${quickBuyAmount} SOL`
+                              )
+                            : "No token selected"
+                        } position="right">
+                          <button
+                            onClick={(e) => handleQuickBuy(wallet, e)}
+                            disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
+                            className={`
+                              w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
+                              ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
+                                ? 'bg-app-tertiary border border-app-primary-20 cursor-not-allowed opacity-50'
+                                : buyingWalletId === wallet.id
+                                ? 'bg-app-primary-color border border-app-primary-color shadow-lg shadow-app-primary-40 animate-pulse'
+                                : 'bg-primary-30 border border-app-primary-80 hover:bg-app-primary-color hover-border-primary hover:shadow-lg hover:shadow-app-primary-40 cursor-pointer'
                               }
-                            `} />
-                          )}
-                        </button>
-                      </Tooltip>
-                    ) : (
-                      <div className="w-6 h-6 flex items-center justify-center">
-                        <div className={`
-                          w-2 h-2 rounded-full transition-all duration-200
-                          ${wallet.isActive ? 'bg-[#02b36d]' : 'bg-[#02b36d40]'}
-                        `} />
-                      </div>
-                    )}
+                            `}
+                          >
+                            {buyingWalletId === wallet.id ? (
+                              <RefreshCw size={10} className="text-app-quaternary animate-spin" />
+                            ) : (
+                              <Zap size={10} className={`
+                                ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
+                                  ? 'text-app-primary-40'
+                                  : 'text-app-quaternary group-hover:text-app-quaternary'
+                                }
+                              `} />
+                            )}
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
                   </td>
                   
-                  {/* Address with proper sizing */}
-                  <td className="py-2.5 px-2 font-mono">
+                  {/* Enhanced Address Display */}
+                  <td className="py-3 px-2 font-mono">
                     <div className="flex items-center">
-                      {refreshingWalletId === wallet.id && (
-                        <RefreshCw size={12} className="text-[#02b36d] mr-2 animate-spin" />
-                      )}
                       <Tooltip 
-                        content={wallet.label ? `${wallet.label} (${formatAddress(wallet.address)})` : `Click to copy: ${wallet.address}`}
-                        position="top"
+                        content={`Click to copy`}
+                        position="bottom"
                       >
                         <span 
-                          className={`text-sm font-mono cursor-pointer hover:text-[#02b36d] transition-colors duration-200 tracking-wide ${
-                            wallet.isActive ? 'text-[#00ff88]' : 'text-[#e4fbf2]'
-                          }`}
+                          className={`text-sm font-mono cursor-pointer transition-all duration-300 tracking-wide font-medium
+                            ${wallet.isActive 
+                              ? 'text-success drop-shadow-sm' 
+                              : 'text-app-primary hover:color-primary'
+                            }
+                          `}
                           onClick={async (e) => {
                             e.stopPropagation();
                             const success = await copyToClipboard(wallet.address, showToast);
@@ -617,7 +465,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         >
                           {getWalletDisplayName(wallet)}
                           {copiedAddress === wallet.address && (
-                            <span className="ml-1 text-xs text-[#02b36d] animate-pulse">
+                            <span className="ml-2 text-xs color-primary animate-pulse bg-primary-20 px-1 py-0.5 rounded">
                               ✓
                             </span>
                           )}
@@ -626,34 +474,48 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     </div>
                   </td>
                   
-                  {/* SOL balance */}
-                  <td className="py-2.5 px-2 text-right font-mono text-[#e4fbf2]">
+                  {/* Enhanced SOL Balance */}
+                  <td className="py-3 px-2 text-right font-mono">
                     <div className="flex items-center justify-end gap-1">
-                      <span className={`${(solBalances.get(wallet.address) || 0) > 0 ? 'text-[#7ddfbd]' : 'text-[#7ddfbd60]'}`}>
+                      <span className={`font-medium transition-colors duration-300 ${
+                        wallet.isActive
+                          ? ((solBalances.get(wallet.address) || 0) > 0 ? 'text-success' : 'text-warning')
+                          : ((solBalances.get(wallet.address) || 0) > 0 ? 'text-app-secondary' : 'text-app-secondary-60')
+                      }`}>
                         {(solBalances.get(wallet.address) || 0).toFixed(3)}
                       </span>
                     </div>
                   </td>
                   
-                  {/* Token balance if needed */}
+                  {/* Enhanced Token Balance */}
                   {tokenAddress && (
-                    <td className="py-2.5 px-2 text-right font-mono">
+                    <td className="py-3 px-2 text-right font-mono">
                       <div className="flex items-center justify-end gap-1">
-                        <span className={`${(tokenBalances.get(wallet.address) || 0) > 0 ? 'text-[#02b36d]' : 'text-[#02b36d40]'}`}>
+                        <span className={`font-medium transition-colors duration-300 ${
+                          wallet.isActive
+                            ? ((tokenBalances.get(wallet.address) || 0) > 0 ? 'text-success' : 'text-warning-60')
+                            : ((tokenBalances.get(wallet.address) || 0) > 0 ? 'color-primary' : 'text-app-primary-40')
+                        }`}>
                           {formatTokenBalance(tokenBalances.get(wallet.address) || 0)}
                         </span>
                       </div>
                     </td>
                   )}
                   
-                  {/* Explorer link */}
-                  <td className="py-2.5 pl-2 pr-3 text-right">
+                  {/* Enhanced Explorer Link */}
+                  <td className="py-3 pl-2 pr-3 text-right">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         window.open(`https://solscan.io/account/${wallet.address}`, '_blank');
                       }}
-                      className="text-[#7ddfbd60] hover:text-[#02b36d] transition-colors duration-200"
+                      className={`
+                        transition-all duration-200 p-1 rounded
+                        ${wallet.isActive 
+                          ? 'text-success hover:color-primary hover-bg-primary-20' 
+                          : 'text-app-secondary-60 hover:color-primary hover:bg-primary-10'
+                        }
+                      `}
                     >
                       <ExternalLink size={14} />
                     </button>

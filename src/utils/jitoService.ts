@@ -1,8 +1,3 @@
-// JitoService.ts
-/**
- * Service to send transactions to Jito Bundle Service via the server endpoint
- */
-
 /**
  * Sends a signed transaction to the server's /api/transactions/send endpoint
  * which then forwards it to the Jito bundle service

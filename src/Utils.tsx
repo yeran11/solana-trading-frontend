@@ -20,6 +20,10 @@ export interface ConfigType {
   isDropdownOpen: boolean;
   buyAmount: string;
   sellAmount: string;
+  slippageBps: string; // Slippage in basis points (e.g., "100" = 1%)
+  bundleMode: string; // Default bundle mode preference ('single', 'batch', 'all-in-one')
+  singleDelay: string; // Delay between wallets in single mode (milliseconds)
+  batchDelay: string; // Delay between batches in batch mode (milliseconds)
 }
 
 export const toggleWallet = (wallets: WalletType[], id: number): WalletType[] => {
@@ -334,7 +338,6 @@ export const saveWalletsToCookies = (wallets: WalletType[]): void => {
     // Encrypt wallet data before storing
     const walletData = JSON.stringify(wallets);
     const encryptedData = encryptData(walletData);
-    console.log('🔐 Wallet data encrypted and saved successfully');
     
     if (!db) {
       // Fallback to localStorage if DB is not ready
@@ -408,7 +411,6 @@ export const loadWalletsFromCookies = (): WalletType[] => {
       return parsedWallets;
     }
     
-    console.log('📝 No wallet data found, starting fresh');
     return [];
   } catch (error) {
     console.error('Error loading wallets:', error);
@@ -424,7 +426,23 @@ export const loadConfigFromCookies = (): ConfigType | null => {
   const savedConfig = Cookies.get(CONFIG_COOKIE_KEY);
   if (savedConfig) {
     try {
-      return JSON.parse(savedConfig);
+      const config = JSON.parse(savedConfig);
+      // Handle backward compatibility for slippageBps
+      if (config.slippageBps === undefined) {
+        config.slippageBps = '9900'; // Default 99% slippage
+      }
+      // Handle backward compatibility for bundleMode
+      if (config.bundleMode === undefined) {
+        config.bundleMode = 'batch'; // Default to batch mode
+      }
+      // Handle backward compatibility for delay settings
+      if (config.singleDelay === undefined) {
+        config.singleDelay = '200'; // Default 200ms delay between wallets in single mode
+      }
+      if (config.batchDelay === undefined) {
+        config.batchDelay = '1000'; // Default 1000ms delay between batches
+      }
+      return config;
     } catch (error) {
       console.error('Error parsing saved config:', error);
       return null;

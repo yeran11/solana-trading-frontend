@@ -9,26 +9,43 @@ window.Buffer = Buffer;
 import './styles/globals.css';
 import { ToastProvider } from "./Notifications";
 import ServerConfig from './ServerConfig';
-import IntroModal from './IntroModal';
+import IntroModal from './modals/IntroModal';
 const App = lazy(() => import('./App'));
 
 declare global {
   interface Window {
     tradingServerUrl: string;
     Buffer: typeof NodeBuffer;
+    serverRegion: string;
+    availableServers: ServerInfo[];
+    switchServer: (serverId: string) => Promise<boolean>;
   }
 }
 
 const SERVER_URL_COOKIE = 'trading_server_url';
+const SERVER_REGION_COOKIE = 'trading_server_region';
 const INTRO_COMPLETED_COOKIE = 'intro_completed';
-const DEFAULT_LOCAL_URLS = [
-  'https://solana.raze.bot/'
+
+interface ServerInfo {
+  id: string;
+  name: string;
+  url: string;
+  region: string;
+  flag: string;
+  ping?: number;
+}
+
+const DEFAULT_REGIONAL_SERVERS: ServerInfo[] = [
+  { id: 'us', name: 'United States', url: 'https://us.fury.bot/', region: 'US', flag: '🇺🇸' },
+  { id: 'de', name: 'Germany', url: 'https://de.fury.bot/', region: 'DE', flag: '🇩🇪' },
+  { id: 'it', name: 'Italy', url: 'https://it.fury.bot/', region: 'IT', flag: '🇮🇹' },
+  { id: 'nl', name: 'Netherlands', url: 'https://nl.fury.bot/', region: 'NL', flag: '🇳🇱' },
 ];
 
 const ServerCheckLoading = () => {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-neutral-900">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-green-500"></div>
+    <div className="flex items-center justify-center min-h-screen bg-app-primary">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 spinner-app-primary"></div>
     </div>
   );
 };
@@ -91,7 +108,7 @@ const ModalPortal: React.FC<ModalPortalProps> = ({ isOpen, onComplete, onSkip })
   
   // Create our portal
   return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center"
+    <div className="fixed inset-0 bg-app-overlay backdrop-blur-sm flex items-center justify-center"
          style={{ zIndex: 99999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div className="relative z-[99999]">
         <IntroModal 
@@ -106,10 +123,98 @@ const ModalPortal: React.FC<ModalPortalProps> = ({ isOpen, onComplete, onSkip })
 
 const Root = () => {
   const [serverUrl, setServerUrl] = useState<string | null>(null);
+  const [currentServer, setCurrentServer] = useState<ServerInfo | null>(null);
+  const [availableServers, setAvailableServers] = useState<ServerInfo[]>([]);
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showIntroModal, setShowIntroModal] = useState(false);
+
+  // Disable right-click and text selection globally
+  useEffect(() => {
+    // Add global styles to disable text selection
+    const style = document.createElement('style');
+    style.textContent = `
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      
+      /* Allow selection for input fields and textareas */
+      input, textarea, [contenteditable="true"] {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Disable right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable text selection with mouse
+    const handleSelectStart = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Allow selection in input fields and textareas
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return true;
+      }
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable drag and drop
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+
+    // Cleanup function
+    return () => {
+      document.head.removeChild(style);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, []);
   
+  const measurePing = async (url: string): Promise<number> => {
+    const startTime = Date.now();
+    try {
+      const baseUrl = url.replace(/\/+$/, '');
+      const healthEndpoint = '/health';
+      const checkUrl = `${baseUrl}${healthEndpoint}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      await fetch(checkUrl, {
+        signal: controller.signal,
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      clearTimeout(timeoutId);
+      return Date.now() - startTime;
+    } catch (error) {
+      return Infinity; // Return infinite ping if unreachable
+    }
+  };
+
   const checkServerConnection = async (url: string): Promise<boolean> => {
     try {
       const baseUrl = url.replace(/\/+$/, '');
@@ -144,6 +249,37 @@ const Root = () => {
     }
   };
 
+  const switchToServer = async (serverId: string): Promise<boolean> => {
+    const server = availableServers.find(s => s.id === serverId);
+    if (!server) {
+      console.error('Server not found:', serverId);
+      return false;
+    }
+
+    console.log('Switching to server:', server.name, server.url);
+    const isConnected = await checkServerConnection(server.url);
+    if (isConnected) {
+      setServerUrl(server.url);
+      setCurrentServer(server);
+      window.tradingServerUrl = server.url;
+      window.serverRegion = server.region;
+      Cookies.set(SERVER_URL_COOKIE, server.url, { expires: 30 });
+      Cookies.set(SERVER_REGION_COOKIE, server.id, { expires: 30 });
+      
+      // Emit event to notify components of server change
+      const event = new CustomEvent('serverChanged', { 
+        detail: { server } 
+      });
+      window.dispatchEvent(event);
+      
+      console.log('Successfully switched to server:', server.name);
+      return true;
+    }
+    
+    console.error('Failed to connect to server:', server.name);
+    return false;
+  };
+
   const handleServerUrlSubmit = async (url: string) => {
     setIsChecking(true);
     setError(null);
@@ -151,9 +287,21 @@ const Root = () => {
     try {
       const isConnected = await checkServerConnection(url);
       if (isConnected) {
-        Cookies.set(SERVER_URL_COOKIE, url, { expires: 30 });
+        // Create a custom server object for manual URLs
+        const customServer: ServerInfo = {
+          id: 'custom',
+          name: 'Custom Server',
+          url: url,
+          region: 'Custom',
+          flag: '🔧'
+        };
+        
+        setCurrentServer(customServer);
         setServerUrl(url);
-        window.tradingServerUrl = url; // Set the global server URL
+        window.tradingServerUrl = url;
+        window.serverRegion = 'Custom';
+        Cookies.set(SERVER_URL_COOKIE, url, { expires: 30 });
+        Cookies.set(SERVER_REGION_COOKIE, 'custom', { expires: 30 });
       } else {
         setError('Could not connect to server. Please check the address and try again.');
         setServerUrl(null);
@@ -196,11 +344,6 @@ const Root = () => {
     const modalRoot = document.getElementById('modal-root');
     if (modalRoot) {
       modalRoot.style.pointerEvents = 'none';
-      
-      // Optional: remove the element completely
-      // if (modalRoot.parentNode) {
-      //   modalRoot.parentNode.removeChild(modalRoot);
-      // }
     }
   };
 
@@ -219,37 +362,101 @@ const Root = () => {
   // Initialize server connection
   useEffect(() => {
     const initializeServer = async () => {
-      const savedUrl = Cookies.get(SERVER_URL_COOKIE);
+      console.log('Initializing server connection...');
       
-      if (savedUrl) {
-        const isConnected = await checkServerConnection(savedUrl);
-        if (isConnected) {
+      // Always discover all available servers first
+      console.log('Discovering all available servers...');
+      const allServersWithPing = await Promise.all(
+        DEFAULT_REGIONAL_SERVERS.map(async (server) => {
+          const isConnected = await checkServerConnection(server.url);
+          if (!isConnected) {
+            return { ...server, ping: Infinity };
+          }
+          
+          const ping = await measurePing(server.url);
+          console.log(`${server.name} (${server.region}): ${ping}ms`);
+          return { ...server, ping };
+        })
+      );
+
+      // Filter out unreachable servers and sort by ping
+      const reachableServers = allServersWithPing.filter(server => server.ping !== Infinity);
+      reachableServers.sort((a, b) => a.ping! - b.ping!);
+      
+      // Always set available servers regardless of saved server
+      setAvailableServers(reachableServers);
+      window.availableServers = reachableServers;
+      
+      console.log('Available servers discovered:', reachableServers.map(s => `${s.name} (${s.ping}ms)`));
+      
+      // Check if there's a saved server preference
+      const savedUrl = Cookies.get(SERVER_URL_COOKIE);
+      const savedRegion = Cookies.get(SERVER_REGION_COOKIE);
+      
+      if (savedUrl && savedRegion) {
+        console.log('Found saved server:', savedUrl, savedRegion);
+        // Check if the saved server is in our reachable servers
+        const savedServer = reachableServers.find(s => s.id === savedRegion && s.url === savedUrl);
+        
+        if (savedServer) {
+          console.log('Saved server is reachable, using it:', savedServer.name);
           setServerUrl(savedUrl);
-          window.tradingServerUrl = savedUrl; 
+          setCurrentServer(savedServer);
+          window.tradingServerUrl = savedUrl;
+          window.serverRegion = savedServer.region;
           setIsChecking(false);
+          
+          // Emit event to notify components
+          const event = new CustomEvent('serverChanged', { 
+            detail: { server: savedServer } 
+          });
+          window.dispatchEvent(event);
+          
           forceShowIntroModal();
           return;
+        } else {
+          console.log('Saved server is not reachable or not in our list, finding best server...');
         }
       }
 
-      for (const localUrl of DEFAULT_LOCAL_URLS) {
-        const isLocalConnected = await checkServerConnection(localUrl);
-        if (isLocalConnected) {
-          setServerUrl(localUrl);
-          window.tradingServerUrl = localUrl; 
-          Cookies.set(SERVER_URL_COOKIE, localUrl, { expires: 30 });
-          setIsChecking(false);
-          forceShowIntroModal();
-          return;
-        }
+      // No saved server or it failed, use the best available one
+      if (reachableServers.length > 0) {
+        const bestServer = reachableServers[0];
+        console.log('Using best available server:', bestServer.name);
+        setServerUrl(bestServer.url);
+        setCurrentServer(bestServer);
+        window.tradingServerUrl = bestServer.url;
+        window.serverRegion = bestServer.region;
+        Cookies.set(SERVER_URL_COOKIE, bestServer.url, { expires: 30 });
+        Cookies.set(SERVER_REGION_COOKIE, bestServer.id, { expires: 30 });
+        setIsChecking(false);
+        
+        // Emit event to notify components
+        const event = new CustomEvent('serverChanged', { 
+          detail: { server: bestServer } 
+        });
+        window.dispatchEvent(event);
+        
+        forceShowIntroModal();
+        console.log('Server initialization completed with:', bestServer.name);
+        return;
       }
       
+      console.error('No server connection found');
       setError('No server connection found. Please enter your server URL.');
       setIsChecking(false);
     };
 
     initializeServer();
   }, []);
+
+  // Expose server switching function globally for the App component
+  useEffect(() => {
+    if (availableServers.length > 0) {
+      window.availableServers = availableServers;
+      window.switchServer = switchToServer;
+    }
+  }, [availableServers]);
 
   // Force modal to appear with keyboard shortcut for debugging
   useEffect(() => {
