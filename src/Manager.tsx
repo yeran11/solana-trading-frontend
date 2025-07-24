@@ -43,8 +43,10 @@ export const handleApiKeyFromUrl = (
 export const fetchSolBalances = async (
   connection: Connection,
   wallets: WalletType[],
-  setSolBalances: Function
+  setSolBalances: Function,
+  onProgress?: (current: number, total: number) => void
 ) => {
+  console.log(`Fetching SOL balances for ${wallets.length} wallets...`);
   const newBalances = new Map<string, number>();
   
   // Process wallets sequentially with delay
@@ -54,19 +56,26 @@ export const fetchSolBalances = async (
     try {
       const balance = await fetchSolBalance(connection, wallet.address);
       newBalances.set(wallet.address, balance);
+      console.log(`Wallet ${wallet.address}: ${balance} SOL`);
     } catch (error) {
       console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
       newBalances.set(wallet.address, 0);
     }
     
-    // Update balances after each wallet to show progress
-    setSolBalances(new Map(newBalances));
+    // Report progress
+    if (onProgress) {
+      onProgress(i + 1, wallets.length);
+    }
+    
     // Add 100ms delay between wallets (except for the last one)
     if (i < wallets.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
   
+  // Update balances once at the end
+  console.log('Setting SOL balances:', newBalances);
+  setSolBalances(newBalances);
   return newBalances;
 };
 

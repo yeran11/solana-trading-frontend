@@ -58,6 +58,7 @@ interface WalletsPageProps {
   setWallets: (wallets: WalletType[]) => void;
   handleRefresh: () => void;
   isRefreshing: boolean;
+  refreshProgress?: { current: number; total: number };
   setIsModalOpen: (open: boolean) => void;
   tokenAddress: string;
   sortDirection: string;
@@ -94,6 +95,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   setWallets,
   handleRefresh,
   isRefreshing,
+  refreshProgress = { current: 0, total: 0 },
   setIsModalOpen,
   tokenAddress,
   sortDirection,
@@ -346,7 +348,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         </div>
         
         {/* Improved balance info */}
-        <div className="py-2 px-3 bg-app-secondary-80-solid">
+        <div className="py-2 px-3 bg-app-secondary-80-solid relative">
           <div className="flex justify-between text-sm">
             <div>
               <div className="text-app-secondary font-mono flex items-center gap-2">
@@ -369,6 +371,24 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
               </div>
             )}
           </div>
+          
+          {/* Minimal progress bar when refreshing - overlay without adding height */}
+          {isRefreshing && refreshProgress.total > 0 && (
+            <div className="absolute bottom-0 left-0 right-0">
+              <div className="w-full bg-app-primary-10 h-1 overflow-hidden relative">
+                {/* Background */}
+                <div className="absolute inset-0 bg-app-primary-20"></div>
+                
+                {/* Progress fill */}
+                <div 
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-app-primary-color to-primary-60 transition-all duration-300 ease-out"
+                  style={{
+                    width: `${Math.min(100, (refreshProgress.current / refreshProgress.total) * 100)}%`
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       

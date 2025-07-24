@@ -283,6 +283,7 @@ const WalletManager: React.FC = () => {
     currentPage: 'wallets' | 'chart' | 'actions';
     wallets: WalletType[];
     isRefreshing: boolean;
+    refreshProgress: { current: number; total: number };
     connection: Connection | null;
     solBalances: Map<string, number>;
     tokenBalances: Map<string, number>;
@@ -342,6 +343,7 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_CURRENT_PAGE'; payload: 'wallets' | 'chart' | 'actions' }
     | { type: 'SET_WALLETS'; payload: WalletType[] }
     | { type: 'SET_REFRESHING'; payload: boolean }
+    | { type: 'SET_REFRESH_PROGRESS'; payload: { current: number; total: number } }
     | { type: 'SET_CONNECTION'; payload: Connection | null }
     | { type: 'SET_SOL_BALANCES'; payload: Map<string, number> }
     | { type: 'SET_TOKEN_BALANCES'; payload: Map<string, number> }
@@ -385,6 +387,7 @@ const WalletManager: React.FC = () => {
     currentPage: 'wallets',
     wallets: [],
     isRefreshing: false,
+    refreshProgress: { current: 0, total: 0 },
     connection: null,
     solBalances: new Map(),
     tokenBalances: new Map(),
@@ -434,6 +437,8 @@ const WalletManager: React.FC = () => {
         return { ...state, wallets: action.payload };
       case 'SET_REFRESHING':
         return { ...state, isRefreshing: action.payload };
+      case 'SET_REFRESH_PROGRESS':
+        return { ...state, refreshProgress: action.payload };
       case 'SET_CONNECTION':
         return { ...state, connection: action.payload };
       case 'SET_SOL_BALANCES':
@@ -536,6 +541,7 @@ const WalletManager: React.FC = () => {
     setCurrentPage: (page: 'wallets' | 'chart' | 'actions') => dispatch({ type: 'SET_CURRENT_PAGE', payload: page }),
     setWallets: (wallets: WalletType[]) => dispatch({ type: 'SET_WALLETS', payload: wallets }),
     setIsRefreshing: (refreshing: boolean) => dispatch({ type: 'SET_REFRESHING', payload: refreshing }),
+    setRefreshProgress: (progress: { current: number; total: number }) => dispatch({ type: 'SET_REFRESH_PROGRESS', payload: progress }),
     setConnection: (connection: Connection | null) => dispatch({ type: 'SET_CONNECTION', payload: connection }),
     setSolBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_SOL_BALANCES', payload: balances }),
     setTokenBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_TOKEN_BALANCES', payload: balances }),
@@ -559,7 +565,7 @@ const WalletManager: React.FC = () => {
     setQuickBuyMaxAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MAX_AMOUNT', payload: amount }),
     setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange }),
     setIframeData: (data: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; } | null) => dispatch({ type: 'SET_IFRAME_DATA', payload: data })
-  }), []);
+  }), [dispatch]);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
   const configCallbacks = useMemo(() => ({
@@ -672,7 +678,7 @@ const WalletManager: React.FC = () => {
   // Extract API key from URL
   useEffect(() => {
     handleApiKeyFromUrl(memoizedCallbacks.setConfig, saveConfigToCookies, showToast);
-  }, [memoizedCallbacks.setConfig]);
+  }, []);
 
   // Read tokenAddress from URL parameter on mount
   useEffect(() => {
@@ -681,7 +687,7 @@ const WalletManager: React.FC = () => {
     if (tokenFromUrl) {
       memoizedCallbacks.setTokenAddress(tokenFromUrl);
     }
-  }, [memoizedCallbacks.setTokenAddress]);
+  }, []);
 
   // Update URL when tokenAddress changes
   useEffect(() => {
@@ -731,7 +737,7 @@ const WalletManager: React.FC = () => {
     };
 
     initializeApp();
-  }, [memoizedCallbacks]);
+  }, []);
 
   // Save wallets when they change
   useEffect(() => {
@@ -752,7 +758,7 @@ const WalletManager: React.FC = () => {
     return () => {
       window.removeEventListener('openSettingsWalletsTab', handleOpenSettingsWalletsTab);
     };
-  }, [memoizedCallbacks.setActiveTab, memoizedCallbacks.setIsSettingsOpen]);
+  }, []);
 
   // Save quick buy preferences when they change
   useEffect(() => {
@@ -766,20 +772,6 @@ const WalletManager: React.FC = () => {
     saveQuickBuyPreferencesToCookies(preferences);
   }, [state.quickBuyEnabled, state.quickBuyAmount, state.quickBuyMinAmount, state.quickBuyMaxAmount, state.useQuickBuyRange]);
 
-  // Fetch SOL balances when wallets change or connection is established
-  useEffect(() => {
-    if (state.connection && state.wallets.length > 0) {
-      fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
-    }
-  }, [state.connection, state.wallets.length, memoizedCallbacks.setSolBalances]);
-
-  // Fetch token balances when token address changes or wallets change
-  useEffect(() => {
-    if (state.connection && state.wallets.length > 0 && state.tokenAddress) {
-      fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
-    }
-  }, [state.connection, state.wallets.length, state.tokenAddress, memoizedCallbacks.setTokenBalances]);
-
   // Update connection when RPC endpoint changes
   useEffect(() => {
     try {
@@ -788,38 +780,46 @@ const WalletManager: React.FC = () => {
     } catch (error) {
       console.error('Error creating connection:', error);
     }
-  }, [state.config.rpcEndpoint, memoizedCallbacks.setConnection]);
+  }, [state.config.rpcEndpoint]);
 
-  // Refresh balances on load
+  // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
     if (state.connection && state.wallets.length > 0) {
-      handleRefresh();
+      fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
     }
-  }, [state.connection, state.wallets.length]);
+  }, [state.connection, state.wallets]);
 
-  // Add effect to refresh balances when token address changes
+  // Fetch token balances when token address changes or wallets change
   useEffect(() => {
     if (state.connection && state.wallets.length > 0 && state.tokenAddress) {
-      handleRefresh();
+      fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
     }
-  }, [state.tokenAddress, state.connection, state.wallets.length]);
+  }, [state.connection, state.wallets, state.tokenAddress]);
 
   // Trigger tick animation when wallet count changes
   useEffect(() => {
     memoizedCallbacks.setTickEffect(true);
     const timer = setTimeout(() => memoizedCallbacks.setTickEffect(false), 500);
     return () => clearTimeout(timer);
-  }, [state.wallets.length, memoizedCallbacks.setTickEffect]);
+  }, [state.wallets.length]);
 
   // Helper functions
   const handleRefresh = useCallback(async () => {
-    if (!state.connection) return;
+    if (!state.connection || state.wallets.length === 0) return;
     
     memoizedCallbacks.setIsRefreshing(true);
+    memoizedCallbacks.setRefreshProgress({ current: 0, total: state.wallets.length });
     
     try {
-      // Fetch SOL balances
-      await fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
+      // Fetch SOL balances with progress tracking
+      await fetchSolBalances(
+        state.connection, 
+        state.wallets, 
+        memoizedCallbacks.setSolBalances,
+        (current, total) => {
+          memoizedCallbacks.setRefreshProgress({ current, total });
+        }
+      );
       
       // Fetch token balances if token address is provided
       if (state.tokenAddress) {
@@ -828,21 +828,22 @@ const WalletManager: React.FC = () => {
     } catch (error) {
       console.error('Error refreshing balances:', error);
     } finally {
-      // Set refreshing to false
+      // Set refreshing to false and reset progress
       memoizedCallbacks.setIsRefreshing(false);
+      memoizedCallbacks.setRefreshProgress({ current: 0, total: 0 });
     }
-  }, [state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setIsRefreshing, memoizedCallbacks.setSolBalances, memoizedCallbacks.setTokenBalances]);
+  }, [state.connection, state.wallets, state.tokenAddress]);
 
   const handleConfigChange = useCallback((key: keyof ConfigType, value: string) => {
     const newConfig = { ...state.config, [key]: value };
     saveConfigToCookies(newConfig);
     memoizedCallbacks.setConfig(newConfig);
-  }, [memoizedCallbacks.setConfig, state.config]);
+  }, [state.config]);
 
   const handleSaveSettings = useCallback(() => {
     saveConfigToCookies(state.config);
     memoizedCallbacks.setIsSettingsOpen(false);
-  }, [state.config, memoizedCallbacks.setIsSettingsOpen]);
+  }, [state.config]);
 
   const handleDeleteWallet = useCallback((id: number) => {
     const walletToDelete = state.wallets.find(w => w.id === id);
@@ -859,16 +860,16 @@ const WalletManager: React.FC = () => {
     
     const updatedWallets = deleteWallet(state.wallets, id);
     memoizedCallbacks.setWallets(updatedWallets);
-  }, [state.wallets, state.solBalances, state.tokenBalances, memoizedCallbacks.setSolBalances, memoizedCallbacks.setTokenBalances, memoizedCallbacks.setWallets]);
+  }, [state.wallets, state.solBalances, state.tokenBalances]);
 
   // Modal action handlers
-  const openSettingsModal = useCallback(() => memoizedCallbacks.setIsSettingsOpen(true), [memoizedCallbacks.setIsSettingsOpen]);
-  const closeSettingsModal = useCallback(() => memoizedCallbacks.setIsSettingsOpen(false), [memoizedCallbacks.setIsSettingsOpen]);
-  const openWalletOverview = useCallback(() => memoizedCallbacks.setIsModalOpen(true), [memoizedCallbacks.setIsModalOpen]);
-  const closeWalletOverview = useCallback(() => memoizedCallbacks.setIsModalOpen(false), [memoizedCallbacks.setIsModalOpen]);
-  const openWalletsPage = useCallback(() => memoizedCallbacks.setCurrentPage('wallets'), [memoizedCallbacks.setCurrentPage]);
-  const openChartPage = useCallback(() => memoizedCallbacks.setCurrentPage('chart'), [memoizedCallbacks.setCurrentPage]);
-  const openActionsPage = useCallback(() => memoizedCallbacks.setCurrentPage('actions'), [memoizedCallbacks.setCurrentPage]);
+  const openSettingsModal = useCallback(() => memoizedCallbacks.setIsSettingsOpen(true), []);
+  const closeSettingsModal = useCallback(() => memoizedCallbacks.setIsSettingsOpen(false), []);
+  const openWalletOverview = useCallback(() => memoizedCallbacks.setIsModalOpen(true), []);
+  const closeWalletOverview = useCallback(() => memoizedCallbacks.setIsModalOpen(false), []);
+  const openWalletsPage = useCallback(() => memoizedCallbacks.setCurrentPage('wallets'), []);
+  const openChartPage = useCallback(() => memoizedCallbacks.setCurrentPage('chart'), []);
+  const openActionsPage = useCallback(() => memoizedCallbacks.setCurrentPage('actions'), []);
 
   const handleBurn = async (amount: string) => {
     try {
@@ -993,6 +994,7 @@ const WalletManager: React.FC = () => {
                   setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
                   isRefreshing={state.isRefreshing}
+                  refreshProgress={state.refreshProgress}
                   setIsModalOpen={memoizedCallbacks.setIsModalOpen}
                   tokenAddress={state.tokenAddress}
                   sortDirection={state.sortDirection}
@@ -1059,6 +1061,7 @@ const WalletManager: React.FC = () => {
                   setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
                   isRefreshing={state.isRefreshing}
+                  refreshProgress={state.refreshProgress}
                   setIsModalOpen={memoizedCallbacks.setIsModalOpen}
                   tokenAddress={state.tokenAddress}
                   sortDirection={state.sortDirection}

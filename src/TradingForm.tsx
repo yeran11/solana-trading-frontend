@@ -179,8 +179,8 @@ const TabButton = ({ label, isActive, onClick, onEdit, isEditMode }) => {
       onClick={handleClick}
       className={`flex-1 px-3 py-1.5 text-xs font-mono rounded transition-all duration-200
                 ${isActive 
-                  ? 'bg-primary-20 border border-app-primary-color color-primary' 
-                  : 'bg-app-primary-60 border border-app-primary-20 text-app-secondary-60 hover-border-primary-40 hover-text-app-secondary'
+                  ? 'bg-primary-20 border border-app-primary-80 color-primary' 
+                  : 'bg-app-primary-60 border border-app-primary-40 text-app-secondary-60 hover-border-primary-40 hover-text-app-secondary'
                 }
                 ${isEditMode ? 'cursor-text' : 'cursor-pointer'}`}
     >

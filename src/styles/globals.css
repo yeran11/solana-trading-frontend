@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @keyframes slideInRight {
     from {
     transform: translateX(100%);
@@ -9,6 +10,18 @@
     to {
     transform: translateX(0);
     opacity: 1;
+    }
+}
+
+@keyframes slideProgress {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(100%);
+    }
+    100% {
+        transform: translateX(300%);
     }
 }
 :root {
