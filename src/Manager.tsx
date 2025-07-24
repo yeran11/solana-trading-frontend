@@ -43,9 +43,10 @@ export const handleApiKeyFromUrl = (
 export const fetchSolBalances = async (
   connection: Connection,
   wallets: WalletType[],
-  setSolBalances: Function
+  setSolBalances: Function,
+  currentBalances?: Map<string, number>
 ) => {
-  const newBalances = new Map<string, number>();
+  const newBalances = new Map<string, number>(currentBalances || new Map());
   
   // Process wallets sequentially with delay
   for (let i = 0; i < wallets.length; i++) {
@@ -56,7 +57,10 @@ export const fetchSolBalances = async (
       newBalances.set(wallet.address, balance);
     } catch (error) {
       console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
-      newBalances.set(wallet.address, 0);
+      // Keep existing balance if there's an error, don't set to 0
+      if (!newBalances.has(wallet.address)) {
+        newBalances.set(wallet.address, 0);
+      }
     }
     
     // Update balances after each wallet to show progress
@@ -77,11 +81,12 @@ export const fetchTokenBalances = async (
   connection: Connection,
   wallets: WalletType[],
   tokenAddress: string,
-  setTokenBalances: Function
+  setTokenBalances: Function,
+  currentBalances?: Map<string, number>
 ) => {
   if (!tokenAddress) return new Map<string, number>();
   
-  const newBalances = new Map<string, number>();
+  const newBalances = new Map<string, number>(currentBalances || new Map());
   
   const promises = wallets.map(async (wallet) => {
     try {
@@ -89,7 +94,10 @@ export const fetchTokenBalances = async (
       newBalances.set(wallet.address, balance);
     } catch (error) {
       console.error(`Error fetching token balance for ${wallet.address}:`, error);
-      newBalances.set(wallet.address, 0);
+      // Keep existing balance if there's an error, don't set to 0
+      if (!newBalances.has(wallet.address)) {
+        newBalances.set(wallet.address, 0);
+      }
     }
   });
   

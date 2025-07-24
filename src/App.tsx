@@ -769,14 +769,14 @@ const WalletManager: React.FC = () => {
   // Fetch SOL balances when wallets change or connection is established
   useEffect(() => {
     if (state.connection && state.wallets.length > 0) {
-      fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
+      fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances, state.solBalances);
     }
   }, [state.connection, state.wallets.length, memoizedCallbacks.setSolBalances]);
 
   // Fetch token balances when token address changes or wallets change
   useEffect(() => {
     if (state.connection && state.wallets.length > 0 && state.tokenAddress) {
-      fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
+      fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances, state.tokenBalances);
     }
   }, [state.connection, state.wallets.length, state.tokenAddress, memoizedCallbacks.setTokenBalances]);
 
@@ -819,11 +819,11 @@ const WalletManager: React.FC = () => {
     
     try {
       // Fetch SOL balances
-      await fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
+      await fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances, state.solBalances);
       
       // Fetch token balances if token address is provided
       if (state.tokenAddress) {
-        await fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
+        await fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances, state.tokenBalances);
       }
     } catch (error) {
       console.error('Error refreshing balances:', error);
