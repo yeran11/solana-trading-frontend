@@ -626,8 +626,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                     <div className="text-xs text-app-secondary-80 font-mono mt-1">
                       High slippage tolerance for volatile tokens (recommended: 99%)
                     </div>
-                  </div>
-                                
+                  </div>  
                   <div className="bg-app-tertiary border border-app-primary-20 rounded p-4">
                     <h4 className="text-sm font-bold text-app-primary font-mono mb-2">SYSTEM INFORMATION</h4>
                     <div className="space-y-2 text-sm font-mono">
