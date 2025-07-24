@@ -6,7 +6,7 @@ import { Buffer as NodeBuffer } from 'buffer';
 import Cookies from 'js-cookie';
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
-import './styles/raze.css';
+import './styles/betterskill.css';
 import { ToastProvider } from "./Notifications";
 import ServerConfig from './ServerConfig';
 import IntroModal from './modals/IntroModal';
