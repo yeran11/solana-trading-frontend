@@ -93,6 +93,9 @@ raze.bot/
 │   │   └── WalletsModal.tsx
 │   ├── styles/         # CSS and styling
 │   │   ├── Styles.tsx
+│   │   ├── betterskill.css
+│   │   ├── raze.css
+│   │   ├── yellow.css
 │   │   └── globals.css
 │   ├── utils/          # Utility functions
 │   │   ├── bonkcreate.ts
@@ -128,7 +131,7 @@ raze.bot/
 │   ├── Utils.tsx       # Utility functions
 │   ├── Wallets.tsx     # Wallet management
 │   └── index.tsx       # Entry point
-├── index.html          # HTML index
+├── index.html          # HTML template
 ├── manifest.json       # Web app manifest
 ├── tailwind.config.js  # Tailwind CSS configuration
 ├── postcss.config.js   # PostCSS configuration
