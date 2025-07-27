@@ -69,7 +69,7 @@ export const fetchSolBalances = async (
     
     // Add 100ms delay between wallets (except for the last one)
     if (i < wallets.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 20));
     }
   }
   
