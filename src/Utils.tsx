@@ -332,6 +332,217 @@ export const refreshWalletBalance = async (
   }
 };
 
+/**
+ * Fetch both SOL and token balances for all wallets one by one
+ * This is the main function for fetching wallet balances with progress tracking
+ */
+export const fetchWalletBalances = async (
+  connection: Connection,
+  wallets: WalletType[],
+  tokenAddress: string,
+  setSolBalances: Function,
+  setTokenBalances: Function,
+  currentSolBalances?: Map<string, number>,
+  currentTokenBalances?: Map<string, number>
+) => {
+  console.log(`Fetching balances for ${wallets.length} wallets...`);
+  // Start with existing balances to preserve them on errors
+  const newSolBalances = new Map(currentSolBalances || new Map<string, number>());
+  const newTokenBalances = new Map(currentTokenBalances || new Map<string, number>());
+  
+  // Process wallets sequentially
+  for (let i = 0; i < wallets.length; i++) {
+    const wallet = wallets[i];
+    
+    try {
+      // Fetch SOL balance
+      const solBalance = await fetchSolBalance(connection, wallet.address);
+      newSolBalances.set(wallet.address, solBalance);
+      console.log(`Wallet ${wallet.address}: ${solBalance} SOL`);
+      
+      // Update SOL balances immediately to show progress
+      setSolBalances(new Map(newSolBalances));
+      
+      // Fetch token balance if token address is provided
+      if (tokenAddress) {
+        const tokenBalance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
+        newTokenBalances.set(wallet.address, tokenBalance);
+        console.log(`Wallet ${wallet.address}: ${tokenBalance} tokens`);
+        
+        // Update token balances immediately to show progress
+        setTokenBalances(new Map(newTokenBalances));
+      }
+    } catch (error) {
+      console.error(`Error fetching balances for ${wallet.address}:`, error);
+      // Don't modify the balance maps on error - existing balances are preserved
+      // This prevents balances from being reset during refresh operations
+    }
+    
+    // Add 100ms delay between wallets (except for the last one)
+    if (i < wallets.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+  
+  console.log('Final SOL balances:', newSolBalances);
+  console.log('Final token balances:', newTokenBalances);
+  
+  return { solBalances: newSolBalances, tokenBalances: newTokenBalances };
+};
+
+/**
+ * Legacy function - kept for backwards compatibility
+ * @deprecated Use fetchWalletBalances instead
+ */
+export const fetchSolBalances = async (
+  connection: Connection,
+  wallets: WalletType[],
+  setSolBalances: Function,
+  onProgress?: (current: number, total: number) => void
+) => {
+  console.log(`Fetching SOL balances for ${wallets.length} wallets...`);
+  const newBalances = new Map<string, number>();
+  
+  // Process wallets sequentially with delay
+  for (let i = 0; i < wallets.length; i++) {
+    const wallet = wallets[i];
+    
+    try {
+      const balance = await fetchSolBalance(connection, wallet.address);
+      newBalances.set(wallet.address, balance);
+      console.log(`Wallet ${wallet.address}: ${balance} SOL`);
+    } catch (error) {
+      console.error(`Error fetching SOL balance for ${wallet.address}:`, error);
+      // Don't set balance to 0 on error - preserve existing balance or skip if no existing balance
+    }
+    
+    // Report progress
+    if (onProgress) {
+      onProgress(i + 1, wallets.length);
+    }
+    
+    // Add 100ms delay between wallets (except for the last one)
+    if (i < wallets.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+  
+  // Update balances once at the end
+  console.log('Setting SOL balances:', newBalances);
+  setSolBalances(newBalances);
+  return newBalances;
+};
+
+/**
+ * Legacy function - kept for backwards compatibility
+ * @deprecated Use fetchWalletBalances instead
+ */
+export const fetchTokenBalances = async (
+  connection: Connection,
+  wallets: WalletType[],
+  tokenAddress: string,
+  setTokenBalances: Function
+) => {
+  if (!tokenAddress) return new Map<string, number>();
+  
+  const newBalances = new Map<string, number>();
+  
+  const promises = wallets.map(async (wallet) => {
+    try {
+      const balance = await fetchTokenBalance(connection, wallet.address, tokenAddress);
+      newBalances.set(wallet.address, balance);
+    } catch (error) {
+      console.error(`Error fetching token balance for ${wallet.address}:`, error);
+      // Don't set balance to 0 on error - preserve existing balance or skip if no existing balance
+    }
+  });
+  
+  await Promise.all(promises);
+  setTokenBalances(newBalances);
+  return newBalances;
+};
+
+/**
+ * Handle wallet sorting by balance
+ */
+export const handleSortWallets = (
+  wallets: WalletType[],
+  sortDirection: 'asc' | 'desc',
+  setSortDirection: Function,
+  solBalances: Map<string, number>,
+  setWallets: Function
+) => {
+  const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  setSortDirection(newDirection);
+  
+  const sortedWallets = [...wallets].sort((a, b) => {
+    const balanceA = solBalances.get(a.address) || 0;
+    const balanceB = solBalances.get(b.address) || 0;
+    
+    if (newDirection === 'asc') {
+      return balanceA - balanceB;
+    } else {
+      return balanceB - balanceA;
+    }
+  });
+  
+  setWallets(sortedWallets);
+};
+
+/**
+ * Clean up wallets by removing empty and duplicate wallets
+ */
+export const handleCleanupWallets = (
+  wallets: WalletType[],
+  solBalances: Map<string, number>,
+  tokenBalances: Map<string, number>,
+  setWallets: Function,
+  showToast: Function
+) => {
+  // Keep track of seen addresses
+  const seenAddresses = new Set<string>();
+  // Keep track of removal counts
+  let emptyCount = 0;
+  let duplicateCount = 0;
+  
+  // Filter out empty wallets and duplicates
+  const cleanedWallets = wallets.filter(wallet => {
+    // Check for empty balance (no SOL and no tokens)
+    const solBalance = solBalances.get(wallet.address) || 0;
+    const tokenBalance = tokenBalances.get(wallet.address) || 0;
+    
+    if (solBalance <= 0 && tokenBalance <= 0) {
+      emptyCount++;
+      return false;
+    }
+    
+    // Check for duplicates
+    if (seenAddresses.has(wallet.address)) {
+      duplicateCount++;
+      return false;
+    }
+    
+    seenAddresses.add(wallet.address);
+    return true;
+  });
+
+  // Show appropriate toast message
+  if (emptyCount > 0 || duplicateCount > 0) {
+    const messages: string[] = [];
+    if (emptyCount > 0) {
+      messages.push(`${emptyCount} empty wallet${emptyCount === 1 ? '' : 's'}`);
+    }
+    if (duplicateCount > 0) {
+      messages.push(`${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'}`);
+    }
+    showToast(`Removed ${messages.join(' and ')}`, "success");
+  } else {
+    showToast("No empty wallets or duplicates found", "success");
+  }
+  
+  setWallets(cleanedWallets);
+};
+
 
 export const saveWalletsToCookies = (wallets: WalletType[]): void => {
   try {

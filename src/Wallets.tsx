@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, ExternalLink, DollarSign, Activity, Zap, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { RefreshCw, ExternalLink, DollarSign, Activity, Zap, Check, TrendingDown } from 'lucide-react';
 import { saveWalletsToCookies, WalletType, formatAddress, formatTokenBalance, copyToClipboard, toggleWallet, getWalletDisplayName } from './Utils';
 import { useToast } from "./Notifications";
 import { Connection } from '@solana/web3.js';
 import { WalletOperationsButtons } from './OperationsWallets'; // Import the new component
 import { executeBuy, createBuyConfig, validateBuyInputs } from './utils/buy';
+import { executeSell, createSellConfig, validateSellInputs } from './utils/sell';
 import { 
   ScriptType, 
   countActiveWallets, 
@@ -58,7 +59,6 @@ interface WalletsPageProps {
   setWallets: (wallets: WalletType[]) => void;
   handleRefresh: () => void;
   isRefreshing: boolean;
-  refreshProgress?: { current: number; total: number };
   setIsModalOpen: (open: boolean) => void;
   tokenAddress: string;
   sortDirection: string;
@@ -95,7 +95,6 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   setWallets,
   handleRefresh,
   isRefreshing,
-  refreshProgress = { current: 0, total: 0 },
   setIsModalOpen,
   tokenAddress,
   sortDirection,
@@ -130,6 +129,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const [buyingWalletId, setBuyingWalletId] = useState<number | null>(null);
+  const [sellingWalletId, setSellingWalletId] = useState<number | null>(null);
   const [recentlyUpdatedWallets, setRecentlyUpdatedWallets] = useState<Set<string>>(new Set());
   
   // Use internal state if external state is not provided
@@ -137,18 +137,14 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   const [internalTokenBalances, setInternalTokenBalances] = useState<Map<string, number>>(new Map());
   
   const solBalances = externalSolBalances || internalSolBalances;
-  const setSolBalances = setExternalSolBalances || setInternalSolBalances;
   const tokenBalances = externalTokenBalances || internalTokenBalances;
-  const setTokenBalances = setExternalTokenBalances || setInternalTokenBalances;
   
   const { showToast } = useToast();
-
-  // Remove the internal fetchSolBalances function since App.tsx manages balance fetching
-  // The component now relies on external balance props passed from App.tsx
-
   // Use refs to track previous balance values
   const prevSolBalancesRef = useRef<Map<string, number>>(new Map());
   const prevTokenBalancesRef = useRef<Map<string, number>>(new Map());
+
+
 
   // Monitor balance changes to show visual feedback for trade updates
   useEffect(() => {
@@ -199,37 +195,44 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   }, [solBalances, tokenBalances]); // Removed wallets from dependency array to prevent triggering on selection changes
 
   // Calculate balances and update external state
+  const calculatedTotalSol = useMemo(() => 
+    Array.from(solBalances.values()).reduce((sum, balance) => sum + balance, 0),
+    [solBalances]
+  );
+  
+  const calculatedTotalTokens = useMemo(() =>
+    Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0),
+    [tokenBalances]
+  );
+  
+  const activeWallets = useMemo(() => 
+    wallets.filter(wallet => wallet.isActive),
+    [wallets]
+  );
+  
+  const calculatedActiveSol = useMemo(() =>
+    activeWallets.reduce((sum, wallet) => sum + (solBalances.get(wallet.address) || 0), 0),
+    [activeWallets, solBalances]
+  );
+  
+  const calculatedActiveTokens = useMemo(() =>
+    activeWallets.reduce((sum, wallet) => sum + (tokenBalances.get(wallet.address) || 0), 0),
+    [activeWallets, tokenBalances]
+  );
+
   useEffect(() => {
-    // Calculate total SOL and token balances
-    const calculatedTotalSol = Array.from(solBalances.values()).reduce((sum, balance) => sum + balance, 0);
-    const calculatedTotalTokens = Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0);
-
-    // Calculate SOL and token balances for active wallets only
-    const activeWallets = wallets.filter(wallet => wallet.isActive);
-    const calculatedActiveSol = activeWallets.reduce((sum, wallet) => sum + (solBalances.get(wallet.address) || 0), 0);
-    const calculatedActiveTokens = activeWallets.reduce((sum, wallet) => sum + (tokenBalances.get(wallet.address) || 0), 0);
-
     // Update external state if provided
     if (setExternalTotalSol) setExternalTotalSol(calculatedTotalSol);
     if (setExternalActiveSol) setExternalActiveSol(calculatedActiveSol);
     if (setExternalTotalTokens) setExternalTotalTokens(calculatedTotalTokens);
     if (setExternalActiveTokens) setExternalActiveTokens(calculatedActiveTokens);
-  }, [wallets, solBalances, tokenBalances]);
+  }, [calculatedTotalSol, calculatedActiveSol, calculatedTotalTokens, calculatedActiveTokens]);
 
   // Use either external state or calculated values
-  const totalSol = externalTotalSol !== undefined ? externalTotalSol : 
-    Array.from(solBalances.values()).reduce((sum, balance) => sum + balance, 0);
-  
-  const totalTokens = externalTotalTokens !== undefined ? externalTotalTokens :
-    Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0);
-  
-  const activeWallets = wallets.filter(wallet => wallet.isActive);
-  
-  const activeSol = externalActiveSol !== undefined ? externalActiveSol :
-    activeWallets.reduce((sum, wallet) => sum + (solBalances.get(wallet.address) || 0), 0);
-  
-  const activeTokens = externalActiveTokens !== undefined ? externalActiveTokens :
-    activeWallets.reduce((sum, wallet) => sum + (tokenBalances.get(wallet.address) || 0), 0);
+  const totalSol = externalTotalSol !== undefined ? externalTotalSol : calculatedTotalSol;
+  const totalTokens = externalTotalTokens !== undefined ? externalTotalTokens : calculatedTotalTokens;
+  const activeSol = externalActiveSol !== undefined ? externalActiveSol : calculatedActiveSol;
+  const activeTokens = externalActiveTokens !== undefined ? externalActiveTokens : calculatedActiveTokens;
 
   const handleBalanceToggle = () => {
     setShowingTokenWallets(!showingTokenWallets);
@@ -311,6 +314,64 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
     }
   };
 
+  const handleQuickSell = async (wallet: WalletType, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!tokenAddress) {
+      showToast('No token address specified', 'error');
+      return;
+    }
+
+    if (sellingWalletId === wallet.id) return; // Prevent double clicks
+    
+    setSellingWalletId(wallet.id);
+    
+    try {
+      // Create wallet for sell
+      const walletForSell = {
+        address: wallet.address,
+        privateKey: wallet.privateKey
+      };
+
+      // Check if wallet has tokens to sell
+      const walletTokenBalance = tokenBalances.get(wallet.address) || 0;
+      if (walletTokenBalance <= 0) {
+        showToast('No tokens to sell in this wallet', 'error');
+        return;
+      }
+      
+      // Create sell configuration using the unified system
+      const sellConfig = createSellConfig({
+        tokenAddress,
+        protocol: 'auto', // Use Auto for quick sell
+        sellPercent: 100 // Sell 100% of tokens
+        // slippageBps will be automatically set from config in the sell.ts file
+      });
+      
+      // Validate inputs
+      const validation = validateSellInputs([walletForSell], sellConfig, tokenBalances);
+      if (!validation.valid) {
+        showToast(validation.error || 'Validation failed', 'error');
+        return;
+      }
+      
+      const result = await executeSell([walletForSell], sellConfig);
+      
+      if (result.success) {
+        showToast('Quick sell executed successfully!', 'success');
+      } else {
+        showToast(result.error || 'Quick sell failed', 'error');
+      }
+    } catch (error) {
+      console.error('Quick sell error:', error);
+      showToast('Quick sell failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
+    } finally {
+      setSellingWalletId(null);
+    }
+  };
+
+
+
   return (
     <div className="flex-1 bg-app-primary relative cyberpunk-bg">
       {/* Cyberpunk scanline effect - pointer-events-none ensures it doesn't block clicks */}
@@ -372,23 +433,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             )}
           </div>
           
-          {/* Minimal progress bar when refreshing - overlay without adding height */}
-          {isRefreshing && refreshProgress.total > 0 && (
-            <div className="absolute bottom-0 left-0 right-0">
-              <div className="w-full bg-app-primary-10 h-1 overflow-hidden relative">
-                {/* Background */}
-                <div className="absolute inset-0 bg-app-primary-20"></div>
-                
-                {/* Progress fill */}
-                <div 
-                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-app-primary-color to-primary-60 transition-all duration-300 ease-out"
-                  style={{
-                    width: `${Math.min(100, (refreshProgress.current / refreshProgress.total) * 100)}%`
-                  }}
-                ></div>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
       
@@ -415,6 +460,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     }
                     ${hoverRow === wallet.id && !wallet.isActive ? 'bg-primary-08 border-app-primary-30' : ''}
                     ${recentlyUpdatedWallets.has(wallet.address) ? 'animate-pulse border-l-2 border-l-success' : ''}
+
                   `}
                 >
                   {/* Enhanced Selection Indicator */}
@@ -462,7 +508,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                   
                   {/* Enhanced Address Display */}
                   <td className="py-3 px-2 font-mono">
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-between">
                       <Tooltip 
                         content={`Click to copy`}
                         position="bottom"
@@ -491,6 +537,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                           )}
                         </span>
                       </Tooltip>
+
                     </div>
                   </td>
                   
@@ -522,23 +569,40 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     </td>
                   )}
                   
-                  {/* Enhanced Explorer Link */}
+                  {/* Quick Sell Button */}
                   <td className="py-3 pl-2 pr-3 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(`https://solscan.io/account/${wallet.address}`, '_blank');
-                      }}
-                      className={`
-                        transition-all duration-200 p-1 rounded
-                        ${wallet.isActive 
-                          ? 'text-success hover:color-primary hover-bg-primary-20' 
-                          : 'text-app-secondary-60 hover:color-primary hover:bg-primary-10'
-                        }
-                      `}
-                    >
-                      <ExternalLink size={14} />
-                    </button>
+                    <Tooltip content={
+                      tokenAddress 
+                        ? (tokenBalances.get(wallet.address) || 0) > 0
+                          ? "Quick sell 100% of tokens"
+                          : "No tokens to sell"
+                        : "No token selected"
+                    } position="left">
+                      <button
+                        onClick={(e) => handleQuickSell(wallet, e)}
+                        disabled={!tokenAddress || sellingWalletId === wallet.id || (tokenBalances.get(wallet.address) || 0) <= 0}
+                        className={`
+                          w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
+                          ${!tokenAddress || (tokenBalances.get(wallet.address) || 0) <= 0
+                            ? 'bg-app-tertiary border border-app-primary-20 cursor-not-allowed opacity-50'
+                            : sellingWalletId === wallet.id
+                            ? 'bg-red-500 border border-red-500 shadow-lg shadow-red-400 animate-pulse'
+                            : 'bg-red-400 border border-red-600 hover:bg-red-500 hover:border-red-500 hover:shadow-lg hover:shadow-red-400 cursor-pointer'
+                          }
+                        `}
+                      >
+                        {sellingWalletId === wallet.id ? (
+                          <RefreshCw size={10} className="text-white animate-spin" />
+                        ) : (
+                          <TrendingDown size={10} className={`
+                            ${!tokenAddress || (tokenBalances.get(wallet.address) || 0) <= 0
+                              ? 'text-app-primary-40'
+                              : 'text-white'
+                            }
+                          `} />
+                        )}
+                      </button>
+                    </Tooltip>
                   </td>
                 </tr>
               ))}

@@ -17,13 +17,25 @@ import {
 import Split from 'react-split';
 import { useToast } from "./Notifications";
 import {
+  fetchWalletBalances,
   fetchSolBalances,
   fetchTokenBalances,
-  handleSortWallets,
+  handleSortWallets
+} from './Utils';
+import {
   handleApiKeyFromUrl
 } from './Manager';
 import { countActiveWallets, getScriptName } from './utils/wallets';
 import { executeTrade } from './utils/trading.ts';
+
+// Extend Window interface to include server-related properties
+declare global {
+  interface Window {
+    serverRegion: string;
+    availableServers: ServerInfo[];
+    switchServer: (serverId: string) => Promise<boolean>;
+  }
+}
 
 // Lazy loaded components
 const EnhancedSettingsModal = lazy(() => import('./modals/SettingsModal'));
@@ -283,7 +295,6 @@ const WalletManager: React.FC = () => {
     currentPage: 'wallets' | 'chart' | 'actions';
     wallets: WalletType[];
     isRefreshing: boolean;
-    refreshProgress: { current: number; total: number };
     connection: Connection | null;
     solBalances: Map<string, number>;
     tokenBalances: Map<string, number>;
@@ -343,7 +354,6 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_CURRENT_PAGE'; payload: 'wallets' | 'chart' | 'actions' }
     | { type: 'SET_WALLETS'; payload: WalletType[] }
     | { type: 'SET_REFRESHING'; payload: boolean }
-    | { type: 'SET_REFRESH_PROGRESS'; payload: { current: number; total: number } }
     | { type: 'SET_CONNECTION'; payload: Connection | null }
     | { type: 'SET_SOL_BALANCES'; payload: Map<string, number> }
     | { type: 'SET_TOKEN_BALANCES'; payload: Map<string, number> }
@@ -387,7 +397,6 @@ const WalletManager: React.FC = () => {
     currentPage: 'wallets',
     wallets: [],
     isRefreshing: false,
-    refreshProgress: { current: 0, total: 0 },
     connection: null,
     solBalances: new Map(),
     tokenBalances: new Map(),
@@ -437,8 +446,6 @@ const WalletManager: React.FC = () => {
         return { ...state, wallets: action.payload };
       case 'SET_REFRESHING':
         return { ...state, isRefreshing: action.payload };
-      case 'SET_REFRESH_PROGRESS':
-        return { ...state, refreshProgress: action.payload };
       case 'SET_CONNECTION':
         return { ...state, connection: action.payload };
       case 'SET_SOL_BALANCES':
@@ -541,7 +548,6 @@ const WalletManager: React.FC = () => {
     setCurrentPage: (page: 'wallets' | 'chart' | 'actions') => dispatch({ type: 'SET_CURRENT_PAGE', payload: page }),
     setWallets: (wallets: WalletType[]) => dispatch({ type: 'SET_WALLETS', payload: wallets }),
     setIsRefreshing: (refreshing: boolean) => dispatch({ type: 'SET_REFRESHING', payload: refreshing }),
-    setRefreshProgress: (progress: { current: number; total: number }) => dispatch({ type: 'SET_REFRESH_PROGRESS', payload: progress }),
     setConnection: (connection: Connection | null) => dispatch({ type: 'SET_CONNECTION', payload: connection }),
     setSolBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_SOL_BALANCES', payload: balances }),
     setTokenBalances: (balances: Map<string, number>) => dispatch({ type: 'SET_TOKEN_BALANCES', payload: balances }),
@@ -782,19 +788,19 @@ const WalletManager: React.FC = () => {
     }
   }, [state.config.rpcEndpoint]);
 
-  // Fetch SOL balances when wallets change or connection is established
+  // Fetch SOL balances when wallets are added/removed or connection is established (not when selection changes)
   useEffect(() => {
     if (state.connection && state.wallets.length > 0) {
       fetchSolBalances(state.connection, state.wallets, memoizedCallbacks.setSolBalances);
     }
-  }, [state.connection, state.wallets]);
+  }, [state.connection, state.wallets.length, state.wallets.map(w => w.address).join(',')]);
 
-  // Fetch token balances when token address changes or wallets change
+  // Fetch token balances when token address changes or wallets are added/removed (not when selection changes)
   useEffect(() => {
     if (state.connection && state.wallets.length > 0 && state.tokenAddress) {
       fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
     }
-  }, [state.connection, state.wallets, state.tokenAddress]);
+  }, [state.connection, state.wallets.length, state.wallets.map(w => w.address).join(','), state.tokenAddress]);
 
   // Trigger tick animation when wallet count changes
   useEffect(() => {
@@ -808,31 +814,25 @@ const WalletManager: React.FC = () => {
     if (!state.connection || state.wallets.length === 0) return;
     
     memoizedCallbacks.setIsRefreshing(true);
-    memoizedCallbacks.setRefreshProgress({ current: 0, total: state.wallets.length });
     
     try {
-      // Fetch SOL balances with progress tracking
-      await fetchSolBalances(
-        state.connection, 
-        state.wallets, 
+      // Use the consolidated fetchWalletBalances function with current balances to preserve them on errors
+      await fetchWalletBalances(
+        state.connection,
+        state.wallets,
+        state.tokenAddress,
         memoizedCallbacks.setSolBalances,
-        (current, total) => {
-          memoizedCallbacks.setRefreshProgress({ current, total });
-        }
+        memoizedCallbacks.setTokenBalances,
+        state.solBalances,
+        state.tokenBalances
       );
-      
-      // Fetch token balances if token address is provided
-      if (state.tokenAddress) {
-        await fetchTokenBalances(state.connection, state.wallets, state.tokenAddress, memoizedCallbacks.setTokenBalances);
-      }
     } catch (error) {
       console.error('Error refreshing balances:', error);
     } finally {
-      // Set refreshing to false and reset progress
+      // Set refreshing to false
       memoizedCallbacks.setIsRefreshing(false);
-      memoizedCallbacks.setRefreshProgress({ current: 0, total: 0 });
     }
-  }, [state.connection, state.wallets, state.tokenAddress]);
+  }, [state.connection, state.wallets, state.tokenAddress, state.solBalances, state.tokenBalances]);
 
   const handleConfigChange = useCallback((key: keyof ConfigType, value: string) => {
     const newConfig = { ...state.config, [key]: value };
@@ -994,7 +994,6 @@ const WalletManager: React.FC = () => {
                   setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
                   isRefreshing={state.isRefreshing}
-                  refreshProgress={state.refreshProgress}
                   setIsModalOpen={memoizedCallbacks.setIsModalOpen}
                   tokenAddress={state.tokenAddress}
                   sortDirection={state.sortDirection}
@@ -1061,7 +1060,6 @@ const WalletManager: React.FC = () => {
                   setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
                   isRefreshing={state.isRefreshing}
-                  refreshProgress={state.refreshProgress}
                   setIsModalOpen={memoizedCallbacks.setIsModalOpen}
                   tokenAddress={state.tokenAddress}
                   sortDirection={state.sortDirection}

@@ -30,7 +30,7 @@ import {
   saveWalletsToCookies,
   getWalletDisplayName
 } from '../Utils';
-import { handleCleanupWallets, handleSortWallets } from '../Manager';
+import { handleCleanupWallets, handleSortWallets } from '../Utils';
 
 interface EnhancedWalletOverviewProps {
   isOpen: boolean;

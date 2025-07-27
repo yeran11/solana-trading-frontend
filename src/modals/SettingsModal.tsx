@@ -12,7 +12,7 @@ import {
   ConfigType,
   copyToClipboard
 } from '../Utils';
-import { handleCleanupWallets } from '../Manager';
+import { handleCleanupWallets } from '../Utils';
 
 interface EnhancedSettingsModalProps {
   isOpen: boolean;
