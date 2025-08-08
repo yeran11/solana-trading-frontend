@@ -88,6 +88,8 @@ interface WalletsPageProps {
   setQuickBuyMaxAmount?: (amount: number) => void;
   useQuickBuyRange?: boolean;
   setUseQuickBuyRange?: (enabled: boolean) => void;
+  quickSellPercentage?: number;
+  setQuickSellPercentage?: (percentage: number) => void;
 }
 
 export const WalletsPage: React.FC<WalletsPageProps> = ({
@@ -123,7 +125,9 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
   quickBuyMaxAmount = 0.05,
   setQuickBuyMaxAmount,
   useQuickBuyRange = false,
-  setUseQuickBuyRange
+  setUseQuickBuyRange,
+  quickSellPercentage = 100,
+  setQuickSellPercentage
 }) => {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [showingTokenWallets, setShowingTokenWallets] = useState(true);
@@ -277,11 +281,20 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
         privateKey: wallet.privateKey
       };
 
-      // Check if wallet has sufficient SOL balance
+      // Check wallet balance and adjust amount if necessary
       const walletBalance = solBalances.get(wallet.address) || 0;
-      if (walletBalance < solAmountToUse) {
-        showToast(`Insufficient SOL balance. Need ${solAmountToUse.toFixed(3)} SOL, have ${walletBalance.toFixed(3)} SOL`, 'error');
+      const maxAvailable = walletBalance - 0.01; // Leave 0.01 SOL for transaction fees
+      
+      if (maxAvailable <= 0) {
+        showToast(`Insufficient SOL balance. Need at least 0.01 SOL for transaction fees`, 'error');
         return;
+      }
+      
+      // Cap the amount to what's available in the wallet
+      if (solAmountToUse > maxAvailable) {
+        solAmountToUse = maxAvailable;
+        // Round to 3 decimal places
+        solAmountToUse = Math.round(solAmountToUse * 1000) / 1000;
       }
       
       // Create buy configuration using the unified system
@@ -344,7 +357,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
       const sellConfig = createSellConfig({
         tokenAddress,
         protocol: 'auto', // Use Auto for quick sell
-        sellPercent: 100 // Sell 100% of tokens
+        sellPercent: quickSellPercentage // Use the configured quick sell percentage
         // slippageBps will be automatically set from config in the sell.ts file
       });
       
@@ -405,6 +418,8 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
             setQuickBuyMaxAmount={setQuickBuyMaxAmount}
             useQuickBuyRange={useQuickBuyRange}
             setUseQuickBuyRange={setUseQuickBuyRange}
+            quickSellPercentage={quickSellPercentage}
+            setQuickSellPercentage={setQuickSellPercentage}
           />
         </div>
         
@@ -472,17 +487,17 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                         <Tooltip content={
                           tokenAddress 
                             ? (useQuickBuyRange 
-                                ? `Quick buy random ${quickBuyMinAmount?.toFixed(3)}-${quickBuyMaxAmount?.toFixed(3)} SOL` 
-                                : `Quick buy ${quickBuyAmount} SOL`
+                                ? `Quick buy random ${quickBuyMinAmount?.toFixed(3)}-${quickBuyMaxAmount?.toFixed(3)} SOL (capped to available balance)` 
+                                : `Quick buy ${quickBuyAmount} SOL (capped to available balance)`
                               )
                             : "No token selected"
                         } position="right">
                           <button
                             onClick={(e) => handleQuickBuy(wallet, e)}
-                            disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < quickBuyAmount}
+                            disabled={!tokenAddress || buyingWalletId === wallet.id || (solBalances.get(wallet.address) || 0) < (useQuickBuyRange ? (quickBuyMinAmount || quickBuyAmount) : quickBuyAmount) + 0.01}
                             className={`
                               w-6 h-6 rounded-full transition-all duration-200 flex items-center justify-center
-                              ${!tokenAddress || (solBalances.get(wallet.address) || 0) < 0.01
+                              ${!tokenAddress || (solBalances.get(wallet.address) || 0) < (useQuickBuyRange ? (quickBuyMinAmount || quickBuyAmount) : quickBuyAmount) + 0.01
                                 ? 'bg-app-tertiary border border-app-primary-20 cursor-not-allowed opacity-50'
                                 : buyingWalletId === wallet.id
                                 ? 'bg-app-primary-color border border-app-primary-color shadow-lg shadow-app-primary-40 animate-pulse'
@@ -494,7 +509,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                               <RefreshCw size={10} className="text-app-quaternary animate-spin" />
                             ) : (
                               <Zap size={10} className={`
-                                ${!tokenAddress || (solBalances.get(wallet.address) || 0) < quickBuyAmount
+                                ${!tokenAddress || (solBalances.get(wallet.address) || 0) < (useQuickBuyRange ? (quickBuyMinAmount || quickBuyAmount) : quickBuyAmount) + 0.01
                                   ? 'text-app-primary-40'
                                   : 'text-app-quaternary group-hover:text-app-quaternary'
                                 }
@@ -574,7 +589,7 @@ export const WalletsPage: React.FC<WalletsPageProps> = ({
                     <Tooltip content={
                       tokenAddress 
                         ? (tokenBalances.get(wallet.address) || 0) > 0
-                          ? "Quick sell 100% of tokens"
+                          ? `Quick sell ${quickSellPercentage}% of tokens`
                           : "No tokens to sell"
                         : "No token selected"
                     } position="left">

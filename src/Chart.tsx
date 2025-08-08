@@ -27,6 +27,7 @@ interface ChartPageProps {
       tradeType: 'buy' | 'sell';
       volume: number;
     } | null;
+    marketCap: number | null;
   }) => void;
 }
 
@@ -193,15 +194,41 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     volume: number;
   } | null>(null);
 
+  // Calculate market cap from token price and SOL price
+  const calculateMarketCap = (tokenPriceData: typeof tokenPrice, solPriceData: number | null): number | null => {
+    if (!tokenPriceData || !solPriceData) {
+      console.log('Market cap calculation skipped - missing data:', { tokenPrice: tokenPriceData, solPrice: solPriceData });
+      return null;
+    }
+    
+    // Assuming 1 billion token supply (standard for many Solana tokens)
+    const tokenSupply = 1000000000;
+    
+    // Market cap = token price (in SOL) * token supply * SOL price (in USD)
+    const marketCapInUSD = tokenPriceData.tokenPrice * tokenSupply * solPriceData;
+    
+    console.log('Market cap calculated:', {
+      tokenPrice: tokenPriceData.tokenPrice,
+      solPrice: solPriceData,
+      tokenSupply,
+      marketCapInUSD
+    });
+    
+    return marketCapInUSD;
+  };
+
   // Notify parent component of data updates (excluding currentWallets to prevent balance updates on selection)
   useEffect(() => {
     if (onDataUpdate) {
+      const marketCap = calculateMarketCap(tokenPrice, solPrice);
+      
       onDataUpdate({
         tradingStats,
         solPrice,
         currentWallets,
         recentTrades,
-        tokenPrice
+        tokenPrice,
+        marketCap
       });
     }
   }, [tradingStats, solPrice, recentTrades, tokenPrice, onDataUpdate]);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw } from 'lucide-react';
-import { getWallets } from '../Utils';
+import { getWallets, getWalletDisplayName } from '../Utils';
 import { useToast } from "../Notifications";
 import { executePumpCreate, WalletForPumpCreate, TokenCreationConfig } from '../utils/pumpcreate';
 import { Keypair } from '@solana/web3.js';
@@ -802,7 +802,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium color-primary font-mono">{index === 0 ? 'DEVELOPER' : `#${index + 1}`}</span>
                                     <span className="text-sm font-medium text-app-primary font-mono glitch-text">
-                                      {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
+                                      {wallet ? getWalletDisplayName(wallet) : 'UNKNOWN'}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -858,7 +858,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                               </div>
                               <div className="space-y-1">
                                 <span className="text-sm font-medium text-app-primary font-mono glitch-text">
-                                  {formatAddress(wallet.address)}
+                                  {getWalletDisplayName(wallet)}
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-app-secondary font-mono">BALANCE:</span>
@@ -1015,7 +1015,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                           <div className="flex items-center gap-2">
                             <span className="color-primary text-xs font-medium w-6 font-mono">{index === 0 ? 'DEV' : `#${index + 1}`}</span>
                             <span className="font-mono text-sm text-app-primary glitch-text">
-                              {wallet ? formatAddress(wallet.address) : 'UNKNOWN'}
+                              {wallet ? getWalletDisplayName(wallet) : 'UNKNOWN'}
                             </span>
                           </div>
                           <div className="flex flex-col items-end">

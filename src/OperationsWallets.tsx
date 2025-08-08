@@ -39,7 +39,9 @@ interface WalletOperationsButtonsProps {
   quickBuyMaxAmount?: number;
   setQuickBuyMaxAmount?: (amount: number) => void;
   useQuickBuyRange?: boolean;
-  setUseQuickBuyRange?: (enabled: boolean) => void;
+  setUseQuickBuyRange?: (useRange: boolean) => void;
+  quickSellPercentage?: number;
+  setQuickSellPercentage?: (percentage: number) => void;
 }
 
 type OperationTab = 'distribute' | 'consolidate' | 'transfer' | 'deposit' | 'mixer' | 'fund';
@@ -67,7 +69,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   quickBuyMaxAmount = 0.05,
   setQuickBuyMaxAmount,
   useQuickBuyRange = false,
-  setUseQuickBuyRange
+  setUseQuickBuyRange,
+  quickSellPercentage = 100,
+  setQuickSellPercentage
 }) => {
   // State for active modal
   const [activeModal, setActiveModal] = useState<OperationTab | null>(null);
@@ -85,6 +89,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
   const [tempQuickBuyMinAmount, setTempQuickBuyMinAmount] = useState(quickBuyMinAmount);
   const [tempQuickBuyMaxAmount, setTempQuickBuyMaxAmount] = useState(quickBuyMaxAmount);
   const [tempUseQuickBuyRange, setTempUseQuickBuyRange] = useState(useQuickBuyRange);
+  const [tempQuickSellPercentage, setTempQuickSellPercentage] = useState(quickSellPercentage);
   
   // Function to toggle drawer
   const toggleDrawer = () => {
@@ -132,6 +137,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
     setTempQuickBuyMinAmount(quickBuyMinAmount);
     setTempQuickBuyMaxAmount(quickBuyMaxAmount);
     setTempUseQuickBuyRange(useQuickBuyRange);
+    setTempQuickSellPercentage(quickSellPercentage);
     setIsQuickBuySettingsOpen(true);
     setIsDrawerOpen(false);
   };
@@ -152,6 +158,9 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
     }
     if (setUseQuickBuyRange !== undefined) {
       setUseQuickBuyRange(tempUseQuickBuyRange);
+    }
+    if (setQuickSellPercentage && tempQuickSellPercentage >= 1 && tempQuickSellPercentage <= 100) {
+      setQuickSellPercentage(tempQuickSellPercentage);
     }
     setIsQuickBuySettingsOpen(false);
   };
@@ -376,34 +385,35 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-app-overlay flex items-center justify-center z-50"
-            onClick={() => setIsQuickBuySettingsOpen(false)}
+            className="fixed inset-0 bg-app-overlay flex items-center justify-center z-50 p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-app-primary border border-app-primary-30 rounded-lg p-6 max-w-md w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
+              className="bg-app-primary border border-app-primary-30 rounded-lg p-4 sm:p-6 
+                         w-full max-w-sm sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-mono color-primary tracking-wider">Quick Buy Settings</h2>
+              <div className="flex justify-between items-start mb-4 sm:mb-6">
+                <h2 className="text-base sm:text-lg font-mono color-primary tracking-wider pr-4">
+                  Quick Buy Settings
+                </h2>
                 <button
                   onClick={() => setIsQuickBuySettingsOpen(false)}
-                  className="color-primary hover-color-primary-light transition-colors"
+                  className="color-primary hover-color-primary-light transition-colors flex-shrink-0 p-1"
                 >
-                  <X size={20} />
+                  <X size={18} className="sm:w-5 sm:h-5" />
                 </button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-4 sm:space-y-5">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+                    <div className="flex-1 min-w-0">
                       <span className="text-sm font-mono color-primary block mb-1">
                         Quick Buy Feature
                       </span>
-                      <p className="text-xs text-app-secondary-80">
+                      <p className="text-xs text-app-secondary-80 break-words">
                         Show quick buy buttons in wallet rows
                       </p>
                     </div>
@@ -411,7 +421,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     {/* Custom Toggle Switch */}
                     <button
                       onClick={() => setTempQuickBuyEnabled(!tempQuickBuyEnabled)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 ring-app-primary-color focus:ring-offset-2 ring-offset-app-primary ${
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 ring-app-primary-color focus:ring-offset-2 ring-offset-app-primary flex-shrink-0 ${
                         tempQuickBuyEnabled 
                           ? 'bg-gradient-to-r from-app-primary-color to-app-primary-light' 
                           : 'bg-app-secondary border border-app-primary-30'
@@ -435,12 +445,12 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                 
                 <div className={tempQuickBuyEnabled ? '' : 'opacity-50'}>
                   {/* Range Toggle */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+                    <div className="flex-1 min-w-0">
                       <span className="text-sm font-mono color-primary block mb-1">
                         Random Amount Range
                       </span>
-                      <p className="text-xs text-app-secondary-80">
+                      <p className="text-xs text-app-secondary-80 break-words">
                         Use random amounts between min and max
                       </p>
                     </div>
@@ -448,7 +458,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     <button
                       onClick={() => setTempUseQuickBuyRange(!tempUseQuickBuyRange)}
                       disabled={!tempQuickBuyEnabled}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 ring-app-primary-color focus:ring-offset-2 ring-offset-app-primary disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 ring-app-primary-color focus:ring-offset-2 ring-offset-app-primary disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
                         tempUseQuickBuyRange && tempQuickBuyEnabled
                           ? 'bg-gradient-to-r from-app-primary-color to-app-primary-light' 
                           : 'bg-app-secondary border border-app-primary-30'
@@ -466,7 +476,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
 
                   {/* Amount Inputs */}
                   {tempUseQuickBuyRange ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 sm:space-y-4">
                       <div>
                         <label className="block text-sm font-mono color-primary mb-2">
                           Minimum SOL Amount
@@ -478,10 +488,23 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                           max="10"
                           value={tempQuickBuyMinAmount}
                           onChange={(e) => {
-                            const value = parseFloat(e.target.value) || 0.001;
-                            setTempQuickBuyMinAmount(value);
-                            if (value >= tempQuickBuyMaxAmount) {
-                              setTempQuickBuyMaxAmount(value + 0.01);
+                            const inputValue = e.target.value;
+                            if (inputValue === '') {
+                              setTempQuickBuyMinAmount(0.001);
+                              return;
+                            }
+                            const value = parseFloat(inputValue);
+                            if (!isNaN(value) && value >= 0.001 && value <= 10) {
+                              setTempQuickBuyMinAmount(value);
+                              if (value >= tempQuickBuyMaxAmount) {
+                                setTempQuickBuyMaxAmount(Math.min(value + 0.01, 10));
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = parseFloat(e.target.value);
+                            if (isNaN(value) || value < 0.001) {
+                              setTempQuickBuyMinAmount(0.001);
                             }
                           }}
                           disabled={!tempQuickBuyEnabled}
@@ -503,9 +526,20 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                           max="10"
                           value={tempQuickBuyMaxAmount}
                           onChange={(e) => {
-                            const value = parseFloat(e.target.value) || tempQuickBuyMinAmount + 0.001;
-                            if (value > tempQuickBuyMinAmount) {
+                            const inputValue = e.target.value;
+                            if (inputValue === '') {
+                              setTempQuickBuyMaxAmount(Math.max(tempQuickBuyMinAmount + 0.001, 0.05));
+                              return;
+                            }
+                            const value = parseFloat(inputValue);
+                            if (!isNaN(value) && value > tempQuickBuyMinAmount && value <= 10) {
                               setTempQuickBuyMaxAmount(value);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = parseFloat(e.target.value);
+                            if (isNaN(value) || value <= tempQuickBuyMinAmount) {
+                              setTempQuickBuyMaxAmount(Math.max(tempQuickBuyMinAmount + 0.001, 0.05));
                             }
                           }}
                           disabled={!tempQuickBuyEnabled}
@@ -517,7 +551,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                       </div>
                       
                       <div className="bg-primary-10 border border-app-primary-20 rounded-md p-3">
-                        <p className="text-xs text-app-secondary-80">
+                        <p className="text-xs text-app-secondary-80 break-words">
                           Each quick buy will use a random amount between {tempQuickBuyMinAmount.toFixed(3)} and {tempQuickBuyMaxAmount.toFixed(3)} SOL
                         </p>
                       </div>
@@ -533,21 +567,77 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                         min="0.001"
                         max="10"
                         value={tempQuickBuyAmount}
-                        onChange={(e) => setTempQuickBuyAmount(parseFloat(e.target.value) || 0.001)}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          if (inputValue === '') {
+                            setTempQuickBuyAmount(0.001);
+                            return;
+                          }
+                          const value = parseFloat(inputValue);
+                          if (!isNaN(value) && value >= 0.001 && value <= 10) {
+                            setTempQuickBuyAmount(value);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (isNaN(value) || value < 0.001) {
+                            setTempQuickBuyAmount(0.001);
+                          }
+                        }}
                         disabled={!tempQuickBuyEnabled}
                         className="w-full px-3 py-2 bg-app-quaternary border border-app-primary-30 rounded-md
                                  text-app-primary font-mono text-sm focus-border-primary focus:outline-none
                                  transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="0.01"
                       />
-                      <p className="text-xs text-app-secondary-80 mt-1">
+                      <p className="text-xs text-app-secondary-80 mt-1 break-words">
                         Fixed amount of SOL to spend when clicking quick buy buttons
                       </p>
                     </div>
                   )}
                 </div>
+
+                {/* Quick Sell Percentage */}
+                <div className="space-y-3 sm:space-y-4">
+                  <div>
+                    <label className="block text-sm font-mono color-primary mb-2">
+                      Quick Sell Percentage
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      max="100"
+                      value={tempQuickSellPercentage}
+                      onChange={(e) => {
+                        const inputValue = e.target.value;
+                        if (inputValue === '') {
+                          setTempQuickSellPercentage(100);
+                          return;
+                        }
+                        const value = parseInt(inputValue);
+                        if (!isNaN(value) && value >= 1 && value <= 100) {
+                          setTempQuickSellPercentage(value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (isNaN(value) || value < 1 || value > 100) {
+                          setTempQuickSellPercentage(100);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-app-quaternary border border-app-primary-30 rounded-md
+                               text-app-primary font-mono text-sm focus-border-primary focus:outline-none
+                               transition-colors duration-200"
+                      placeholder="100"
+                    />
+                    <p className="text-xs text-app-secondary-80 mt-1 break-words">
+                      Percentage of token balance to sell when clicking quick sell buttons (1-100%)
+                    </p>
+                  </div>
+                </div>
                 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <motion.button
                     variants={buttonVariants}
                     initial="rest"
@@ -555,7 +645,8 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     whileTap="tap"
                     onClick={() => setIsQuickBuySettingsOpen(false)}
                     className="flex-1 py-2 px-4 rounded-md border border-app-primary-30
-                             color-primary hover-color-primary-light transition-colors duration-200"
+                             color-primary hover-color-primary-light transition-colors duration-200
+                             text-sm font-mono"
                   >
                     Cancel
                   </motion.button>
@@ -572,7 +663,7 @@ export const WalletOperationsButtons: React.FC<WalletOperationsButtonsProps> = (
                     )}
                     className="flex-1 py-2 px-4 rounded-md bg-app-primary-color text-app-quaternary
                              hover:bg-app-primary-light disabled:opacity-50 disabled:cursor-not-allowed
-                             transition-colors duration-200 font-mono"
+                             transition-colors duration-200 font-mono text-sm"
                   >
                     Save
                   </motion.button>

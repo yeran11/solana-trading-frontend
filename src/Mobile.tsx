@@ -17,15 +17,15 @@ const MobileLayout: React.FC<MobileLayoutProps> = () => {
     const cyberpunkStyle = document.createElement('style');
     cyberpunkStyle.textContent = `
       @keyframes desktop-glow {
-        0% { text-shadow: 0 0 4px rgba(2, 179, 109, 0.7); }
-        50% { text-shadow: 0 0 8px rgba(2, 179, 109, 0.9), 0 0 12px rgba(2, 179, 109, 0.5); }
-        100% { text-shadow: 0 0 4px rgba(2, 179, 109, 0.7); }
+        0% { text-shadow: 0 0 4px var(--color-primary-70); }
+        50% { text-shadow: 0 0 8px var(--color-primary-90), 0 0 12px var(--color-primary-50); }
+        100% { text-shadow: 0 0 4px var(--color-primary-70); }
       }
       
       @keyframes desktop-pulse {
-        0% { box-shadow: 0 0 10px rgba(2, 179, 109, 0.3), 0 0 20px rgba(2, 179, 109, 0.1); }
-        50% { box-shadow: 0 0 20px rgba(2, 179, 109, 0.6), 0 0 30px rgba(2, 179, 109, 0.3); }
-        100% { box-shadow: 0 0 10px rgba(2, 179, 109, 0.3), 0 0 20px rgba(2, 179, 109, 0.1); }
+        0% { box-shadow: 0 0 10px var(--color-primary-30), 0 0 20px var(--color-primary-10); }
+        50% { box-shadow: 0 0 20px var(--color-primary-60), 0 0 30px var(--color-primary-30); }
+        100% { box-shadow: 0 0 10px var(--color-primary-30), 0 0 20px var(--color-primary-10); }
       }
       
       @keyframes desktop-scan {
@@ -39,8 +39,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = () => {
       }
       
       .desktop-only-grid {
-        background-image: linear-gradient(rgba(2, 179, 109, 0.1) 1px, transparent 1px), 
-                         linear-gradient(90deg, rgba(2, 179, 109, 0.1) 1px, transparent 1px);
+        background-image: linear-gradient(var(--color-primary-10) 1px, transparent 1px), 
+                         linear-gradient(90deg, var(--color-primary-10) 1px, transparent 1px);
         background-size: 20px 20px;
         background-position: center center;
         opacity: 0.2;
@@ -54,7 +54,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = () => {
         height: 4px;
         background: linear-gradient(to bottom, 
           transparent 0%,
-          rgba(2, 179, 109, 0.3) 50%,
+          var(--color-primary-30) 50%,
           transparent 100%);
         z-index: 10;
         animation: desktop-scan 6s linear infinite;
@@ -78,7 +78,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = () => {
   }, []);
 
   return (
-    <div className="md:hidden flex flex-col h-[100dvh] max-h-[100dvh] select-none bg-[#050a0e] relative overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="md:hidden flex flex-col h-[100dvh] max-h-[100dvh] select-none bg-app-primary relative overflow-hidden safe-area-inset">
       {/* Grid background */}
       <div className="absolute inset-0 desktop-only-grid"></div>
       
@@ -90,30 +90,30 @@ const MobileLayout: React.FC<MobileLayoutProps> = () => {
         <div className="text-center max-w-md mx-auto">
           {/* Warning icon with glow effect */}
           <div className="mb-8 flex justify-center">
-            <div className="relative desktop-only-pulse rounded-full p-4 border border-[#02b36d40] bg-[#050a0e]">
+            <div className="relative desktop-only-pulse rounded-full p-4 border border-app-primary-40 bg-app-primary">
               <Monitor 
                 size={48} 
-                className="text-[#02b36d] desktop-only-glow" 
+                className="color-primary desktop-only-glow" 
               />
               <AlertTriangle 
                 size={20} 
-                className="absolute -top-1 -right-1 text-[#ff6b6b] desktop-only-glow" 
+                className="absolute -top-1 -right-1 text-warning desktop-only-glow" 
               />
             </div>
           </div>
           
           {/* Main message */}
-          <h1 className="text-2xl font-bold text-[#02b36d] mb-4 font-mono tracking-wider desktop-only-glow">
+          <h1 className="text-2xl font-bold color-primary mb-4 font-mono tracking-wider desktop-only-glow">
             DESKTOP REQUIRED
           </h1>
           
           {/* Subtitle */}
-          <p className="text-[#7ddfbd] text-lg mb-6 font-mono leading-relaxed">
+          <p className="text-app-secondary text-lg mb-6 font-mono leading-relaxed">
             You must use app from a desktop for an enhanced experience
           </p>
           
           {/* Additional info */}
-          <div className="text-[#7ddfbd80] text-sm font-mono space-y-2">
+          <div className="text-app-secondary-80 text-sm font-mono space-y-2">
             <p>• Advanced trading features</p>
             <p>• Multi-wallet management</p>
             <p>• Real-time analytics</p>
@@ -122,21 +122,21 @@ const MobileLayout: React.FC<MobileLayoutProps> = () => {
           
           {/* Decorative elements */}
           <div className="mt-8 flex justify-center space-x-4">
-            <div className="w-2 h-2 rounded-full bg-[#02b36d] desktop-only-pulse"></div>
-            <div className="w-2 h-2 rounded-full bg-[#02b36d] desktop-only-pulse" style={{ animationDelay: '0.5s' }}></div>
-            <div className="w-2 h-2 rounded-full bg-[#02b36d] desktop-only-pulse" style={{ animationDelay: '1s' }}></div>
+            <div className="w-2 h-2 rounded-full bg-app-primary-color desktop-only-pulse"></div>
+            <div className="w-2 h-2 rounded-full bg-app-primary-color desktop-only-pulse" style={{ animationDelay: '0.5s' }}></div>
+            <div className="w-2 h-2 rounded-full bg-app-primary-color desktop-only-pulse" style={{ animationDelay: '1s' }}></div>
           </div>
         </div>
       </div>
       
       {/* Bottom border with glow */}
-      <div className="h-1 bg-gradient-to-r from-transparent via-[#02b36d] to-transparent opacity-60"></div>
+      <div className="h-1 from-transparent via-app-primary-color to-transparent opacity-60 bg-gradient-to-r"></div>
       
       {/* Corner decorations */}
-      <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-[#02b36d] opacity-70"></div>
-      <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[#02b36d] opacity-70"></div>
-      <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-[#02b36d] opacity-70"></div>
-      <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-[#02b36d] opacity-70"></div>
+      <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-app-primary opacity-70"></div>
+      <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-app-primary opacity-70"></div>
+      <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-app-primary opacity-70"></div>
+      <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-app-primary opacity-70"></div>
     </div>
   );
 };

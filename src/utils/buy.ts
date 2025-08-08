@@ -143,12 +143,12 @@ const getPartiallyPreparedTransactions = async (
       const feeInSol = appConfig?.transactionFee || '0.005';
       requestBody.jitoTipLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
     }
-
+    console.log(appConfig)
     const response = await fetch(`${baseUrl}/api/tokens/buy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': appConfig?.apiKey || '' 
+        'X-API-Key': '2ce46175afc70bc0981a2cbad3f1805e05d2f47b4fdecc5203f2529fcb764ab0' 
       },
       body: JSON.stringify(requestBody),
     });

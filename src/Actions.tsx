@@ -427,6 +427,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
           tokenBalances={tokenBalances}
           onOpenFloating={onOpenFloating}
           isFloatingCardOpen={isFloatingCardOpen}
+          solPrice={iframeData?.solPrice}
         />
         
         {/* Token Operations */}
