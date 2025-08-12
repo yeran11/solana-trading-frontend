@@ -161,6 +161,25 @@ export const executeMoonshotTrade = async (
   }
 };
 
+// Meteora trading functions
+
+export const executeMeteoraTrade = async (
+  wallets: FormattedWallet[],
+  config: TradingConfig,
+  isBuyMode: boolean,
+  walletBalances?: Map<string, number>
+): Promise<TradingResult> => {
+  try {
+    if (isBuyMode) {
+      return await executeUnifiedBuy(wallets, config, 'meteora');
+    } else {
+      return await executeUnifiedSell(wallets, config, 'meteora');
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 // BoopFun trading functions
 export const executeBoopFunTrade = async (
   wallets: FormattedWallet[],
@@ -314,6 +333,8 @@ export const executeTrade = async (
       return await executeAutoTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'launchpad':
       return await executeLaunchpadTrade(formattedWallets, config, isBuyMode, walletBalances);
+    case 'meteora':
+      return await executeMeteoraTrade(formattedWallets, config, isBuyMode, walletBalances);
     case 'pumpswap':
       return await executePumpSwapTrade(formattedWallets, config, isBuyMode, walletBalances);
     default:
