@@ -23,7 +23,7 @@ export type BundleMode = 'single' | 'batch' | 'all-in-one';
 
 export interface SellConfig {
   tokenAddress: string;
-  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'auto';
+  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'meteora'| 'auto';
   sellPercent: number; // Percentage of tokens to sell (1-100)
   slippageBps?: number; // Slippage tolerance in basis points (e.g., 100 = 1%)
   outputMint?: string; // Output token (usually SOL) - mainly for Auto
@@ -151,7 +151,7 @@ const getPartiallyPreparedSellTransactions = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': '2ce46175afc70bc0981a2cbad3f1805e05d2f47b4fdecc5203f2529fcb764ab0' 
+        'x-api-key': '' 
       },
       body: JSON.stringify(requestBody)
     });

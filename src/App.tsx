@@ -648,6 +648,7 @@ const WalletManager: React.FC = () => {
     { value: 'raydium', label: 'Raydium' },
     { value: 'launchpad', label: 'Launchpad' },
     { value: 'boopfun', label: 'BoopFun' },
+    { value: 'meteora', label: 'Meteora' },
   ];
 
   // Handle trade submission

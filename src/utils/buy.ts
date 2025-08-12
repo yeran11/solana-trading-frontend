@@ -23,7 +23,7 @@ export type BundleMode = 'single' | 'batch' | 'all-in-one';
 
 export interface BuyConfig {
   tokenAddress: string;
-  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'auto';
+  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'meteora' | 'auto';
   solAmount: number;
   amounts?: number[]; // Optional custom amounts per wallet
   slippageBps?: number; // Slippage in basis points (e.g., 100 = 1%)
@@ -148,7 +148,7 @@ const getPartiallyPreparedTransactions = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': '2ce46175afc70bc0981a2cbad3f1805e05d2f47b4fdecc5203f2529fcb764ab0' 
+        'X-API-Key': '' 
       },
       body: JSON.stringify(requestBody),
     });

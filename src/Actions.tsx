@@ -324,6 +324,7 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
     { value: 'raydium', label: 'Raydium' },
     { value: 'launchpad', label: 'Launchpad' },
     { value: 'boopfun', label: 'BoopFun' },
+    { value: 'meteora', label: 'Meteora' },
   ];
   
   const handleTradeSubmit = async (wallets: WalletType[], isBuyMode: boolean, dex?: string, buyAmount?: string, sellAmount?: string) => {

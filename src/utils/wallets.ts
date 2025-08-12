@@ -7,6 +7,7 @@ export type ScriptType =
   | 'jupbuy' | 'jupsell'
   | 'swapbuy' | 'swapsell'
   | 'moonbuy' | 'moonsell'
+  | 'meteorabuy' | 'meteorasell'
   | 'launchbuy' | 'launchsell'
   | 'boopbuy' | 'boopsell'
   | 'consolidate' | 'distribute' | 'mixer' | 'cleaner'
@@ -96,7 +97,9 @@ export const getScriptName = (selectedDex: string, isBuyMode: boolean): ScriptTy
       return isBuyMode ? 'launchbuy' : 'launchsell';
     case 'boopfun':
       return isBuyMode ? 'boopbuy' : 'boopsell';
+    case 'meteora':
+      return isBuyMode ? 'meteorabuy' : 'meteorasell';
     default:
-      return isBuyMode ? 'pumpbuy' : 'pumpsell';
+      return isBuyMode ? 'jupbuy' : 'jupsell';
   }
 };
