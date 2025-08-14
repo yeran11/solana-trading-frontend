@@ -471,8 +471,7 @@ export const signAndSendSharedConfigTransaction = async (
     // Get transaction fee from settings (default to 0.001 SOL if not available)
     const configuredFee = parseFloat(savedConfig?.transactionFee || '0.001');
     const transactionFee = configuredFee * LAMPORTS_PER_SOL; // Use configured fee
-    const solTransferAmount = configuredFee * LAMPORTS_PER_SOL; // Use configured fee
-    const additionalFeeAmount = configuredFee * LAMPORTS_PER_SOL; // Additional fee using same amount
+    const solTransferAmount = 0.001 * LAMPORTS_PER_SOL; // Use configured fee
     
     // Create instructions for fee transaction
     const instructions = [
