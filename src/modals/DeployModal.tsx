@@ -6,6 +6,8 @@ import { DeployBonkModal } from './DeployBonkModal';
 import { DeployCookModal } from './DeployCookModal';
 import { DeployMoonModal } from './DeployMoonModal';
 import { DeployBoopModal } from './DeployBoopModal';
+import { DeployBagsModal } from './DeployBagsModal';
+import { DeployBagsSharedFeesModal } from './DeployBagsSharedModal';
 import { useToast } from "../Notifications";
 
 interface BaseModalProps {
@@ -26,7 +28,9 @@ export const DeployModal: React.FC<DeployModalProps> = ({
   handleRefresh,
   solBalances,
 }) => {
-  const [selectedDeployType, setSelectedDeployType] = useState<'pump' | 'bonk' | 'cook' | 'moon' | 'boop' | null>(null);
+  const [selectedDeployType, setSelectedDeployType] = useState<'pump' | 'bonk' | 'cook' | 'moon' | 'boop' | 'bags' | null>(null);
+  const [sharedFeesEnabled, setSharedFeesEnabled] = useState(false);
+
   const { showToast } = useToast();
 
   if (!isOpen) return null;
@@ -88,6 +92,45 @@ export const DeployModal: React.FC<DeployModalProps> = ({
             <div className="absolute inset-0 bg-gradient-to-br from-app-primary-05 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
           </div>
 
+          {/* bags.fm Deploy Option */}
+          <div 
+            onClick={() => setSelectedDeployType('bags')}
+            className="group relative cursor-pointer bg-app-tertiary border-2 border-app-primary-30 rounded-xl p-4 transition-all duration-300 hover-border-primary hover:shadow-lg hover:shadow-app-primary-20"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-lg bg-primary-20 flex items-center justify-center">
+                <Utensils size={24} className="color-primary group-hover:animate-pulse" />
+              </div>
+              <h3 className="text-lg font-bold text-app-primary font-mono">BAGS.FM</h3>
+              <p className="text-app-secondary text-xs leading-relaxed">
+              Create a new bags.fm token.
+              </p>
+              
+              {/* Shared Fees Toggle */}
+              <div 
+                className="relative z-10 flex items-center justify-between pt-2 border-t border-app-primary-20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSharedFeesEnabled(!sharedFeesEnabled);
+                }}
+              >
+                <span className="text-xs font-medium text-app-secondary font-mono cursor-pointer">SHARED FEES</span>
+                <button
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none pointer-events-none ${
+                    sharedFeesEnabled ? 'bg-primary-50' : 'bg-app-primary-30'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      sharedFeesEnabled ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-app-primary-05 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+          </div>
+
           {/* Cook.Meme Deploy Option */}
           <div 
             onClick={() => setSelectedDeployType('cook')}
@@ -137,22 +180,7 @@ export const DeployModal: React.FC<DeployModalProps> = ({
               </p>
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-app-primary-05 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-          </div>
-          <div 
-            onClick={() => showToast("LAUNCHPAD deployment coming soon!", "error")}
-            className="group relative cursor-not-allowed bg-app-tertiary border-2 border-app-primary-30 rounded-xl p-4 opacity-60"
-          >
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-lg bg-primary-20 flex items-center justify-center">
-                <Utensils size={24} className="color-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-app-primary font-mono">LAUNCHPAD</h3>
-              <p className="text-app-secondary text-xs leading-relaxed">
-                Create a new LAUNCHPAD token. Advanced features including customizable tokenomics and marketing.
-              </p>
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-br from-app-primary-05 to-transparent rounded-xl" />
-          </div>
+          </div>          
         </div>
 
         {/* Render selected modal */}
@@ -200,6 +228,26 @@ export const DeployModal: React.FC<DeployModalProps> = ({
         {/* Render Boop Deploy Modal when selected */}
         {selectedDeployType === 'boop' && (
           <DeployBoopModal
+            isOpen={true}
+            onClose={() => setSelectedDeployType(null)}
+            onDeploy={onDeploy}
+            handleRefresh={handleRefresh}
+            solBalances={solBalances}
+          />
+        )}
+        {/* Render Bags Deploy Modal when selected */}
+        {selectedDeployType === 'bags' && !sharedFeesEnabled && (
+          <DeployBagsModal
+            isOpen={true}
+            onClose={() => setSelectedDeployType(null)}
+            onDeploy={onDeploy}
+            handleRefresh={handleRefresh}
+            solBalances={solBalances}
+          />
+        )}
+        {/* Render Bags Shared Deploy Modal when selected with shared fees */}
+        {selectedDeployType === 'bags' && sharedFeesEnabled && (
+          <DeployBagsSharedFeesModal
             isOpen={true}
             onClose={() => setSelectedDeployType(null)}
             onDeploy={onDeploy}

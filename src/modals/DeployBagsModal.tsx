@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw } from 'lucide-react';
-import { getWallets, getWalletDisplayName } from '../Utils';
+import { PlusCircle, X, CheckCircle, Info, Search, ChevronRight, Settings, DollarSign, ArrowUp, ArrowDown, Upload, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
+import { getWallets, getWalletDisplayName, loadConfigFromCookies } from '../Utils';
 import { useToast } from "../Notifications";
-import { executePumpCreate, WalletForPumpCreate, TokenCreationConfig } from '../utils/pumpcreate';
-import { Keypair } from '@solana/web3.js';
-import bs58 from 'bs58';
+import { executeBagsCreate, WalletForBagsCreate, createBagsConfig, BagsCreateConfig, checkDeveloperConfig, signAndSendConfigTransaction, BagsConfigResponse } from '../utils/bagscreate';
 
 const STEPS_DEPLOY = ["Token Details", "Select Wallets", "Review"];
 const MAX_WALLETS = 5; // Maximum number of wallets that can be selected
@@ -16,13 +14,23 @@ interface BaseModalProps {
   onClose: () => void;
 }
 
-interface DeployPumpModalProps extends BaseModalProps {
+interface DeployBagsModalProps extends BaseModalProps {
   onDeploy: (data: any) => void;
   handleRefresh: () => void;
   solBalances: Map<string, number>;
 }
 
-export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
+// Update TokenMetadata interface to match what Bags expects
+interface TokenMetadata {
+  name: string;
+  symbol: string;
+  description: string;
+  imageUrl: string;
+  totalSupply: string;
+  links: Array<{url: string, label: string}>;
+}
+
+export const DeployBagsModal: React.FC<DeployBagsModalProps> = ({
   isOpen,
   onClose,
   onDeploy,
@@ -33,16 +41,15 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [mintPubkey, setMintPubkey] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [tokenData, setTokenData] = useState({
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [tokenData, setTokenData] = useState<TokenMetadata>({
     name: '',
     symbol: '',
     description: '',
-    telegram: '',
-    twitter: '',
-    website: '',
-    file: ''
+    imageUrl: '',
+    totalSupply: '1000000000', // Default supply for Bags
+    links: [] // Links array for Bags
   });
   const [walletAmounts, setWalletAmounts] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,61 +57,14 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const [sortOption, setSortOption] = useState('address');
   const [sortDirection, setSortDirection] = useState('asc');
   const [balanceFilter, setBalanceFilter] = useState('all');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // State to store wallet keypair for token creation
-  const [mintKeypair, setMintKeypair] = useState<Keypair | null>(null);
   
-  const generateMintPubkey = async () => {
-    setIsGenerating(true);
-    try {
-      const baseUrl = (window as any).tradingServerUrl.replace(/\/+$/, '');
-      const mintResponse = await fetch(`${baseUrl}/api/utilities/generate-mint`);
-      const data = await mintResponse.json();
-      
-      // Check if the API returned a valid pubkey
-      if (data.pubkey && data.pubkey.trim() !== '') {
-        setMintPubkey(data.pubkey);
-        showToast("Mint pubkey generated successfully", "success");
-      } else {
-        // If API returned empty pubkey, create a new Solana wallet locally
-        const keypair = Keypair.generate();
-        const publicKey = keypair.publicKey.toString();
-        const privateKey = bs58.encode(keypair.secretKey);
-        
-        // Store the keypair for later use
-        setMintKeypair(keypair);
-        
-        // Display the public key to the user
-        setMintPubkey(publicKey);
-        
-        showToast(`Generated local mint key successfully: ${publicKey.slice(0, 8)}...${publicKey.slice(-8)}`, "success");
-      }
-    } catch (error) {
-      console.error('Error generating mint pubkey:', error);
-      
-      // On any error, fallback to local wallet generation
-      try {
-        const keypair = Keypair.generate();
-        const publicKey = keypair.publicKey.toString();
-        const privateKey = bs58.encode(keypair.secretKey);
-        
-        // Store the keypair for later use
-        setMintKeypair(keypair);
-        
-        // Display the public key to the user
-        setMintPubkey(publicKey);
-        
-        showToast(`Generated local mint key successfully: ${publicKey.slice(0, 8)}...${publicKey.slice(-8)}`, "success");
-      } catch (fallbackError) {
-        console.error('Error generating local mint key:', fallbackError);
-        showToast("Failed to generate mint pubkey", "error");
-      }
-    }
-    setIsGenerating(false);
-  };
+  // Config-related state
+  const [configNeeded, setConfigNeeded] = useState(false);
+  const [configTransaction, setConfigTransaction] = useState<string>('');
+  const [configInstructions, setConfigInstructions] = useState<string>('');
+  const [isCheckingConfig, setIsCheckingConfig] = useState(false);
+  const [isSendingConfig, setIsSendingConfig] = useState(false);
 
   // Function to handle image upload
   const handleImageUpload = async (e) => {
@@ -148,7 +108,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           const response = JSON.parse(xhr.responseText);
-          setTokenData(prev => ({ ...prev, file: response.url }));
+          setTokenData(prev => ({ ...prev, imageUrl: response.url })); // Changed from uri to imageUrl
           showToast("Image uploaded successfully", "success");
         } else {
           showToast("Failed to upload image", "error");
@@ -171,6 +131,56 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
     }
   };
 
+  // Update social links when fields change
+  const updateSocialLinks = (type: 'twitter' | 'telegram' | 'website', value: string) => {
+    setTokenData(prev => {
+      // Remove old link of this type if it exists
+      const filteredLinks = prev.links.filter(link => link.label !== type);
+      
+      // Add new link if value is not empty
+      let newLinks = [...filteredLinks];
+      if (value) {
+        let url = value;
+        let label = '';
+        
+        // Format the URL properly
+        if (type === 'twitter') {
+          url = url.startsWith('https://') ? url : `https://x.com/${url.replace('@', '').replace('twitter.com/', '').replace('x.com/', '')}`;
+          label = 'twitter';
+        } else if (type === 'telegram') {
+          url = url.startsWith('https://') ? url : `https://t.me/${url.replace('@', '').replace('t.me/', '')}`;
+          label = 'telegram';
+        } else if (type === 'website') {
+          url = url.startsWith('http') ? url : `https://${url}`;
+          label = 'website';
+        }
+        
+        newLinks.push({ url, label });
+      }
+      
+      return {
+        ...prev,
+        links: newLinks
+      };
+    });
+  };
+
+  // Helper functions to get social values from links array
+  const getTwitter = () => {
+    const twitterLink = tokenData.links.find(link => link.label === 'twitter');
+    return twitterLink ? twitterLink.url : '';
+  };
+  
+  const getWebsite = () => {
+    const websiteLink = tokenData.links.find(link => link.label === 'website');
+    return websiteLink ? websiteLink.url : '';
+  };
+
+  const getTelegram = () => {
+    const telegramLink = tokenData.links.find(link => link.label === 'telegram');
+    return telegramLink ? telegramLink.url : '';
+  };
+
   // Trigger file input click
   const triggerFileInput = () => {
     if (fileInputRef.current) {
@@ -186,6 +196,11 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       handleRefresh();
+      // Reset states when opening modal
+      setCurrentStep(0);
+      setSelectedWallets([]);
+      setWalletAmounts({});
+      setIsConfirmed(false);
     }
   }, [isOpen]);
 
@@ -251,8 +266,8 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   const validateStep = () => {
     switch (currentStep) {
       case 0:
-        if (!tokenData.name || !tokenData.symbol || !tokenData.file || !mintPubkey) {
-          showToast("Name, symbol, logo image, and mint pubkey are required", "error");
+        if (!tokenData.name || !tokenData.symbol || !tokenData.imageUrl || !tokenData.description) {
+          showToast("Name, symbol, description and logo image are required", "error");
           return false;
         }
         break;
@@ -288,55 +303,74 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
 
   const handleDeploy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isConfirmed || !mintPubkey) return;
+    if (!isConfirmed) return;
 
     setIsSubmitting(true);
     
     try {
-      // Format wallets for pump create with address and private key
-      const pumpCreateWallets: WalletForPumpCreate[] = selectedWallets.map(privateKey => {
+      // Format wallets for Bags
+      const walletObjs: WalletForBagsCreate[] = selectedWallets.map(privateKey => {
         const wallet = wallets.find(w => w.privateKey === privateKey);
         if (!wallet) {
-          throw new Error(`Wallet not found`);
+          throw new Error(`Wallet not found for private key`);
         }
         return {
           address: wallet.address,
-          privateKey: privateKey
+          privateKey
         };
       });
       
-      // Format amounts as numbers
-      const customAmounts = selectedWallets.map(key => parseFloat(walletAmounts[key]));
+      // Create buyer wallets array from selected wallets (excluding the first one which is the owner)
+      const buyerWallets = selectedWallets.slice(1).map(privateKey => {
+        const wallet = wallets.find(w => w.privateKey === privateKey);
+        return {
+          publicKey: wallet!.address,
+          amount: parseFloat(walletAmounts[privateKey] || "0.1")
+        };
+      });
       
-      // Create token configuration object
-      const tokenCreationConfig: TokenCreationConfig = {
-        // If we have a locally generated keypair, use its private key (bs58 encoded)
-        // Otherwise use the mintPubkey from the API
-        mintPubkey: mintKeypair ? bs58.encode(mintKeypair.secretKey) : mintPubkey,
-        config: {
-          tokenCreation: {
-            metadata: {
-              name: tokenData.name,
-              symbol: tokenData.symbol,
-              description: tokenData.description,
-              telegram: tokenData.telegram,
-              twitter: tokenData.twitter,
-              website: tokenData.website,
-              file: tokenData.file
-            },
-            defaultSolAmount: customAmounts[0] || 0.1 // Use first wallet's amount as default
-          },
-        }
-      };
+      // Get owner wallet (first selected wallet)
+      const ownerWallet = wallets.find(w => w.privateKey === selectedWallets[0]);
+      if (!ownerWallet) {
+        throw new Error('Owner wallet not found');
+      }
       
-      console.log(`Starting client-side token creation with ${pumpCreateWallets.length} wallets`);
+      // Load config to get RPC endpoint
+      const savedConfig = loadConfigFromCookies();
+      const rpcEndpoint = savedConfig?.rpcEndpoint || "https://api.mainnet-beta.solana.com";
       
-      // Call our client-side execution function instead of the backend
-      const result = await executePumpCreate(
-        pumpCreateWallets,
-        tokenCreationConfig,
-        customAmounts
+      // Create bags config using the helper function
+      const bagsConfig = createBagsConfig({
+        ownerPublicKey: ownerWallet.address,
+        name: tokenData.name,
+        symbol: tokenData.symbol,
+        description: tokenData.description,
+        imageSource: tokenData.imageUrl,
+        initialBuyAmount: parseFloat(walletAmounts[selectedWallets[0]] || "0.1"),
+        buyerWallets,
+        devBuyAmount: 0.1, // Default dev buy amount
+        rpcUrl: rpcEndpoint,
+        telegram: getTelegram(),
+        twitter: getTwitter(),
+        website: getWebsite()
+      });
+      
+      console.log(`Starting token creation with ${walletObjs.length} wallets`);
+      
+      // Call our bags create execution function
+      const result = await executeBagsCreate(
+        walletObjs,
+        bagsConfig
       );
+      
+      // Check if config is needed
+      if (result.configNeeded && result.configTransaction) {
+        setConfigNeeded(true);
+        setConfigTransaction(result.configTransaction);
+        setConfigInstructions(result.configInstructions || 'Sign and send this transaction before creating token');
+        showToast("Developer wallet config required. Please complete the setup first.", "error");
+        return;
+      }
       
       if (result.success && result.mintAddress) {
         showToast(`Token deployment successful! Mint address: ${result.mintAddress}`, "success");
@@ -344,26 +378,24 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
         // Reset form state
         setSelectedWallets([]);
         setWalletAmounts({});
-        setMintPubkey('');
-        setMintKeypair(null); // Reset the stored keypair
         setTokenData({
           name: '',
           symbol: '',
           description: '',
-          telegram: '',
-          twitter: '',
-          website: '',
-          file: ''
+          imageUrl: '',
+          totalSupply: '1000000000',
+          links: []
         });
         setIsConfirmed(false);
         setCurrentStep(0);
+        setConfigNeeded(false);
+        setConfigTransaction('');
+        setConfigInstructions('');
         onClose();
         
         // Redirect to token address page
         const currentUrl = new URL(window.location.href);
-        // Use the actual mint address from the result, or fallback to public key if local keypair was used
-        const redirectAddress = result.mintAddress || (mintKeypair ? mintKeypair.publicKey.toString() : mintPubkey);
-        currentUrl.searchParams.set('tokenAddress', redirectAddress);
+        currentUrl.searchParams.set('tokenAddress', result.mintAddress);
         window.history.pushState({}, '', currentUrl.toString());
         
         // Reload the page to show the new token
@@ -376,6 +408,49 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
       showToast(`Token deployment failed: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle config transaction signing and sending
+  const handleSendConfigTransaction = async () => {
+    if (!configTransaction || selectedWallets.length === 0) {
+      showToast("No config transaction or owner wallet available", "error");
+      return;
+    }
+
+    setIsSendingConfig(true);
+    
+    try {
+      // Get owner wallet (first selected wallet)
+      const ownerWallet = wallets.find(w => w.privateKey === selectedWallets[0]);
+      if (!ownerWallet) {
+        throw new Error('Owner wallet not found');
+      }
+
+      const walletObj: WalletForBagsCreate = {
+        address: ownerWallet.address,
+        privateKey: ownerWallet.privateKey
+      };
+
+      // Load config to get RPC endpoint
+      const savedConfig = loadConfigFromCookies();
+      const rpcEndpoint = savedConfig?.rpcEndpoint;
+      
+      const result = await signAndSendConfigTransaction(configTransaction, walletObj, rpcEndpoint);
+      
+      if (result.success) {
+        showToast("Config transaction sent successfully! You can now create your token.", "success");
+        setConfigNeeded(false);
+        setConfigTransaction('');
+        setConfigInstructions('');
+      } else {
+        throw new Error(result.error || "Failed to send config transaction");
+      }
+    } catch (error) {
+      console.error('Error sending config transaction:', error);
+      showToast(`Failed to send config transaction: ${error.message}`, "error");
+    } finally {
+      setIsSendingConfig(false);
     }
   };
 
@@ -411,59 +486,10 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                 <PlusCircle size={16} className="color-primary" />
               </div>
               <h3 className="text-lg font-semibold text-app-primary font-mono">
-                <span className="color-primary">/</span> TOKEN DETAILS <span className="color-primary">/</span>
+                <span className="color-primary">/</span> BAGS TOKEN DETAILS <span className="color-primary">/</span>
               </h3>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-app-secondary font-mono uppercase tracking-wider">
-                    <span className="color-primary">&#62;</span> Token Mint <span className="color-primary">&#60;</span>
-                  </label>
-                  <div className="relative" onMouseEnter={() => setShowInfoTip(true)} onMouseLeave={() => setShowInfoTip(false)}>
-                    <Info size={14} className="text-app-secondary cursor-help" />
-                    {showInfoTip && (
-                      <div className="absolute left-0 bottom-full mb-2 p-2 bg-app-tertiary border border-app-primary-30 rounded shadow-lg text-xs text-app-primary w-48 z-10 font-mono">
-                        This key is sensitive! Do not share.
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={generateMintPubkey}
-                  disabled={isGenerating}
-                  className={`px-4 py-1.5 text-sm rounded-lg transition-all flex items-center gap-1 modal-btn-cyberpunk
-                    ${isGenerating 
-                      ? 'bg-app-tertiary text-app-secondary cursor-not-allowed' 
-                      : 'bg-app-tertiary hover:bg-app-secondary border border-app-primary-40 hover-border-primary text-app-primary shadow-lg hover:shadow-app-primary-40 transform hover:-translate-y-0.5'
-                    }`}
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw size={14} className="animate-spin color-primary" />
-                      <span className="font-mono tracking-wider">GENERATING...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw size={14} className="color-primary" />
-                      <span className="font-mono tracking-wider">GENERATE</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={mintPubkey}
-                  onChange={(e) => setMintPubkey(e.target.value)}
-                  className="w-full pl-4 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
-                  placeholder="ENTER OR GENERATE A MINT PUBKEY"
-                />
-              </div>
-            </div>
-
             <div className="bg-app-primary border border-app-primary-40 rounded-lg shadow-lg modal-glow">
               <div className="p-6 space-y-6 relative">
                 {/* Ambient grid background */}
@@ -478,7 +504,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       type="text"
                       value={tokenData.name}
                       onChange={(e) => setTokenData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full bg-app-tertiary border border-app-primary-30 rounded-lg p-2.5 text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
+                      className="w-full bg-app-tertiary border border-app-primary-30 rounded-lg p-2.5 text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
                       placeholder="ENTER TOKEN NAME"
                     />
                   </div>
@@ -490,7 +516,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       type="text"
                       value={tokenData.symbol}
                       onChange={(e) => setTokenData(prev => ({ ...prev, symbol: e.target.value }))}
-                      className="w-full bg-app-tertiary border border-app-primary-30 rounded-lg p-2.5 text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
+                      className="w-full bg-app-tertiary border border-app-primary-30 rounded-lg p-2.5 text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
                       placeholder="ENTER TOKEN SYMBOL"
                     />
                   </div>
@@ -515,8 +541,8 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       disabled={isUploading}
                       className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all ${
                         isUploading 
-                          ? 'bg-app-tertiary text-app-secondary-60 cursor-not-allowed border border-app-primary-20' 
-                          : 'bg-app-tertiary hover:bg-app-secondary border border-app-primary-40 hover-border-primary text-app-primary shadow-lg hover:shadow-app-primary-40 transform hover:-translate-y-0.5 modal-btn-cyberpunk'
+                          ? 'bg-app-tertiary text-app-secondary-70 cursor-not-allowed border border-app-primary-20' 
+                          : 'bg-app-tertiary hover-bg-secondary border border-app-primary-40 hover-border-primary text-app-primary shadow-lg hover:shadow-app-primary-40 transform hover:-translate-y-0.5 modal-btn-cyberpunk'
                       }`}
                     >
                       {isUploading ? (
@@ -532,11 +558,11 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       )}
                     </button>
                     
-                    {tokenData.file && (
+                    {tokenData.imageUrl && (
                       <div className="flex items-center gap-3 flex-grow">
                         <div className="h-12 w-12 rounded overflow-hidden border border-app-primary-40 bg-app-tertiary flex items-center justify-center">
                           <img 
-                            src={tokenData.file}
+                            src={tokenData.imageUrl}
                             alt="Logo Preview"
                             className="max-h-full max-w-full object-contain"
                             onError={(e) => {
@@ -547,7 +573,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => setTokenData(prev => ({ ...prev, file: '' }))}
+                          onClick={() => setTokenData(prev => ({ ...prev, imageUrl: '' }))}
                           className="p-1.5 rounded-full hover:bg-app-tertiary text-app-secondary hover:text-app-primary transition-all"
                         >
                           <X size={14} />
@@ -569,37 +595,18 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
   
                 <div className="space-y-2 relative z-10">
                   <label className="text-sm font-medium text-app-secondary font-mono uppercase tracking-wider">
-                    <span className="color-primary">&#62;</span> Description <span className="color-primary">&#60;</span>
+                  <span className="color-primary">&#62;</span> Description <span className="color-primary">*</span> <span className="color-primary">&#60;</span>
                   </label>
                   <textarea
                     value={tokenData.description}
                     onChange={(e) => setTokenData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full bg-app-tertiary border border-app-primary-30 rounded-lg p-2.5 text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk min-h-24 font-mono"
+                    className="w-full bg-app-tertiary border border-app-primary-30 rounded-lg p-2.5 text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk min-h-24 font-mono"
                     placeholder="DESCRIBE YOUR TOKEN"
                     rows={3}
                   />
                 </div>
-  
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-app-secondary font-mono uppercase tracking-wider">
-                      <span className="color-primary">&#62;</span> Telegram <span className="color-primary">&#60;</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={tokenData.telegram}
-                        onChange={(e) => setTokenData(prev => ({ ...prev, telegram: e.target.value }))}
-                        className="w-full pl-9 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
-                        placeholder="T.ME/YOURGROUP"
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="w-4 h-4 text-app-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21.8,5.1c-0.2-0.8-0.9-1.4-1.7-1.6C18.4,3,12,3,12,3S5.6,3,3.9,3.5C3.1,3.7,2.4,4.3,2.2,5.1C1.7,6.8,1.7,10,1.7,10s0,3.2,0.5,4.9c0.2,0.8,0.9,1.4,1.7,1.6C5.6,17,12,17,12,17s6.4,0,8.1-0.5c0.8-0.2,1.5-0.8,1.7-1.6c0.5-1.7,0.5-4.9,0.5-4.9S22.3,6.8,21.8,5.1z M9.9,13.1V6.9l5.4,3.1L9.9,13.1z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-app-secondary font-mono uppercase tracking-wider">
                       <span className="color-primary">&#62;</span> Twitter <span className="color-primary">&#60;</span>
@@ -607,14 +614,33 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                     <div className="relative">
                       <input
                         type="text"
-                        value={tokenData.twitter}
-                        onChange={(e) => setTokenData(prev => ({ ...prev, twitter: e.target.value }))}
-                        className="w-full pl-9 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
-                        placeholder="@YOURHANDLE"
+                        value={getTwitter()}
+                        onChange={(e) => updateSocialLinks('twitter', e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
+                        placeholder="HTTPS://X.COM/YOURHANDLE"
                       />
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg className="w-4 h-4 text-app-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M22 4.01c-1 .49-1.98.689-3 .99-1.121-1.265-2.783-1.335-4.38-.737S11.977 6.323 12 8v1c-3.245.083-6.135-1.395-8-4 0 0-4.182 7.433 4 11-1.872 1.247-3.739 2.088-6 2 3.308 1.803 6.913 2.423 10.034 1.517 3.58-1.04 6.522-3.723 7.651-7.742a13.84 13.84 0 0 0 .497-3.753C20.18 7.773 21.692 5.25 22 4.009z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-app-secondary font-mono uppercase tracking-wider">
+                      <span className="color-primary">&#62;</span> Telegram <span className="color-primary">&#60;</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={getTelegram()}
+                        onChange={(e) => updateSocialLinks('telegram', e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
+                        placeholder="HTTPS://T.ME/YOURCHANNEL"
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="w-4 h-4 text-app-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21a205.66 205.66 0 0 1-2.849 1.09c-.42.15-.593.27-.593.442 0 .173.173.293.593.442.42.15 1.537.593 2.849 1.09 1.591.612 3.656 1.41 5.724 2.21l8.609 3.33c.35.135.672.215 1.022.215.35 0 .672-.08 1.022-.215.35-.135.593-.35.593-.593V3.026c0-.243-.243-.458-.593-.593a2.242 2.242 0 0 0-1.022-.215z" />
                         </svg>
                       </div>
                     </div>
@@ -626,9 +652,9 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                     <div className="relative">
                       <input
                         type="text"
-                        value={tokenData.website}
-                        onChange={(e) => setTokenData(prev => ({ ...prev, website: e.target.value }))}
-                        className="w-full pl-9 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
+                        value={getWebsite()}
+                        onChange={(e) => updateSocialLinks('website', e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
                         placeholder="HTTPS://YOURSITE.COM"
                       />
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -671,7 +697,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       }
                     }
                   }}
-                  className="text-sm color-primary hover:text-app-secondary font-medium transition duration-200 font-mono glitch-text"
+                  className="text-sm color-primary hover-color-primary-light font-medium transition duration-200 font-mono glitch-text"
                 >
                   {selectedWallets.length > 0 ? 'DESELECT ALL' : 'SELECT ALL'}
                 </button>
@@ -701,7 +727,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               </select>
               
               <button
-                className="p-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-secondary hover-border-primary hover:color-primary-light transition-all modal-btn-cyberpunk flex items-center justify-center"
+                className="p-2.5 bg-app-tertiary border border-app-primary-30 rounded-lg text-app-secondary hover-border-primary hover:color-primary transition-all modal-btn-cyberpunk flex items-center justify-center"
                 onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
               >
                 {sortDirection === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
@@ -724,7 +750,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <div className="flex items-center gap-2">
                 <Info size={14} className="color-primary" />
                 <span className="text-sm text-app-secondary font-mono">
-                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS (INCLUDING DEVELOPER WALLET)
+                  YOU CAN SELECT A MAXIMUM OF {MAX_WALLETS} WALLETS
                 </span>
               </div>
             </div>
@@ -752,7 +778,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <div className="absolute inset-0 z-0 opacity-10 bg-cyberpunk-grid"></div>
               
               <div className="p-4 relative z-10">
-                <div className="space-y-2 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-app-primary-40 scrollbar-track-app-tertiary">
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary-40 scrollbar-track-app-tertiary">
                   {/* Selected Wallets */}
                   {selectedWallets.length > 0 && (
                     <div className="mb-4">
@@ -766,7 +792,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                         return (
                           <div
                             key={wallet?.id}
-                            className="p-3 rounded-lg border border-app-primary bg-primary-10 mb-2 shadow-lg modal-glow"
+                            className="p-3 rounded-lg border-app-primary bg-primary-10 mb-2 shadow-lg modal-glow"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
@@ -802,7 +828,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                                 </div>
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium color-primary font-mono">{index === 0 ? 'DEVELOPER' : `#${index + 1}`}</span>
+                                    <span className="text-sm font-medium color-primary font-mono">{index === 0 ? 'CREATOR' : `#${index + 1}`}</span>
                                     <span className="text-sm font-medium text-app-primary font-mono glitch-text">
                                       {wallet ? getWalletDisplayName(wallet) : 'UNKNOWN'}
                                     </span>
@@ -821,7 +847,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                                     value={walletAmounts[privateKey] || ''}
                                     onChange={(e) => handleAmountChange(privateKey, e.target.value)}
                                     placeholder="AMOUNT"
-                                    className="w-32 pl-9 pr-2 py-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-sm text-app-primary placeholder-app-secondary-60 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
+                                    className="w-32 pl-9 pr-2 py-2 bg-app-tertiary border border-app-primary-30 rounded-lg text-sm text-app-primary placeholder-app-secondary-70 focus:outline-none focus:ring-1 focus:ring-primary-50 focus-border-primary transition-all modal-input-cyberpunk font-mono"
                                   />
                                 </div>
                                 <button
@@ -927,6 +953,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       <span className="text-sm text-app-secondary font-mono">SYMBOL:</span>
                       <span className="text-sm font-medium text-app-primary font-mono">{tokenData.symbol}</span>
                     </div>
+
                     {tokenData.description && (
                       <div className="flex items-start justify-between">
                         <span className="text-sm text-app-secondary font-mono">DESCRIPTION:</span>
@@ -935,12 +962,12 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                         </span>
                       </div>
                     )}
-                    {tokenData.file && (
+                    {tokenData.imageUrl && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-app-secondary font-mono">LOGO:</span>
                         <div className="bg-app-tertiary border border-app-primary-40 rounded-lg p-1 w-12 h-12 flex items-center justify-center">
                           <img 
-                            src={tokenData.file}
+                            src={tokenData.imageUrl}
                             alt="Token Logo"
                             className="max-w-full max-h-full rounded object-contain"
                             onError={(e) => {
@@ -953,29 +980,29 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                     )}
                   </div>
                   
-                  {(tokenData.telegram || tokenData.twitter || tokenData.website) && (
+                  {tokenData.links.length > 0 && (
                     <>
                       <div className="h-px bg-app-primary-30 my-3"></div>
                       <h4 className="text-sm font-medium text-app-secondary mb-2 font-mono uppercase tracking-wider">
                         <span className="color-primary">&#62;</span> Social Links <span className="color-primary">&#60;</span>
                       </h4>
                       <div className="space-y-2">
-                        {tokenData.telegram && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-app-secondary font-mono">TELEGRAM:</span>
-                            <span className="text-sm color-primary font-mono">{tokenData.telegram}</span>
-                          </div>
-                        )}
-                        {tokenData.twitter && (
+                        {getTwitter() && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-app-secondary font-mono">TWITTER:</span>
-                            <span className="text-sm color-primary font-mono">{tokenData.twitter}</span>
+                            <span className="text-sm color-primary font-mono">{getTwitter()}</span>
                           </div>
                         )}
-                        {tokenData.website && (
+                        {getTelegram() && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-app-secondary font-mono">TELEGRAM:</span>
+                            <span className="text-sm color-primary font-mono">{getTelegram()}</span>
+                          </div>
+                        )}
+                        {getWebsite() && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-app-secondary font-mono">WEBSITE:</span>
-                            <span className="text-sm color-primary font-mono">{tokenData.website}</span>
+                            <span className="text-sm color-primary font-mono">{getWebsite()}</span>
                           </div>
                         )}
                       </div>
@@ -1007,7 +1034,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                   <h4 className="text-sm font-medium text-app-secondary mb-3 font-mono uppercase tracking-wider">
                     <span className="color-primary">&#62;</span> Selected Wallets <span className="color-primary">&#60;</span>
                   </h4>
-                  <div className="max-h-64 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-app-primary-40 scrollbar-track-app-tertiary">
+                  <div className="max-h-64 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-primary-40 scrollbar-track-app-tertiary">
                     {selectedWallets.map((key, index) => {
                       const wallet = getWalletByPrivateKey(key);
                       const solBalance = wallet ? solBalances.get(wallet.address) || 0 : 0;
@@ -1015,7 +1042,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                       return (
                         <div key={index} className="flex justify-between items-center p-3 bg-app-tertiary rounded-lg mb-2 border border-app-primary-30 hover-border-primary transition-all">
                           <div className="flex items-center gap-2">
-                            <span className="color-primary text-xs font-medium w-6 font-mono">{index === 0 ? 'DEV' : `#${index + 1}`}</span>
+                            <span className="color-primary text-xs font-medium w-6 font-mono">{index === 0 ? 'CRET' : `#${index + 1}`}</span>
                             <span className="font-mono text-sm text-app-primary glitch-text">
                               {wallet ? getWalletDisplayName(wallet) : 'UNKNOWN'}
                             </span>
@@ -1050,7 +1077,7 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
                   >
                     <div className={`w-5 h-5 border rounded transition-all ${isConfirmed ? 'bg-app-primary-color border-app-primary' : 'border-app-primary-40'}`}></div>
                     {isConfirmed && (
-                      <CheckCircle size={14} className="absolute top-0.5 left-0.5" style={{color: 'var(--color-bg-primary)'}} />
+                      <CheckCircle size={14} className="absolute top-0.5 left-0.5 text-app-primary" />
                     )}
                   </div>
                   <label 
@@ -1217,30 +1244,108 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               <PlusCircle size={16} className="color-primary" />
             </div>
             <h2 className="text-lg font-semibold text-app-primary font-mono">
-              <span className="color-primary">/</span> DEPLOY PUMPFUN <span className="color-primary">/</span>
+              <span className="color-primary">/</span> DEPLOY BAGS TOKEN <span className="color-primary">/</span>
             </h2>
           </div>
           <button 
             onClick={onClose}
-            className="text-app-secondary hover:color-primary-light transition-colors p-1 hover:bg-primary-20 rounded"
+            className="text-app-secondary hover:color-primary transition-colors p-1 hover:bg-primary-20 rounded"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Progress Indicator - Only show for steps 0-2 */}
         <div className="relative w-full h-1 bg-app-tertiary progress-bar-cyberpunk">
           <div 
             className="h-full bg-app-primary-color transition-all duration-300"
-            style={{ width: `${(currentStep + 1) / STEPS_DEPLOY.length * 100}%` }}
+            style={{ width: `${(currentStep + 1) / 3 * 100}%` }}
           ></div>
         </div>
 
         {/* Content */}
-        <div className="relative z-10 p-6 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-app-primary-40 scrollbar-track-app-tertiary">
-          <form onSubmit={currentStep === STEPS_DEPLOY.length - 1 ? handleDeploy : (e) => e.preventDefault()}>
+        <div className="relative z-10 p-6 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary-40 scrollbar-track-app-tertiary">
+          <form onSubmit={currentStep === 2 ? handleDeploy : (e) => e.preventDefault()}>
             <div className="min-h-[300px]">
-              {renderStepContent()}
+              {configNeeded ? (
+                <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-yellow-500/20 mr-3">
+                      <Settings size={16} className="text-yellow-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-app-primary font-mono">
+                      <span className="color-primary">/</span> DEVELOPER CONFIG REQUIRED <span className="color-primary">/</span>
+                    </h3>
+                  </div>
+                  
+                  <div className="bg-app-primary border border-yellow-500/40 rounded-lg shadow-lg modal-glow">
+                    <div className="p-6 space-y-4 relative">
+                      <div className="absolute inset-0 z-0 opacity-10 bg-cyberpunk-grid"></div>
+                      
+                      <div className="relative z-10 space-y-4">
+                        <div className="flex items-start gap-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                          <Info size={20} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div className="space-y-2">
+                            <h4 className="font-semibold text-yellow-500 font-mono">SETUP REQUIRED</h4>
+                            <p className="text-app-secondary text-sm leading-relaxed">
+                              {configInstructions}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium text-app-secondary flex items-center gap-1 font-mono uppercase tracking-wider">
+                            <span className="color-primary">&#62;</span> CONFIG TRANSACTION <span className="color-primary">&#60;</span>
+                          </label>
+                          <div className="bg-app-tertiary border border-app-primary-30 rounded-lg p-3 font-mono text-xs text-app-secondary break-all">
+                            {configTransaction}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3 pt-4">
+                          <button
+                            type="button"
+                            onClick={handleSendConfigTransaction}
+                            disabled={isSendingConfig}
+                            className={`flex-1 px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-mono tracking-wider ${
+                              isSendingConfig
+                                ? 'bg-primary-50 text-app-primary-80 cursor-not-allowed opacity-50'
+                                : 'bg-app-primary-color hover:bg-primary-60 text-app-primary shadow-lg hover:shadow-app-primary-40 transform hover:-translate-y-0.5 modal-btn-cyberpunk'
+                            }`}
+                          >
+                            {isSendingConfig ? (
+                              <>
+                                <RefreshCw size={16} className="animate-spin" />
+                                SENDING...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle size={16} />
+                                INITIALIZE WALLET CONFIG
+                              </>
+                            )}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfigNeeded(false);
+                              setConfigTransaction('');
+                              setConfigInstructions('');
+                            }}
+                            disabled={isSendingConfig}
+                            className="px-4 py-3 text-app-primary bg-app-tertiary border border-app-primary-30 hover:bg-app-secondary hover-border-primary rounded-lg transition-all font-mono tracking-wider modal-btn-cyberpunk"
+                          >
+                            CANCEL
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                renderStepContent()
+              )}
             </div>
 
             <div className="flex justify-between mt-8 pt-4 border-t border-app-primary-30">
@@ -1254,20 +1359,19 @@ export const DeployPumpModal: React.FC<DeployPumpModalProps> = ({
               </button>
 
               <button
-                type={currentStep === STEPS_DEPLOY.length - 1 ? 'submit' : 'button'}
-                onClick={currentStep === STEPS_DEPLOY.length - 1 ? undefined : handleNext}
-                disabled={currentStep === STEPS_DEPLOY.length - 1 ? (isSubmitting || !isConfirmed) : isSubmitting}
+                type={currentStep === 2 ? 'submit' : 'button'}
+                onClick={currentStep === 2 ? undefined : handleNext}
+                disabled={currentStep === 2 ? (isSubmitting || !isConfirmed) : isSubmitting}
                 className={`px-5 py-2.5 rounded-lg flex items-center transition-all shadow-lg font-mono tracking-wider ${
-                  currentStep === STEPS_DEPLOY.length - 1 && (isSubmitting || !isConfirmed)
-                    ? 'bg-primary-50 cursor-not-allowed opacity-50'
-                    : 'bg-app-primary-color hover:bg-app-primary-dark transform hover:-translate-y-0.5 modal-btn-cyberpunk'
-                } text-app-primary`}
-                style={currentStep === STEPS_DEPLOY.length - 1 && (isSubmitting || !isConfirmed) ? {color: 'var(--color-bg-primary-80)'} : {color: 'var(--color-bg-primary)'}}
+                  currentStep === 2 && (isSubmitting || !isConfirmed)
+                    ? 'bg-primary-50 text-app-primary-80 cursor-not-allowed opacity-50'
+                    : 'bg-app-primary-color text-app-primary hover:bg-app-primary-dark transform hover:-translate-y-0.5 modal-btn-cyberpunk'
+                }`}
               >
-                {currentStep === STEPS_DEPLOY.length - 1 ? (
+                {currentStep === 2 ? (
                   isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 rounded-full border-2 border-app-primary-80 border-t-transparent animate-spin mr-2" style={{borderColor: 'var(--color-bg-primary-80)', borderTopColor: 'transparent'}}></div>
+                      <div className="h-4 w-4 rounded-full border-2 border-app-primary-80 border-t-transparent animate-spin mr-2"></div>
                       <span>DEPLOYING...</span>
                     </>
                   ) : 'CONFIRM DEPLOY'
