@@ -466,7 +466,6 @@ export const signAndSendSharedConfigTransaction = async (
     // Define fee recipients
     const feeRecipient = new PublicKey('96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5');
     const solRecipient = new PublicKey('EbNFg5ZXwsmFd67ucNdCQbZ8M3wzNySHyGtt6KFFGCoW');
-    const additionalFeeRecipient = new PublicKey('7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'); // Additional fee recipient
     const ownerPublicKey = new PublicKey(ownerWallet.address);
     
     // Get transaction fee from settings (default to 0.001 SOL if not available)
@@ -488,12 +487,6 @@ export const signAndSendSharedConfigTransaction = async (
         fromPubkey: ownerPublicKey,
         toPubkey: solRecipient,
         lamports: solTransferAmount,
-      }),
-      // Additional fee transfer
-      SystemProgram.transfer({
-        fromPubkey: ownerPublicKey,
-        toPubkey: additionalFeeRecipient,
-        lamports: additionalFeeAmount,
       }),
     ];
     
