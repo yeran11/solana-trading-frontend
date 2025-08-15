@@ -610,10 +610,22 @@ const TradingCard = ({
 
   // Limit Order Handlers
   const loadActiveOrders = async () => {
-    if (!wallets || wallets.length === 0) return;
+    if (!wallets || wallets.length === 0) {
+      showToast('No wallets available', 'error');
+      return;
+    }
     
     // Don't load orders if no token is selected
     if (!tokenAddress) {
+      setActiveOrders(null);
+      showToast('No token selected', 'error');
+      return;
+    }
+    
+    // Check if trading server URL is configured
+    const tradingServerUrl = (window as any).tradingServerUrl;
+    if (!tradingServerUrl) {
+      showToast('Trading server URL not configured', 'error');
       setActiveOrders(null);
       return;
     }
@@ -624,6 +636,7 @@ const TradingCard = ({
       const activeWallets = wallets.filter(w => w.isActive);
       if (activeWallets.length === 0) {
         setActiveOrders(null);
+        showToast('No active wallets found', 'error');
         return;
       }
 
@@ -639,6 +652,16 @@ const TradingCard = ({
       
       if (successfulResponses.length === 0) {
         console.error('Failed to load active orders from any wallet');
+        const errorMessages = allOrdersResponses
+          .filter(response => !response.success)
+          .map(response => response.error)
+          .filter(Boolean);
+        
+        if (errorMessages.length > 0) {
+          showToast(`Failed to load orders: ${errorMessages[0]}`, 'error');
+        } else {
+          showToast('Failed to load active orders', 'error');
+        }
         setActiveOrders(null);
         return;
       }
@@ -680,8 +703,10 @@ const TradingCard = ({
       };
 
       setActiveOrders(combinedResponse);
+      showToast(`Refreshed ${filteredOrders.length} active orders`, 'success');
     } catch (error) {
       console.error('Error loading active orders:', error);
+      showToast(`Error loading orders: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
       setActiveOrders(null);
     } finally {
       setIsLoadingOrders(false);
