@@ -29,6 +29,18 @@ interface ChartPageProps {
     } | null;
     marketCap: number | null;
   }) => void;
+  onTokenSelect?: (tokenAddress: string) => void;
+  onNonWhitelistedTrade?: (trade: {
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+    tokenMint: string;
+    marketCap: number;
+  }) => void;
 }
 
 // Iframe communication types
@@ -40,7 +52,13 @@ interface Wallet {
 type IframeMessage = 
   | AddWalletsMessage
   | ClearWalletsMessage
-  | GetWalletsMessage;
+  | GetWalletsMessage
+  | ToggleNonWhitelistedTradesMessage;
+
+interface ToggleNonWhitelistedTradesMessage {
+  type: 'TOGGLE_NON_WHITELISTED_TRADES';
+  enabled: boolean;
+}
 
 interface AddWalletsMessage {
   type: 'ADD_WALLETS';
@@ -63,7 +81,29 @@ type IframeResponse =
   | WhitelistTradingStatsResponse
   | SolPriceUpdateResponse
   | WhitelistTradeResponse
-  | TokenPriceUpdateResponse;
+  | TokenPriceUpdateResponse
+  | TokenSelectedResponse
+  | NonWhitelistedTradeResponse;
+
+interface NonWhitelistedTradeResponse {
+  type: 'NON_WHITELIST_TRADE';
+  data: {
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+    tokenMint: string;
+    marketCap: number;
+  };
+}
+
+interface TokenSelectedResponse {
+  type: 'TOKEN_SELECTED';
+  tokenAddress: string;
+}
 
 interface IframeReadyResponse {
   type: 'IFRAME_READY';
@@ -159,7 +199,9 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   isLoadingChart,
   tokenAddress,
   wallets,
-  onDataUpdate
+  onDataUpdate,
+  onTokenSelect,
+  onNonWhitelistedTrade
 }) => {
   const [frameLoading, setFrameLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
@@ -177,6 +219,17 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   } | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
   const [currentWallets, setCurrentWallets] = useState<any[]>([]);
+  const [recentNonWhitelistedTrades, setRecentNonWhitelistedTrades] = useState<{
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+    tokenMint: string;
+    marketCap: number;
+  }[]>([]);
   const [recentTrades, setRecentTrades] = useState<{
     type: 'buy' | 'sell';
     address: string;
@@ -207,13 +260,6 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     // Market cap = token price (in SOL) * token supply * SOL price (in USD)
     const marketCapInUSD = tokenPriceData.tokenPrice * tokenSupply * solPriceData;
     
-    console.log('Market cap calculated:', {
-      tokenPrice: tokenPriceData.tokenPrice,
-      solPrice: solPriceData,
-      tokenSupply,
-      marketCapInUSD
-    });
-    
     return marketCapInUSD;
   };
 
@@ -238,11 +284,16 @@ export const ChartPage: React.FC<ChartPageProps> = ({
   // Setup iframe message listener
   useEffect(() => {
     const handleMessage = (event: MessageEvent<IframeResponse>) => {
-      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      //console.log('Received iframe message:', event.data);
       
       switch (event.data.type) {
         case 'IFRAME_READY':
           setIsIframeReady(true);
+          // Enable non-whitelisted trades
+          sendMessageToIframe({
+            type: 'TOGGLE_NON_WHITELISTED_TRADES',
+            enabled: true
+          });
           // Process queued messages
           messageQueue.current.forEach(message => {
             sendMessageToIframe(message);
@@ -290,6 +341,25 @@ export const ChartPage: React.FC<ChartPageProps> = ({
           setTokenPrice(response.data);
           break;
         }
+        
+        case 'TOKEN_SELECTED': {
+          const response = event.data as TokenSelectedResponse;
+          if (onTokenSelect) {
+            onTokenSelect(response.tokenAddress);
+          }
+          break;
+        }
+        
+        case 'NON_WHITELIST_TRADE': {
+           const response = event.data as NonWhitelistedTradeResponse;
+
+           setRecentNonWhitelistedTrades(prev => {
+             const newTrades = [response.data, ...prev].slice(0, 10); // Keep only last 10 trades
+             return newTrades;
+           });
+           onNonWhitelistedTrade?.(response.data);
+           break;
+         }
       }
     };
 
@@ -332,11 +402,18 @@ export const ChartPage: React.FC<ChartPageProps> = ({
     isIframeReady
   ]);
   
-  // Reset loading state when token changes
+  // Reset loading state and live data when token changes
   useEffect(() => {
     if (tokenAddress) {
       setFrameLoading(true);
       setIsIframeReady(false);
+      
+      // Reset all live data when token changes
+      setTradingStats(null);
+      setSolPrice(null);
+      setCurrentWallets([]);
+      setRecentTrades([]);
+      setTokenPrice(null);
     }
   }, [tokenAddress]);
   
@@ -424,7 +501,11 @@ export const ChartPage: React.FC<ChartPageProps> = ({
 
 
   // Render iframe with single frame
-  const renderFrame = () => {
+  const renderFrame = (hasToken: boolean = true) => {
+    const iframeSrc = hasToken 
+      ? `https://frame.fury.bot/?tokenMint=${tokenAddress}&theme=green`
+      : 'https://frame.fury.bot/?theme=green';
+    
     return (
       <div className="relative flex-1 overflow-hidden iframe-container">
         {renderLoader(frameLoading || isLoadingChart)}
@@ -433,7 +514,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
           <iframe 
             ref={iframeRef}
             key={`frame-${iframeKey}`}
-            src={`https://frame.fury.bot/?tokenMint=${tokenAddress}&theme=green`}
+            src={iframeSrc}
             className="absolute inset-0 w-full h-full border-0"
             style={{ 
               WebkitOverflowScrolling: 'touch',
@@ -520,8 +601,6 @@ export const ChartPage: React.FC<ChartPageProps> = ({
               <BarChart size={24} className="color-primary-light" />
             </motion.div>
           </div>
-        ) : !tokenAddress ? (
-          renderPlaceholder()
         ) : (
           <motion.div 
             key="content"
@@ -531,7 +610,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
             transition={{ duration: 0.3 }}
             className="flex flex-1 h-full"
           >
-            {renderFrame()}
+            {renderFrame(!!tokenAddress)}
           </motion.div>
         )}
       </AnimatePresence>

@@ -550,7 +550,8 @@ export const validateBuyInputs = (
     return { valid: false, error: 'Protocol is required' };
   }
   
-  const supportedProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'auto', 'boopfun', 'auto'];
+  const supportedProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'auto', 'boopfun', 'meteora', 'auto'];
+
   if (!supportedProtocols.includes(config.protocol)) {
     return { valid: false, error: `Unsupported protocol: ${config.protocol}. Supported protocols: ${supportedProtocols.join(', ')}` };
   }

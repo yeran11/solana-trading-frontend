@@ -23,7 +23,7 @@ export type BundleMode = 'single' | 'batch' | 'all-in-one';
 
 export interface SellConfig {
   tokenAddress: string;
-  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'meteora'| 'auto';
+  protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'meteora' | 'auto';
   sellPercent: number; // Percentage of tokens to sell (1-100)
   slippageBps?: number; // Slippage tolerance in basis points (e.g., 100 = 1%)
   outputMint?: string; // Output token (usually SOL) - mainly for Auto
@@ -544,7 +544,8 @@ export const validateSellInputs = (
     return { valid: false, error: 'Protocol is required' };
   }
   
-  const validProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'auto', 'boopfun', 'auto'];
+  const validProtocols = ['pumpfun', 'moonshot', 'launchpad', 'raydium', 'pumpswap', 'auto', 'boopfun', 'meteora', 'auto'];
+
   if (!validProtocols.includes(sellConfig.protocol)) {
     return { valid: false, error: `Invalid protocol. Must be one of: ${validProtocols.join(', ')}` };
   }

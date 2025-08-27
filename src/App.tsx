@@ -52,6 +52,7 @@ const DeployModal = lazy(() => import('./modals/DeployModal.tsx').then(module =>
 const CleanerTokensModal = lazy(() => import('./modals/CleanerModal.tsx').then(module => ({ default: module.CleanerTokensModal })));
 const CustomBuyModal = lazy(() => import('./modals/CustomBuyModal.tsx').then(module => ({ default: module.CustomBuyModal })));
 const FloatingTradingCard = lazy(() => import('./FloatingTradingCard'));
+const AutomateFloatingCard = lazy(() => import('./AutomateFloatingCard'));
 
 interface ServerInfo {
   id: string;
@@ -316,6 +317,11 @@ const WalletManager: React.FC = () => {
       position: { x: number; y: number };
       isDragging: boolean;
     };
+    automateCard: {
+      isOpen: boolean;
+      position: { x: number; y: number };
+      isDragging: boolean;
+    };
     quickBuyEnabled: boolean;
     quickBuyAmount: number;
     quickBuyMinAmount: number;
@@ -344,6 +350,17 @@ const WalletManager: React.FC = () => {
     } | null;
     marketCap: number | null;
   } | null;
+  nonWhitelistedTrades: {
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+    tokenMint: string;
+    marketCap: number;
+  }[];
   }
 
   type AppAction = 
@@ -370,13 +387,17 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_FLOATING_CARD_OPEN'; payload: boolean }
     | { type: 'SET_FLOATING_CARD_POSITION'; payload: { x: number; y: number } }
     | { type: 'SET_FLOATING_CARD_DRAGGING'; payload: boolean }
+    | { type: 'SET_AUTOMATE_CARD_OPEN'; payload: boolean }
+    | { type: 'SET_AUTOMATE_CARD_POSITION'; payload: { x: number; y: number } }
+    | { type: 'SET_AUTOMATE_CARD_DRAGGING'; payload: boolean }
     | { type: 'SET_QUICK_BUY_ENABLED'; payload: boolean }
     | { type: 'SET_QUICK_BUY_AMOUNT'; payload: number }
     | { type: 'SET_QUICK_BUY_MIN_AMOUNT'; payload: number }
     | { type: 'SET_QUICK_BUY_MAX_AMOUNT'; payload: number }
     | { type: 'SET_USE_QUICK_BUY_RANGE'; payload: boolean }
     | { type: 'SET_QUICK_SELL_PERCENTAGE'; payload: number }
-    | { type: 'SET_IFRAME_DATA'; payload: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; marketCap: number | null; } | null };
+    | { type: 'SET_IFRAME_DATA'; payload: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; marketCap: number | null; } | null }
+    | { type: 'SET_NON_WHITELISTED_TRADES'; payload: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; tokenMint: string; marketCap: number; }[] };
 
   const initialState: AppState = {
     copiedAddress: null,
@@ -421,13 +442,19 @@ const WalletManager: React.FC = () => {
       position: { x: 100, y: 100 },
       isDragging: false
     },
+    automateCard: {
+      isOpen: false,
+      position: { x: 200, y: 200 },
+      isDragging: false
+    },
     quickBuyEnabled: true,
     quickBuyAmount: 0.01,
     quickBuyMinAmount: 0.01,
     quickBuyMaxAmount: 0.05,
     useQuickBuyRange: false,
     quickSellPercentage: 100,
-    iframeData: null
+    iframeData: null,
+    nonWhitelistedTrades: []
   };
 
   const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -509,6 +536,30 @@ const WalletManager: React.FC = () => {
             isDragging: action.payload
           }
         };
+      case 'SET_AUTOMATE_CARD_OPEN':
+        return {
+          ...state,
+          automateCard: {
+            ...state.automateCard,
+            isOpen: action.payload
+          }
+        };
+      case 'SET_AUTOMATE_CARD_POSITION':
+        return {
+          ...state,
+          automateCard: {
+            ...state.automateCard,
+            position: action.payload
+          }
+        };
+      case 'SET_AUTOMATE_CARD_DRAGGING':
+        return {
+          ...state,
+          automateCard: {
+            ...state.automateCard,
+            isDragging: action.payload
+          }
+        };
       case 'SET_QUICK_BUY_ENABLED':
         return { ...state, quickBuyEnabled: action.payload };
       case 'SET_QUICK_BUY_AMOUNT':
@@ -523,6 +574,8 @@ const WalletManager: React.FC = () => {
         return { ...state, quickSellPercentage: action.payload };
       case 'SET_IFRAME_DATA':
         return { ...state, iframeData: action.payload };
+      case 'SET_NON_WHITELISTED_TRADES':
+        return { ...state, nonWhitelistedTrades: action.payload };
       default:
         return state;
     }
@@ -571,13 +624,17 @@ const WalletManager: React.FC = () => {
     setFloatingCardOpen: (open: boolean) => dispatch({ type: 'SET_FLOATING_CARD_OPEN', payload: open }),
     setFloatingCardPosition: (position: { x: number; y: number }) => dispatch({ type: 'SET_FLOATING_CARD_POSITION', payload: position }),
     setFloatingCardDragging: (dragging: boolean) => dispatch({ type: 'SET_FLOATING_CARD_DRAGGING', payload: dragging }),
+    setAutomateCardOpen: (open: boolean) => dispatch({ type: 'SET_AUTOMATE_CARD_OPEN', payload: open }),
+    setAutomateCardPosition: (position: { x: number; y: number }) => dispatch({ type: 'SET_AUTOMATE_CARD_POSITION', payload: position }),
+    setAutomateCardDragging: (dragging: boolean) => dispatch({ type: 'SET_AUTOMATE_CARD_DRAGGING', payload: dragging }),
     setQuickBuyEnabled: (enabled: boolean) => dispatch({ type: 'SET_QUICK_BUY_ENABLED', payload: enabled }),
     setQuickBuyAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_AMOUNT', payload: amount }),
     setQuickBuyMinAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MIN_AMOUNT', payload: amount }),
     setQuickBuyMaxAmount: (amount: number) => dispatch({ type: 'SET_QUICK_BUY_MAX_AMOUNT', payload: amount }),
     setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange }),
     setQuickSellPercentage: (percentage: number) => dispatch({ type: 'SET_QUICK_SELL_PERCENTAGE', payload: percentage }),
-    setIframeData: (data: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; marketCap: number | null; } | null) => dispatch({ type: 'SET_IFRAME_DATA', payload: data })
+    setIframeData: (data: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; marketCap: number | null; } | null) => dispatch({ type: 'SET_IFRAME_DATA', payload: data }),
+    setNonWhitelistedTrades: (trades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; tokenMint: string; marketCap: number; }[]) => dispatch({ type: 'SET_NON_WHITELISTED_TRADES', payload: trades })
   }), [dispatch]);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
@@ -635,7 +692,6 @@ const WalletManager: React.FC = () => {
   useEffect(() => {
     if (state.iframeData?.marketCap !== undefined) {
       memoizedCallbacks.setCurrentMarketCap(state.iframeData.marketCap);
-      console.log('Market cap updated from iframe data:', state.iframeData.marketCap);
     }
   }, [state.iframeData?.marketCap]);
 
@@ -926,6 +982,24 @@ const WalletManager: React.FC = () => {
     }
   };
 
+  const handleNonWhitelistedTrade = useCallback((trade: {
+    type: 'buy' | 'sell';
+    address: string;
+    tokensAmount: number;
+    avgPrice: number;
+    solAmount: number;
+    timestamp: number;
+    signature: string;
+    tokenMint: string;
+    marketCap: number;
+  }) => {
+    // Add the new trade to the beginning of the array and keep only the last 50 trades
+    const updatedTrades = [trade, ...state.nonWhitelistedTrades].slice(0, 50);
+    memoizedCallbacks.setNonWhitelistedTrades(updatedTrades);
+  }, [state.nonWhitelistedTrades, memoizedCallbacks, state.tokenAddress]);
+
+
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-app-primary text-app-tertiary cyberpunk-bg">
       {/* Cyberpunk scanline effect */}
@@ -1042,6 +1116,8 @@ const WalletManager: React.FC = () => {
               tokenAddress={state.tokenAddress}
               wallets={state.wallets}
               onDataUpdate={memoizedCallbacks.setIframeData}
+              onTokenSelect={memoizedCallbacks.setTokenAddress}
+              onNonWhitelistedTrade={handleNonWhitelistedTrade}
             />
             </div>
 
@@ -1062,6 +1138,12 @@ const WalletManager: React.FC = () => {
               setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
               onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
               isFloatingCardOpen={state.floatingCard.isOpen}
+              isAutomateCardOpen={state.automateCard.isOpen}
+              setAutomateCardOpen={memoizedCallbacks.setAutomateCardOpen}
+              automateCardPosition={state.automateCard.position}
+              setAutomateCardPosition={memoizedCallbacks.setAutomateCardPosition}
+              isAutomateCardDragging={state.automateCard.isDragging}
+              setAutomateCardDragging={memoizedCallbacks.setAutomateCardDragging}
               iframeData={state.iframeData}
             />
             </div>
@@ -1115,6 +1197,8 @@ const WalletManager: React.FC = () => {
                 tokenAddress={state.tokenAddress}
                 wallets={state.wallets}
                 onDataUpdate={memoizedCallbacks.setIframeData}
+                onTokenSelect={memoizedCallbacks.setTokenAddress}
+                onNonWhitelistedTrade={handleNonWhitelistedTrade}
               />
             ),
             ActionsPage: (
@@ -1133,6 +1217,12 @@ const WalletManager: React.FC = () => {
                 setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
                 onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
                 isFloatingCardOpen={state.floatingCard.isOpen}
+                isAutomateCardOpen={state.automateCard.isOpen}
+                setAutomateCardOpen={memoizedCallbacks.setAutomateCardOpen}
+                automateCardPosition={state.automateCard.position}
+                setAutomateCardPosition={memoizedCallbacks.setAutomateCardPosition}
+                isAutomateCardDragging={state.automateCard.isDragging}
+                setAutomateCardDragging={memoizedCallbacks.setAutomateCardDragging}
                 iframeData={state.iframeData}
               />
             )
@@ -1252,6 +1342,21 @@ const WalletManager: React.FC = () => {
         countActiveWallets={countActiveWallets}
         currentMarketCap={state.currentMarketCap}
         tokenBalances={state.tokenBalances}
+      />
+      
+      <AutomateFloatingCard
+        isOpen={state.automateCard.isOpen}
+        onClose={() => memoizedCallbacks.setAutomateCardOpen(false)}
+        position={state.automateCard.position}
+        onPositionChange={memoizedCallbacks.setAutomateCardPosition}
+        isDragging={state.automateCard.isDragging}
+        onDraggingChange={memoizedCallbacks.setAutomateCardDragging}
+        tokenAddress={state.tokenAddress}
+        wallets={state.wallets}
+        solBalances={state.solBalances}
+        tokenBalances={state.tokenBalances}
+        nonWhitelistedTrades={state.nonWhitelistedTrades}
+        iframeData={state.iframeData}
       />
     </div>
   );

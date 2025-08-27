@@ -2,6 +2,7 @@ import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import bs58 from 'bs58';
 import Cookies from 'js-cookie';
 import CryptoJS from 'crypto-js';
+import { TradingStrategy } from './automate/types';
 
 export interface WalletType {
   id: number;
@@ -102,6 +103,7 @@ const loadWalletsFromIndexedDB = (): Promise<WalletType[]> => {
 const WALLET_COOKIE_KEY = 'wallets';
 const CONFIG_COOKIE_KEY = 'config';
 const QUICK_BUY_COOKIE_KEY = 'quickBuyPreferences';
+const TRADING_STRATEGIES_COOKIE_KEY = 'tradingStrategies';
 
 // Encryption setup
 const ENCRYPTION_KEY = 'raze-bot-wallet-encryption-key';
@@ -723,4 +725,21 @@ export const loadQuickBuyPreferencesFromCookies = (): QuickBuyPreferences | null
     }
   }
   return null;
+};
+
+export const saveTradingStrategiesToCookies = (strategies: TradingStrategy[]) => {
+  Cookies.set(TRADING_STRATEGIES_COOKIE_KEY, JSON.stringify(strategies), { expires: 30 });
+};
+
+export const loadTradingStrategiesFromCookies = (): TradingStrategy[] => {
+  const savedStrategies = Cookies.get(TRADING_STRATEGIES_COOKIE_KEY);
+  if (savedStrategies) {
+    try {
+      return JSON.parse(savedStrategies);
+    } catch (error) {
+      console.error('Error parsing saved trading strategies:', error);
+      return [];
+    }
+  }
+  return [];
 };

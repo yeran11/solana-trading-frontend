@@ -15,13 +15,15 @@ import {
    TrendingUp,
    Users,
    BarChart,
-   Coins
+   Coins,
+   Bot
  } from 'lucide-react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { WalletType, loadConfigFromCookies } from "./Utils";
 import { useToast } from "./Notifications";
 import { countActiveWallets, getScriptName } from './utils/wallets';
 import TradingCard from './TradingForm';
+import AutomateFloatingCard from './AutomateFloatingCard';
 
 import { executeTrade } from './utils/trading';
 
@@ -68,6 +70,13 @@ interface ActionsPageProps {
   setCustomBuyModalOpen: (open: boolean) => void;
   onOpenFloating: () => void;
   isFloatingCardOpen: boolean;
+  // Automate card state props
+  isAutomateCardOpen: boolean;
+  setAutomateCardOpen: (open: boolean) => void;
+  automateCardPosition: { x: number; y: number };
+  setAutomateCardPosition: (position: { x: number; y: number }) => void;
+  isAutomateCardDragging: boolean;
+  setAutomateCardDragging: (dragging: boolean) => void;
   iframeData?: {
     tradingStats: any;
     solPrice: number | null;
@@ -155,6 +164,8 @@ const DataBox: React.FC<{
   tokenAddress: string;
   tokenBalances: Map<string, number>;
 }> = ({ iframeData, tokenAddress, tokenBalances }) => {
+  const [showUSD, setShowUSD] = useState(false);
+  
   if (!tokenAddress || !iframeData) return null;
 
   const { tradingStats, solPrice, currentWallets, recentTrades, tokenPrice } = iframeData;
@@ -163,10 +174,25 @@ const DataBox: React.FC<{
   const totalTokens = Array.from(tokenBalances.values()).reduce((sum, balance) => sum + balance, 0);
   const currentTokenPrice = tokenPrice?.tokenPrice || 0;
   const holdingsValue = totalTokens * currentTokenPrice;
+  
+  // Currency conversion helper
+  const formatValue = (solValue: number) => {
+    if (showUSD && solPrice) {
+      return (solValue * solPrice).toFixed(2);
+    }
+    return solValue.toFixed(2);
+  };
+  
+  const handleCurrencyToggle = () => {
+    setShowUSD(!showUSD);
+  };
 
   return (
     <div className="mb-4">
-      <div className="bg-gradient-to-br from-app-secondary-80 to-app-primary-dark-50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-app-primary-20 relative overflow-hidden">
+      <div 
+        onClick={handleCurrencyToggle}
+        className="bg-gradient-to-br from-app-secondary-80 to-app-primary-dark-50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-app-primary-20 relative overflow-hidden cursor-pointer hover:border-app-primary-40 transition-all duration-300"
+      >
         
         {/* Cyberpunk accent lines */}
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-app-primary-40 to-transparent"></div>
@@ -182,13 +208,19 @@ const DataBox: React.FC<{
             </div>
             <div className="flex items-center gap-2">
               <div className="text-lg font-bold color-primary font-mono tracking-tight">
-                {tradingStats ? tradingStats.bought.toFixed(2) : '0.00'}
+                {tradingStats ? formatValue(tradingStats.bought) : formatValue(0)}
               </div>
-              <div className="flex flex-col gap-0.5">
-                <div className="w-2 h-0.5 bg-app-primary-color rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
-                <div className="w-2 h-0.5 bg-app-primary-color rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                <div className="w-2 h-0.5 bg-app-primary-color rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
-              </div>
+              {showUSD ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80 group-hover:opacity-100 transition-opacity">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" fill="currentColor"/>
+                </svg>
+              ) : (
+                <div className="flex flex-col gap-0.5">
+                  <div className="w-2 h-0.5 bg-app-primary-color rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-0.5 bg-app-primary-color rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-0.5 bg-app-primary-color rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -199,13 +231,19 @@ const DataBox: React.FC<{
             </div>
             <div className="flex items-center gap-2">
               <div className="text-lg font-bold text-warning font-mono tracking-tight">
-                {tradingStats ? tradingStats.sold.toFixed(2) : '0.00'}
+                {tradingStats ? formatValue(tradingStats.sold) : formatValue(0)}
               </div>
-              <div className="flex flex-col gap-0.5">
-                <div className="w-2 h-0.5 bg-warning rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
-                <div className="w-2 h-0.5 bg-warning rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                <div className="w-2 h-0.5 bg-warning rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
-              </div>
+              {showUSD ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80 group-hover:opacity-100 transition-opacity text-warning">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" fill="currentColor"/>
+                </svg>
+              ) : (
+                <div className="flex flex-col gap-0.5">
+                  <div className="w-2 h-0.5 bg-warning rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-0.5 bg-warning rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-0.5 bg-warning rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -216,13 +254,19 @@ const DataBox: React.FC<{
             </div>
             <div className="flex items-center gap-2">
               <div className="text-lg font-bold text-app-secondary font-mono tracking-tight">
-                {holdingsValue.toFixed(2)}
+                {formatValue(holdingsValue)}
               </div>
-              <div className="flex flex-col gap-0.5">
-                <div className="w-2 h-0.5 bg-app-secondary-color rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
-                <div className="w-2 h-0.5 bg-app-secondary-color rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                <div className="w-2 h-0.5 bg-app-secondary-color rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
-              </div>
+              {showUSD ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80 group-hover:opacity-100 transition-opacity text-app-secondary">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" fill="currentColor"/>
+                </svg>
+              ) : (
+                <div className="flex flex-col gap-0.5">
+                  <div className="w-2 h-0.5 bg-app-secondary-color rounded opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-0.5 bg-app-secondary-color rounded opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-0.5 bg-app-secondary-color rounded opacity-40 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -237,23 +281,36 @@ const DataBox: React.FC<{
               }`}>
                 {tradingStats ? (
                   <div>
-                    {(tradingStats.net + holdingsValue) >= 0 ? '+' : ''}{(tradingStats.net + holdingsValue).toFixed(2)}
+                    {(() => {
+                      const value = tradingStats.net + holdingsValue;
+                      const formattedValue = formatValue(Math.abs(value));
+                      const sign = value >= 0 ? '+' : '-';
+                      return `${sign}${formattedValue}`;
+                    })()}
                   </div>
                 ) : (
-                  <div>+{holdingsValue.toFixed(2)}</div>
+                  <div>+{formatValue(holdingsValue)}</div>
                 )}
               </div>
-              <div className="flex flex-col gap-0.5">
-                <div className={`w-2 h-0.5 rounded opacity-80 group-hover:opacity-100 transition-opacity ${
-                  tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
-                }`}></div>
-                <div className={`w-2 h-0.5 rounded opacity-60 group-hover:opacity-100 transition-opacity ${
-                  tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
-                }`}></div>
-                <div className={`w-2 h-0.5 rounded opacity-40 group-hover:opacity-100 transition-opacity ${
-                  tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
-                }`}></div>
-              </div>
+              {showUSD ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={`opacity-80 group-hover:opacity-100 transition-opacity ${
+                   tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'text-app-primary' : 'text-warning'
+                 }`}>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" fill="currentColor"/>
+                </svg>
+              ) : (
+                <div className="flex flex-col gap-0.5">
+                  <div className={`w-2 h-0.5 rounded opacity-80 group-hover:opacity-100 transition-opacity ${
+                    tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
+                  }`}></div>
+                  <div className={`w-2 h-0.5 rounded opacity-60 group-hover:opacity-100 transition-opacity ${
+                    tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
+                  }`}></div>
+                  <div className={`w-2 h-0.5 rounded opacity-40 group-hover:opacity-100 transition-opacity ${
+                    tradingStats && (tradingStats.net + holdingsValue) >= 0 ? 'bg-app-primary-color' : 'bg-warning'
+                  }`}></div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -303,6 +360,13 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
   setCustomBuyModalOpen,
   onOpenFloating,
   isFloatingCardOpen,
+  // Automate card state props
+  isAutomateCardOpen,
+  setAutomateCardOpen,
+  automateCardPosition,
+  setAutomateCardPosition,
+  isAutomateCardDragging,
+  setAutomateCardDragging,
   iframeData
 }) => {
   // State management (no changes)
@@ -434,23 +498,23 @@ export const ActionsPage: React.FC<ActionsPageProps> = ({
         {/* Token Operations */}
         <div className="space-y-4">          
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
-              {/* Cleaner Button */}
+              {/* AUTOMATE Button */}
               <button
                 onClick={() => {
                   if (!tokenAddress) {
                     showToast("Please select a token first", "error");
                     return;
                   }
-                  setCleanerTokensModalOpen(true);
+                  setAutomateCardOpen(true);
                 }}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg
                           bg-gradient-to-br from-app-secondary-80 to-app-primary-dark-50 border border-app-primary-30 hover-border-primary-60
                           transition-all duration-300"
               >
                 <div className="p-3 bg-gradient-to-br from-app-primary-20 to-app-primary-05 rounded-lg">
-                  <Waypoints size={20} className="color-primary" />
+                  <Bot size={20} className="color-primary" />
                 </div>
-                <span className="text-xs font-mono tracking-wider text-app-secondary uppercase">Cleaner</span>
+                <span className="text-xs font-mono tracking-wider text-app-secondary uppercase">AUTOMATE</span>
               </button>
               
               {/* Deploy Button */}

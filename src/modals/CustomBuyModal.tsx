@@ -65,7 +65,6 @@ export const CustomBuyModal: React.FC<CustomBuyModalProps> = ({
     { value: 'pumpswap', label: 'PumpSwap' },
     { value: 'launchpad', label: 'Launchpad' },
     { value: 'meteora', label: 'Meteora' },
-
     { value: 'boopfun', label: 'Boop.fun' }
   ];
 
