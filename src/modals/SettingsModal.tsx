@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Plus, Upload, FileUp, Download, Trash2, Settings, Globe, Zap, Wallet, Key, Save } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
+import bs58 from 'bs58';
 import { WalletTooltip } from '../styles/Styles';
 import { 
   createNewWallet,
@@ -187,6 +188,39 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
         const trimmedText = text.trim();
         if (base58Pattern.test(trimmedText)) {
           foundKeys = [trimmedText];
+        }
+      } else if (fileExtension === 'json') {
+        // For .json files, parse as keypair JSON format
+        try {
+          const jsonData = JSON.parse(text);
+          
+          // Handle single keypair JSON (array of numbers)
+          if (Array.isArray(jsonData) && jsonData.length === 64) {
+            // Convert array of numbers to Uint8Array and then to base58
+            const secretKey = new Uint8Array(jsonData);
+            const privateKey = bs58.encode(secretKey);
+            foundKeys = [privateKey];
+          }
+          // Handle multiple keypairs in an array
+          else if (Array.isArray(jsonData)) {
+            for (const item of jsonData) {
+              if (Array.isArray(item) && item.length === 64) {
+                const secretKey = new Uint8Array(item);
+                const privateKey = bs58.encode(secretKey);
+                foundKeys.push(privateKey);
+              }
+            }
+          }
+          // Handle object with keypair data
+          else if (jsonData.secretKey && Array.isArray(jsonData.secretKey)) {
+            const secretKey = new Uint8Array(jsonData.secretKey);
+            const privateKey = bs58.encode(secretKey);
+            foundKeys = [privateKey];
+          }
+        } catch (jsonError) {
+          setImportError('Invalid JSON format');
+          setIsProcessingFile(false);
+          return;
         }
       } else {
         // For .txt files, process line by line
@@ -394,7 +428,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".txt,.key"
+                        accept=".txt,.key,.json"
                         onChange={handleFileUpload}
                         className="hidden"
                         disabled={isProcessingFile}
@@ -409,7 +443,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         } border border-app-primary-40 rounded font-mono text-sm transition-all duration-300 flex items-center justify-center gap-2`}
                       >
                         <FileUp size={16} />
-                        {isProcessingFile ? 'PROCESSING FILE...' : 'IMPORT FROM FILE (.txt/.key)'}
+                        {isProcessingFile ? 'PROCESSING FILE...' : 'IMPORT FROM FILE (.txt/.key/.json)'}
                       </button>
                     </div>
                   </div>

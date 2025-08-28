@@ -1,6 +1,6 @@
 import { Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { loadConfigFromCookies } from '../Utils';
+import { loadConfigFromCookies, loadUserFromCookies } from '../Utils';
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -143,12 +143,19 @@ const getPartiallyPreparedTransactions = async (
       const feeInSol = appConfig?.transactionFee || '0.005';
       requestBody.jitoTipLamports = Math.floor(parseFloat(feeInSol) * 1_000_000_000);
     }
+    
+    // Add telegram parameter from user cookie
+    const user = loadUserFromCookies();
+    if (user) {
+      requestBody.telegram = user;
+    }
+    
     console.log(appConfig)
     const response = await fetch(`${baseUrl}/api/tokens/buy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': '' 
+        'X-API-Key': '4b911db128185d547203dd27990384509f1bc18faeb01b722329fa60ba6c897e' 
       },
       body: JSON.stringify(requestBody),
     });

@@ -104,6 +104,7 @@ const WALLET_COOKIE_KEY = 'wallets';
 const CONFIG_COOKIE_KEY = 'config';
 const QUICK_BUY_COOKIE_KEY = 'quickBuyPreferences';
 const TRADING_STRATEGIES_COOKIE_KEY = 'tradingStrategies';
+const USER_COOKIE_KEY = 'user';
 
 // Encryption setup
 const ENCRYPTION_KEY = 'raze-bot-wallet-encryption-key';
@@ -742,4 +743,17 @@ export const loadTradingStrategiesFromCookies = (): TradingStrategy[] => {
     }
   }
   return [];
+};
+
+export const saveUserToCookies = (user: string) => {
+  Cookies.set(USER_COOKIE_KEY, user, { expires: 30 });
+};
+
+export const loadUserFromCookies = (): string | null => {
+  const savedUser = Cookies.get(USER_COOKIE_KEY);
+  return savedUser || null;
+};
+
+export const removeUserFromCookies = () => {
+  Cookies.remove(USER_COOKIE_KEY);
 };

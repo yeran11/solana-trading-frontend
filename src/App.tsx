@@ -1,5 +1,5 @@
 import React, { useEffect, lazy, useCallback, useReducer, useMemo, useState } from 'react';
-import { ChevronDown, Settings, Globe, Wifi } from 'lucide-react';
+import { ChevronDown, Settings, Globe, Wifi, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Connection } from '@solana/web3.js';
 import ServiceSelector from './Menu.tsx';
 import { WalletTooltip, initStyles } from './styles/Styles.tsx';
@@ -10,6 +10,8 @@ import {
   loadConfigFromCookies,
   loadQuickBuyPreferencesFromCookies,
   saveQuickBuyPreferencesToCookies,
+  saveUserToCookies,
+  loadUserFromCookies,
   deleteWallet, 
   WalletType, 
   ConfigType,
@@ -299,6 +301,7 @@ const WalletManager: React.FC = () => {
     connection: Connection | null;
     solBalances: Map<string, number>;
     tokenBalances: Map<string, number>;
+    leftColumnCollapsed: boolean;
 
     isLoadingChart: boolean;
     currentMarketCap: number | null;
@@ -397,7 +400,8 @@ const WalletManager: React.FC = () => {
     | { type: 'SET_USE_QUICK_BUY_RANGE'; payload: boolean }
     | { type: 'SET_QUICK_SELL_PERCENTAGE'; payload: number }
     | { type: 'SET_IFRAME_DATA'; payload: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; marketCap: number | null; } | null }
-    | { type: 'SET_NON_WHITELISTED_TRADES'; payload: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; tokenMint: string; marketCap: number; }[] };
+    | { type: 'SET_NON_WHITELISTED_TRADES'; payload: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; tokenMint: string; marketCap: number; }[] }
+    | { type: 'TOGGLE_LEFT_COLUMN'; payload?: undefined };
 
   const initialState: AppState = {
     copiedAddress: null,
@@ -424,6 +428,7 @@ const WalletManager: React.FC = () => {
     connection: null,
     solBalances: new Map(),
     tokenBalances: new Map(),
+    leftColumnCollapsed: false,
 
     isLoadingChart: false,
     currentMarketCap: null,
@@ -576,6 +581,8 @@ const WalletManager: React.FC = () => {
         return { ...state, iframeData: action.payload };
       case 'SET_NON_WHITELISTED_TRADES':
         return { ...state, nonWhitelistedTrades: action.payload };
+      case 'TOGGLE_LEFT_COLUMN':
+        return { ...state, leftColumnCollapsed: !state.leftColumnCollapsed };
       default:
         return state;
     }
@@ -634,7 +641,8 @@ const WalletManager: React.FC = () => {
     setUseQuickBuyRange: (useRange: boolean) => dispatch({ type: 'SET_USE_QUICK_BUY_RANGE', payload: useRange }),
     setQuickSellPercentage: (percentage: number) => dispatch({ type: 'SET_QUICK_SELL_PERCENTAGE', payload: percentage }),
     setIframeData: (data: { tradingStats: any; solPrice: number | null; currentWallets: any[]; recentTrades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; }[]; tokenPrice: { tokenPrice: number; tokenMint: string; timestamp: number; tradeType: 'buy' | 'sell'; volume: number; } | null; marketCap: number | null; } | null) => dispatch({ type: 'SET_IFRAME_DATA', payload: data }),
-    setNonWhitelistedTrades: (trades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; tokenMint: string; marketCap: number; }[]) => dispatch({ type: 'SET_NON_WHITELISTED_TRADES', payload: trades })
+    setNonWhitelistedTrades: (trades: { type: 'buy' | 'sell'; address: string; tokensAmount: number; avgPrice: number; solAmount: number; timestamp: number; signature: string; tokenMint: string; marketCap: number; }[]) => dispatch({ type: 'SET_NON_WHITELISTED_TRADES', payload: trades }),
+    toggleLeftColumn: () => dispatch({ type: 'TOGGLE_LEFT_COLUMN' })
   }), [dispatch]);
 
   // Separate callbacks for config updates to prevent unnecessary re-renders
@@ -762,6 +770,15 @@ const WalletManager: React.FC = () => {
     const tokenFromUrl = urlParams.get('tokenAddress');
     if (tokenFromUrl) {
       memoizedCallbacks.setTokenAddress(tokenFromUrl);
+    }
+  }, []);
+
+  // Read user parameter from URL and store in cookies
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userFromUrl = urlParams.get('user');
+    if (userFromUrl) {
+      saveUserToCookies(userFromUrl);
     }
   }, []);
 
@@ -1010,6 +1027,18 @@ const WalletManager: React.FC = () => {
       {/* Top Navigation */}
       <nav className="relative border-b border-app-primary-70 px-4 py-2 backdrop-blur-sm bg-app-primary-99 z-20">
         <div className="flex items-center gap-3">
+          <WalletTooltip content={state.leftColumnCollapsed ? "Show Wallets" : "Hide Wallets"} position="bottom">
+            <button
+              className="p-2 border border-app-primary-40 hover-border-primary bg-app-secondary rounded cyberpunk-btn"
+              onClick={memoizedCallbacks.toggleLeftColumn}
+            >
+              {state.leftColumnCollapsed ? (
+                <PanelLeftOpen size={20} className="color-primary" />
+              ) : (
+                <PanelLeftClose size={20} className="color-primary" />
+              )}
+            </button>
+          </WalletTooltip>
 
         <ServiceSelector />
           
@@ -1064,24 +1093,79 @@ const WalletManager: React.FC = () => {
       <div className="flex-1 flex flex-col md:flex-row h-[calc(100vh-8rem)]">
         {/* Desktop Layout */}
         <div className="hidden md:block w-full h-full">
-          <Split
-            className="flex w-full h-full split-custom"
-            sizes={[20, 60, 20]}
-            minSize={[250, 250, 350]}
-            gutterSize={8}
-            gutterAlign="center"
-            direction="horizontal"
-            dragInterval={1}
-            gutter={(index, direction) => {
-              const gutter = document.createElement('div');
-              gutter.className = `gutter gutter-${direction}`;
-              return gutter;
-            }}
-          >
-            {/* Left Column */}
-            <div className="backdrop-blur-sm bg-app-primary-99 border-r border-app-primary-40 overflow-y-auto">
-              {state.connection && (
-                <WalletsPage
+          {state.leftColumnCollapsed ? (
+            <Split
+              className="flex w-full h-full split-custom"
+              sizes={[70, 30]}
+              minSize={[250, 350]}
+              gutterSize={8}
+              gutterAlign="center"
+              direction="horizontal"
+              dragInterval={1}
+              gutter={(index, direction) => {
+                const gutter = document.createElement('div');
+                gutter.className = `gutter gutter-${direction}`;
+                return gutter;
+              }}
+            >
+              {/* Middle Column (Chart) */}
+              <div className="backdrop-blur-sm bg-app-primary-99 border-r border-app-primary-40 overflow-y-auto">
+                <ChartPage
+                isLoadingChart={state.isLoadingChart}
+                tokenAddress={state.tokenAddress}
+                wallets={state.wallets}
+                onDataUpdate={memoizedCallbacks.setIframeData}
+                onTokenSelect={memoizedCallbacks.setTokenAddress}
+                onNonWhitelistedTrade={handleNonWhitelistedTrade}
+              />
+              </div>
+
+              {/* Right Column (Actions) */}
+              <div className="backdrop-blur-sm bg-app-primary-99 overflow-y-auto">
+                <ActionsPage
+                 tokenAddress={state.tokenAddress}
+                 transactionFee={state.config.transactionFee}
+                 handleRefresh={handleRefresh}
+                 wallets={state.wallets}
+                 solBalances={state.solBalances}
+                 tokenBalances={state.tokenBalances}
+                 currentMarketCap={state.currentMarketCap}
+                 setBurnModalOpen={memoizedCallbacks.setBurnModalOpen}
+                 setCalculatePNLModalOpen={memoizedCallbacks.setCalculatePNLModalOpen}
+                 setDeployModalOpen={memoizedCallbacks.setDeployModalOpen}
+                 setCleanerTokensModalOpen={memoizedCallbacks.setCleanerTokensModalOpen}
+                 setCustomBuyModalOpen={memoizedCallbacks.setCustomBuyModalOpen}
+                 onOpenFloating={() => memoizedCallbacks.setFloatingCardOpen(true)}
+                 isFloatingCardOpen={state.floatingCard.isOpen}
+                 isAutomateCardOpen={state.automateCard.isOpen}
+                 setAutomateCardOpen={memoizedCallbacks.setAutomateCardOpen}
+                 automateCardPosition={state.automateCard.position}
+                 setAutomateCardPosition={memoizedCallbacks.setAutomateCardPosition}
+                 isAutomateCardDragging={state.automateCard.isDragging}
+                 setAutomateCardDragging={memoizedCallbacks.setAutomateCardDragging}
+                 iframeData={state.iframeData}
+                 />
+              </div>
+            </Split>
+          ) : (
+            <Split
+              className="flex w-full h-full split-custom"
+              sizes={[20, 60, 20]}
+              minSize={[250, 250, 350]}
+              gutterSize={8}
+              gutterAlign="center"
+              direction="horizontal"
+              dragInterval={1}
+              gutter={(index, direction) => {
+                const gutter = document.createElement('div');
+                gutter.className = `gutter gutter-${direction}`;
+                return gutter;
+              }}
+            >
+              {/* Left Column */}
+              <div className="backdrop-blur-sm bg-app-primary-99 border-r border-app-primary-40 overflow-y-auto">
+                {state.connection && (
+                  <WalletsPage
                   wallets={state.wallets}
                   setWallets={memoizedCallbacks.setWallets}
                   handleRefresh={handleRefresh}
@@ -1148,6 +1232,7 @@ const WalletManager: React.FC = () => {
             />
             </div>
           </Split>
+           )}
         </div>
 
         {/* Mobile Layout */}
