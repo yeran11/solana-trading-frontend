@@ -410,7 +410,7 @@ const WalletManager: React.FC = () => {
     isSettingsOpen: false,
     activeTab: 'wallets',
     config: {
-      rpcEndpoint: 'https://smart-special-thunder.solana-mainnet.quiknode.pro/1366b058465380d24920f9d348f85325455d398d/',
+      rpcEndpoint: 'https://solana-rpc.publicnode.com',
       transactionFee: '0.001',
       apiKey: '',
       selectedDex: 'auto',
