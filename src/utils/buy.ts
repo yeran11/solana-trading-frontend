@@ -35,6 +35,7 @@ export interface BuyConfig {
 
 export interface BuyBundle {
   transactions: string[]; // Base58 encoded transaction data
+  serverResponse?: any; // For self-hosted server responses
 }
 
 export interface BuyResult {
@@ -80,7 +81,15 @@ const checkRateLimit = async (): Promise<void> => {
  */
 const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
-    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    const config = loadConfigFromCookies();
+    let baseUrl = '';
+    
+    // Check if self-hosted trading server is enabled
+    if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
+      baseUrl = config.tradingServerUrl.replace(/\/+$/, '');
+    } else {
+      baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    }
     
     // Send to our backend proxy instead of directly to Jito
     const response = await fetch(`${baseUrl}/api/transactions/send`, {
@@ -105,21 +114,35 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
  * Step 1: Gather Transactions - Request transaction bundles from the API
  */
 const getPartiallyPreparedTransactions = async (
-  walletAddresses: string[], 
+  wallets: WalletBuy[], 
   config: BuyConfig
 ): Promise<BuyBundle[]> => {
   try {
-    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-    
     const appConfig = loadConfigFromCookies();
+    let baseUrl = '';
+    
+    // Check if self-hosted trading server is enabled
+    if (appConfig?.tradingServerEnabled === 'true' && appConfig?.tradingServerUrl) {
+      baseUrl = appConfig.tradingServerUrl.replace(/\/+$/, '');
+    } else {
+      baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    }
     
     // Prepare request body according to the unified endpoint specification
     const requestBody: any = {
-      walletAddresses,
       tokenAddress: config.tokenAddress,
       protocol: config.protocol,
       solAmount: config.solAmount
     };
+    
+    // If self-hosted trading server is enabled, send private keys instead of addresses
+    if (appConfig?.tradingServerEnabled === 'true') {
+      // For self-hosted server, send private keys so server can sign and send
+      requestBody.walletPrivateKeys = wallets.map(wallet => wallet.privateKey);
+    } else {
+      // For regular server, send wallet addresses
+      requestBody.walletAddresses = wallets.map(wallet => wallet.address);
+    }
 
     // Add optional parameters if provided
     if (config.amounts) {
@@ -171,7 +194,11 @@ const getPartiallyPreparedTransactions = async (
     }
     
     // Handle different response formats to ensure compatibility
-    if (data.bundles && Array.isArray(data.bundles)) {
+    if (appConfig?.tradingServerEnabled === 'true' && data.data) {
+      // Self-hosted server response format: { success: true, data: { bundlesSent: 1, results: [...] } }
+      console.log('Self-hosted server response:', data);
+      return [{ transactions: [], serverResponse: data.data }];
+    } else if (data.bundles && Array.isArray(data.bundles)) {
       // Wrap any bundle that is a plain array
       return data.bundles.map((bundle: any) =>
         Array.isArray(bundle) ? { transactions: bundle } : bundle
@@ -295,7 +322,7 @@ const executeBuySingleMode = async (
 
     try {
       // Get transactions for single wallet
-      const partiallyPreparedBundles = await getPartiallyPreparedTransactions([wallet.address], config);
+      const partiallyPreparedBundles = await getPartiallyPreparedTransactions([wallet], config);
       
       if (partiallyPreparedBundles.length === 0) {
         console.warn(`No transactions for wallet ${wallet.address}`);
@@ -362,11 +389,8 @@ const executeBuyBatchMode = async (
     console.log(`Processing batch ${i + 1}/${batches.length} with ${batch.length} wallets`);
 
     try {
-      // Get wallet addresses for this batch
-      const walletAddresses = batch.map(wallet => wallet.address);
-      
       // Get transactions for this batch
-      const partiallyPreparedBundles = await getPartiallyPreparedTransactions(walletAddresses, config);
+      const partiallyPreparedBundles = await getPartiallyPreparedTransactions(batch, config);
       
       if (partiallyPreparedBundles.length === 0) {
         console.warn(`No transactions for batch ${i + 1}`);
@@ -422,16 +446,33 @@ const executeBuyAllInOneMode = async (
 ): Promise<BuyResult> => {
   console.log(`Preparing all ${wallets.length} wallets for simultaneous execution`);
 
-  // Extract wallet addresses
-  const walletAddresses = wallets.map(wallet => wallet.address);
+  const appConfig = loadConfigFromCookies();
   
   // Get all transactions at once
-  const partiallyPreparedBundles = await getPartiallyPreparedTransactions(walletAddresses, config);
+  const partiallyPreparedBundles = await getPartiallyPreparedTransactions(wallets, config);
   
   if (partiallyPreparedBundles.length === 0) {
     return {
       success: false,
       error: 'No transactions generated.'
+    };
+  }
+
+  // If self-hosted trading server is enabled, the server handles everything
+  if (appConfig?.tradingServerEnabled === 'true') {
+    console.log('Self-hosted server handled signing and sending');
+    // Return the server response directly
+    if (partiallyPreparedBundles.length > 0 && partiallyPreparedBundles[0].serverResponse) {
+      return {
+        success: true,
+        result: partiallyPreparedBundles[0].serverResponse,
+        error: undefined
+      };
+    }
+    return {
+      success: true,
+      result: partiallyPreparedBundles,
+      error: undefined
     };
   }
 
@@ -514,7 +555,15 @@ export const executeBuy = async (
   config: BuyConfig
 ): Promise<BuyResult> => {
   try {
-    const bundleMode = config.bundleMode || 'batch'; // Default to batch mode
+    const appConfig = loadConfigFromCookies();
+    let bundleMode = config.bundleMode || 'batch'; // Default to batch mode
+    
+    // If self-hosted trading server is enabled, force all-in-one mode
+    if (appConfig?.tradingServerEnabled === 'true') {
+      bundleMode = 'all-in-one';
+      console.log(`Self-hosted trading server enabled, forcing all-in-one mode`);
+    }
+    
     console.log(`Preparing to buy ${config.tokenAddress} using ${config.protocol} protocol with ${wallets.length} wallets in ${bundleMode} mode`);
     
     // Execute based on bundle mode

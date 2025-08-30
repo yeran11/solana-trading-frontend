@@ -6,6 +6,7 @@ export interface TradingConfig {
   tokenAddress: string;
   solAmount?: number;
   sellPercent?: number;
+  tokensAmount?: number;
   bundleMode?: BundleMode;
   batchDelay?: number;
   singleDelay?: number;
@@ -128,7 +129,8 @@ const executeUnifiedSell = async (
     const sellConfig = createSellConfig({
       tokenAddress: config.tokenAddress,
       protocol,
-      sellPercent: config.sellPercent!,
+      sellPercent: config.sellPercent,
+      tokensAmount: config.tokensAmount,
       slippageBps: finalSlippageBps,
       outputMint,
       jitoTipLamports: finalJitoTipLamports,

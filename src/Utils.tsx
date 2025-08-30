@@ -25,6 +25,8 @@ export interface ConfigType {
   bundleMode: string; // Default bundle mode preference ('single', 'batch', 'all-in-one')
   singleDelay: string; // Delay between wallets in single mode (milliseconds)
   batchDelay: string; // Delay between batches in batch mode (milliseconds)
+  tradingServerEnabled: string; // Whether to use self-hosted trading server ('true' or 'false')
+  tradingServerUrl: string; // URL of the self-hosted trading server
 }
 
 export const toggleWallet = (wallets: WalletType[], id: number): WalletType[] => {
@@ -653,6 +655,13 @@ export const loadConfigFromCookies = (): ConfigType | null => {
       }
       if (config.batchDelay === undefined) {
         config.batchDelay = '1000'; // Default 1000ms delay between batches
+      }
+      // Handle backward compatibility for trading server settings
+      if (config.tradingServerEnabled === undefined) {
+        config.tradingServerEnabled = 'false'; // Default to disabled
+      }
+      if (config.tradingServerUrl === undefined) {
+        config.tradingServerUrl = 'localhost:4444'; // Default URL
       }
       return config;
     } catch (error) {

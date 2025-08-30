@@ -541,6 +541,53 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                 </div>
               </div>
 
+              {/* Trading Server Configuration Section */}
+              <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-app-primary font-mono mb-4 flex items-center gap-2">
+                  <Globe size={20} className="color-primary" />
+                  TRADING SERVER
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-app-tertiary border border-app-primary-30 rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium text-app-primary font-mono">Enable Self-Hosted Trading API</div>
+                      <div className="text-xs text-app-secondary font-mono">Use your own trading server instead of default service</div>
+                    </div>
+                    <button
+                      onClick={() => onConfigChange('tradingServerEnabled', config.tradingServerEnabled === 'true' ? 'false' : 'true')}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        config.tradingServerEnabled === 'true' ? 'bg-app-primary-color' : 'bg-app-primary-30'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          config.tradingServerEnabled === 'true' ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  
+                  {config.tradingServerEnabled === 'true' && (
+                    <div>
+                      <label className="block text-sm text-app-secondary font-mono mb-2 uppercase tracking-wider">
+                        Trading Server URL
+                      </label>
+                      <input
+                        type="text"
+                        value={config.tradingServerUrl || 'http://localhost:4444'}
+                        onChange={(e) => onConfigChange('tradingServerUrl', e.target.value)}
+                        className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
+                        placeholder="http://localhost:4444"
+                      />
+                      <div className="text-xs text-app-secondary-80 font-mono mt-1">
+                        Enter the URL of your self-hosted trading API server
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Trading Configuration Section */}
               <div className="bg-app-secondary border border-app-primary-30 rounded-lg p-6">
                 <h3 className="text-lg font-bold text-app-primary font-mono mb-4 flex items-center gap-2">

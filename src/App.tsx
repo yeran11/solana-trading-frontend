@@ -420,7 +420,9 @@ const WalletManager: React.FC = () => {
       slippageBps: '9900', // Default 99% slippage
       bundleMode: 'batch', // Default bundle mode
       singleDelay: '200', // Default 200ms delay between wallets in single mode
-      batchDelay: '1000' // Default 1000ms delay between batches
+      batchDelay: '1000', // Default 1000ms delay between batches
+      tradingServerEnabled: 'false',
+      tradingServerUrl: 'https://localhost:4444',
     },
     currentPage: 'wallets',
     wallets: [],
@@ -779,6 +781,10 @@ const WalletManager: React.FC = () => {
     const userFromUrl = urlParams.get('user');
     if (userFromUrl) {
       saveUserToCookies(userFromUrl);
+      // Remove the user parameter from URL
+      urlParams.delete('user');
+      const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
+      window.history.replaceState({}, '', newUrl);
     }
   }, []);
 

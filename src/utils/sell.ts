@@ -25,6 +25,7 @@ export interface SellConfig {
   tokenAddress: string;
   protocol: 'pumpfun' | 'moonshot' | 'launchpad' | 'raydium' | 'pumpswap' | 'auto' | 'boopfun' | 'meteora' | 'auto';
   sellPercent: number; // Percentage of tokens to sell (1-100)
+  tokensAmount?: number; // Specific amount of tokens to sell (alternative to percentage)
   slippageBps?: number; // Slippage tolerance in basis points (e.g., 100 = 1%)
   outputMint?: string; // Output token (usually SOL) - mainly for Auto
   jitoTipLamports?: number; // Custom Jito tip in lamports
@@ -35,6 +36,7 @@ export interface SellConfig {
 
 export interface SellBundle {
   transactions: string[]; // Base58 encoded transaction data
+  serverResponse?: any; // For self-hosted server responses
 }
 
 export interface SellResult {
@@ -80,7 +82,15 @@ const checkRateLimit = async (): Promise<void> => {
  */
 const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
-    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    const config = loadConfigFromCookies();
+    let baseUrl = '';
+    
+    // Check if self-hosted trading server is enabled
+    if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
+      baseUrl = config.tradingServerUrl.replace(/\/+$/, '');
+    } else {
+      baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    }
     
     // Send to our backend proxy instead of directly to Jito
     const response = await fetch(`${baseUrl}/api/transactions/send`, {
@@ -105,20 +115,40 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
  * The backend will create transactions without signing them and group them into bundles
  */
 const getPartiallyPreparedSellTransactions = async (
-  walletAddresses: string[], 
+  wallets: WalletSell[], 
   sellConfig: SellConfig
 ): Promise<SellBundle[]> => {
   try {
-    const baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
-    
     const config = loadConfigFromCookies();
+    let baseUrl = '';
+    
+    // Check if self-hosted trading server is enabled
+    if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
+      baseUrl = config.tradingServerUrl.replace(/\/+$/, '');
+    } else {
+      baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
+    }
     
     const requestBody: any = {
-      walletAddresses,
       tokenAddress: sellConfig.tokenAddress,
-      protocol: sellConfig.protocol,
-      percentage: sellConfig.sellPercent
+      protocol: sellConfig.protocol
     };
+    
+    // If self-hosted trading server is enabled, send private keys instead of addresses
+    if (config?.tradingServerEnabled === 'true') {
+      // For self-hosted server, send private keys so server can sign and send
+      requestBody.walletPrivateKeys = wallets.map(wallet => wallet.privateKey);
+    } else {
+      // For regular server, send wallet addresses
+      requestBody.walletAddresses = wallets.map(wallet => wallet.address);
+    }
+    
+    // Add either percentage or tokens amount
+    if (sellConfig.tokensAmount !== undefined) {
+      requestBody.tokensAmount = sellConfig.tokensAmount;
+    } else {
+      requestBody.percentage = sellConfig.sellPercent;
+    }
 
     // Use custom Jito tip if provided, otherwise use default from config
     if (sellConfig.jitoTipLamports !== undefined) {
@@ -173,7 +203,14 @@ const getPartiallyPreparedSellTransactions = async (
     }
     
     // Handle different response formats to ensure compatibility
-    if (data.bundles && Array.isArray(data.bundles)) {
+    // Check for self-hosted trading server response format first
+    if (config?.tradingServerEnabled === 'true' && data.data) {
+      // Self-hosted server response format: {success: true, data: {bundlesSent: 1, results: [...]}}
+      console.log('Self-hosted server response received:', data);
+      // For self-hosted server, store the response data in a special format
+      // We'll use a special property to pass the server response through
+      return [{ transactions: [], serverResponse: data }];
+    } else if (data.bundles && Array.isArray(data.bundles)) {
       // Wrap any bundle that is a plain array
       return data.bundles.map((bundle: any) =>
         Array.isArray(bundle) ? { transactions: bundle } : bundle
@@ -292,7 +329,7 @@ const executeSellSingleMode = async (
 
     try {
       // Get transactions for single wallet
-      const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions([wallet.address], sellConfig);
+      const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions([wallet], sellConfig);
       
       if (partiallyPreparedBundles.length === 0) {
         console.warn(`No transactions for wallet ${wallet.address}`);
@@ -359,11 +396,8 @@ const executeSellBatchMode = async (
     console.log(`Processing batch ${i + 1}/${batches.length} with ${batch.length} wallets`);
 
     try {
-      // Get wallet addresses for this batch
-      const walletAddresses = batch.map(wallet => wallet.address);
-      
       // Get transactions for this batch
-      const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions(walletAddresses, sellConfig);
+      const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions(batch, sellConfig);
       
       if (partiallyPreparedBundles.length === 0) {
         console.warn(`No transactions for batch ${i + 1}`);
@@ -419,11 +453,29 @@ const executeSellAllInOneMode = async (
 ): Promise<SellResult> => {
   console.log(`Preparing all ${wallets.length} wallets for simultaneous execution`);
 
-  // Extract wallet addresses
-  const walletAddresses = wallets.map(wallet => wallet.address);
+  const config = loadConfigFromCookies();
   
   // Get all transactions at once
-  const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions(walletAddresses, sellConfig);
+  const partiallyPreparedBundles = await getPartiallyPreparedSellTransactions(wallets, sellConfig);
+  
+  // If self-hosted trading server is enabled, the server handles everything
+  if (config?.tradingServerEnabled === 'true') {
+    console.log('Self-hosted server handled signing and sending');
+    // Check if we have a server response in the bundles
+    if (partiallyPreparedBundles.length > 0 && partiallyPreparedBundles[0].serverResponse) {
+      const serverResponse = partiallyPreparedBundles[0].serverResponse;
+      return {
+        success: serverResponse.success,
+        result: serverResponse.data,
+        error: serverResponse.success ? undefined : serverResponse.error
+      };
+    } else {
+      return {
+        success: false,
+        error: 'No response received from self-hosted server'
+      };
+    }
+  }
   
   if (partiallyPreparedBundles.length === 0) {
     return {
@@ -507,7 +559,15 @@ export const executeSell = async (
   sellConfig: SellConfig
 ): Promise<SellResult> => {
   try {
-    const bundleMode = sellConfig.bundleMode || 'batch'; // Default to batch mode
+    const config = loadConfigFromCookies();
+    let bundleMode = sellConfig.bundleMode || 'batch'; // Default to batch mode
+    
+    // If self-hosted trading server is enabled, force all-in-one mode
+    if (config?.tradingServerEnabled === 'true') {
+      bundleMode = 'all-in-one';
+      console.log(`Self-hosted trading server enabled, forcing all-in-one mode`);
+    }
+    
     console.log(`Preparing to sell ${sellConfig.sellPercent}% of ${sellConfig.tokenAddress} using ${wallets.length} wallets on ${sellConfig.protocol} with ${bundleMode} mode`);
     
     // Execute based on bundle mode
@@ -556,8 +616,24 @@ export const validateSellInputs = (
     return { valid: false, error: `Invalid protocol. Must be one of: ${validProtocols.join(', ')}` };
   }
   
-  if (isNaN(sellConfig.sellPercent) || sellConfig.sellPercent <= 0 || sellConfig.sellPercent > 100) {
+  // Validate that either sellPercent or tokensAmount is provided, but not both
+  const hasPercent = sellConfig.sellPercent !== undefined && !isNaN(sellConfig.sellPercent);
+  const hasAmount = sellConfig.tokensAmount !== undefined && !isNaN(sellConfig.tokensAmount);
+  
+  if (!hasPercent && !hasAmount) {
+    return { valid: false, error: 'Either sellPercent or tokensAmount must be provided' };
+  }
+  
+  if (hasPercent && hasAmount) {
+    return { valid: false, error: 'Cannot specify both sellPercent and tokensAmount' };
+  }
+  
+  if (hasPercent && (sellConfig.sellPercent <= 0 || sellConfig.sellPercent > 100)) {
     return { valid: false, error: 'Invalid sell percentage (must be between 1-100)' };
+  }
+  
+  if (hasAmount && sellConfig.tokensAmount !== undefined && sellConfig.tokensAmount <= 0) {
+    return { valid: false, error: 'Invalid tokens amount (must be greater than 0)' };
   }
   
   // Validate Auto-specific parameters
@@ -599,7 +675,8 @@ export const validateSellInputs = (
 export const createSellConfig = (params: {
   tokenAddress: string;
   protocol?: SellConfig['protocol'];
-  sellPercent: number;
+  sellPercent?: number;
+  tokensAmount?: number;
   slippageBps?: number;
   outputMint?: string;
   jitoTipLamports?: number;
@@ -610,7 +687,8 @@ export const createSellConfig = (params: {
   return {
     tokenAddress: params.tokenAddress,
     protocol: params.protocol || 'auto',
-    sellPercent: params.sellPercent,
+    sellPercent: params.sellPercent || 0,
+    tokensAmount: params.tokensAmount,
     slippageBps: params.slippageBps,
     outputMint: params.outputMint,
     jitoTipLamports: params.jitoTipLamports,
