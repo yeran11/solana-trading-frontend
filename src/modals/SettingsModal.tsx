@@ -519,7 +519,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={config.rpcEndpoint}
+                      value={config.rpcEndpoint || ''}
                       onChange={(e) => onConfigChange('rpcEndpoint', e.target.value)}
                       className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
                       placeholder="Enter RPC endpoint URL"
@@ -532,7 +532,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={config.transactionFee}
+                      value={config.transactionFee || '0.001'}
                       onChange={(e) => onConfigChange('transactionFee', e.target.value)}
                       className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
                       placeholder="0.000005"
@@ -575,10 +575,10 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={config.tradingServerUrl || 'http://localhost:4444'}
+                        value={config.tradingServerUrl || 'http://localhost:7777'}
                         onChange={(e) => onConfigChange('tradingServerUrl', e.target.value)}
                         className="w-full bg-app-tertiary border border-app-primary-40 rounded p-3 text-sm text-app-primary focus-border-primary focus:outline-none cyberpunk-input font-mono"
-                        placeholder="http://localhost:4444"
+                        placeholder="http://localhost:7777"
                       />
                       <div className="text-xs text-app-secondary-80 font-mono mt-1">
                         Enter the URL of your self-hosted trading API server
@@ -609,7 +609,7 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                         <div 
                           key={option.value}
                           className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                            config.bundleMode === option.value 
+                            (config.bundleMode || 'batch') === option.value 
                               ? 'border-app-primary bg-primary-10' 
                               : 'border-app-primary-30 hover:border-primary-50'
                           }`}
@@ -627,11 +627,11 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                               </div>
                             </div>
                             <div className={`w-4 h-4 rounded-full border-2 ${
-                              config.bundleMode === option.value 
+                              (config.bundleMode || 'batch') === option.value 
                                 ? 'border-app-primary bg-app-primary-color' 
                                 : 'border-app-primary-30'
                             }`}>
-                              {config.bundleMode === option.value && (
+                              {(config.bundleMode || 'single') === option.value && (
                                 <div className="w-full h-full rounded-full bg-app-primary-color flex items-center justify-center">
                                   <div className="w-1.5 h-1.5 rounded-full bg-app-primary"></div>
                                 </div>
@@ -719,8 +719,8 @@ const EnhancedSettingsModal: React.FC<EnhancedSettingsModalProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-app-secondary">RPC Endpoint:</span>
-                        <span className="text-app-primary truncate ml-2" title={config.rpcEndpoint}>
-                          {config.rpcEndpoint.length > 30 ? config.rpcEndpoint.substring(0, 30) + '...' : config.rpcEndpoint}
+                        <span className="text-app-primary truncate ml-2" title={config.rpcEndpoint || ''}>
+                          {(config.rpcEndpoint || '').length > 30 ? (config.rpcEndpoint || '').substring(0, 30) + '...' : (config.rpcEndpoint || '')}
                         </span>
                       </div>
                     </div>

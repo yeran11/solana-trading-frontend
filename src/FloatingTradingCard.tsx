@@ -38,7 +38,7 @@ const Tooltip = ({ children, content, position = 'top' }) => {
       {children}
       <div className={`absolute hidden group-hover:block px-3 py-1.5 text-xs font-mono tracking-wide
                     bg-app-primary color-primary rounded-lg backdrop-blur-md
-                    border border-app-primary-40 shadow-lg shadow-black-80
+                    border border-app-primary-60 shadow-lg shadow-app-primary-20
                     ${positionClasses[position]} z-50 whitespace-nowrap`}>
         <div className="relative z-10">{content}</div>
       </div>
@@ -468,7 +468,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
       onMouseDown={handleMouseDown}
     >
       <div 
-        className="relative overflow-hidden p-4 rounded-lg w-80 max-w-[90vw] bg-app-primary-99 backdrop-blur-md border border-app-primary-30 shadow-lg shadow-black-80"
+        className="relative overflow-hidden p-4 rounded-lg w-80 max-w-[90vw] bg-app-primary-99 backdrop-blur-md border-2 border-app-primary-60 shadow-lg shadow-app-primary-40"
       >
         {/* Header with Edit Button */}
         <div className="flex items-center justify-between mb-3">
@@ -485,7 +485,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
                   setIsProtocolDropdownOpen(!isProtocolDropdownOpen);
                 }}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono color-primary font-medium
-                         bg-app-tertiary border border-app-primary-40 hover:bg-app-secondary hover-border-primary-80
+                         bg-app-tertiary border border-app-primary-60 hover:bg-app-secondary hover-border-primary
                          transition-all duration-300 focus:outline-none"
               >
                 <span className="flex items-center">
@@ -504,7 +504,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
               {isProtocolDropdownOpen && (
                 <div 
                   className="absolute z-50 w-48 mt-1 rounded-md bg-app-primary
-                            border border-app-primary-40 shadow-lg shadow-black-80 left-0"
+                            border border-app-primary-60 shadow-lg shadow-app-primary-20 left-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* DEX options */}
@@ -543,7 +543,7 @@ const FloatingTradingCard: React.FC<FloatingTradingCardProps> = ({
               onClick={() => setIsEditMode(!isEditMode)}
               className={`p-1.5 rounded transition-all duration-200
                         ${isEditMode 
-                          ? 'bg-primary-20 border border-app-primary color-primary' 
+                          ? 'bg-primary-30 border border-app-primary-80 color-primary' 
                           : 'hover:bg-primary-20 text-app-secondary-60 hover:color-primary'
                         }`}
             >

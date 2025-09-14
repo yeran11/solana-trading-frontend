@@ -421,8 +421,8 @@ const WalletManager: React.FC = () => {
       bundleMode: 'batch', // Default bundle mode
       singleDelay: '200', // Default 200ms delay between wallets in single mode
       batchDelay: '1000', // Default 1000ms delay between batches
-      tradingServerEnabled: 'false',
-      tradingServerUrl: 'https://localhost:4444',
+      tradingServerEnabled: 'true',
+      tradingServerUrl: 'http://localhost:7777',
     },
     currentPage: 'wallets',
     wallets: [],

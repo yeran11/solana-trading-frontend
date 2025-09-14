@@ -91,8 +91,28 @@ export default defineConfig({
   // Development server configuration
   server: {
     port: 3000,
-    host: true,
-    
-    allowedHosts: ['localhost', '127.0.0.1', '.ngrok-free.app']
+    host: '0.0.0.0',
+
+    // HMR configuration for hot reload
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 3000
+    },
+
+    // Disable strict port to allow fallback
+    strictPort: false,
+
+    // Watch options for file changes
+    watch: {
+      usePolling: true
+    }
+  },
+
+  // Preview server configuration for production build
+  preview: {
+    port: 3000,
+    host: '0.0.0.0',
+    strictPort: false
   }
 });

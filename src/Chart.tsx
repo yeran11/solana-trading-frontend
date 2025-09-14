@@ -489,7 +489,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
           transition={{ duration: 0.3 }}
         >
           <motion.div 
-            className="w-12 h-12 rounded-full border-2 border-t-transparent border-app-primary-30"
+            className="w-12 h-12 rounded-full border-2 border-t-transparent border-cyan-500/60"
             variants={loaderVariants}
             animate="animate"
           />
@@ -507,10 +507,10 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       : 'https://frame.fury.bot/?theme=green';
     
     return (
-      <div className="relative flex-1 overflow-hidden iframe-container">
+      <div className="relative flex-1 overflow-hidden iframe-container border-2 border-cyan-500/60 rounded-lg">
         {renderLoader(frameLoading || isLoadingChart)}
         
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden rounded-lg">
           <iframe 
             ref={iframeRef}
             key={`frame-${iframeKey}`}
@@ -546,31 +546,31 @@ export const ChartPage: React.FC<ChartPageProps> = ({
         variants={pulseVariants}
         initial="initial"
         animate="animate" 
-        className="rounded-full bg-gradient-to-br from-app-secondary to-app-primary p-4 mb-6"
+        className="rounded-full bg-gradient-to-br from-cyan-900/40 to-cyan-600/40 p-4 mb-6"
       >
         <Search className="h-10 w-10 text-app-muted opacity-50" />
       </motion.div>
       
       <motion.h3 
         variants={itemVariants}
-        className="text-lg font-medium text-app-muted mb-2"
+        className="text-lg font-medium text-cyan-300 mb-2"
       >
         Set token address
       </motion.h3>
       
       <motion.p 
         variants={itemVariants}
-        className="text-app-secondary-60 text-sm max-w-md text-center"
+        className="text-cyan-400/60 text-sm max-w-md text-center"
       >
         Enter a valid token address in the search bar above to view the token frame
       </motion.p>
       
       <motion.div
         variants={itemVariants}
-        className="mt-6 flex items-center gap-2 px-4 py-3 rounded-lg bg-primary-10 border border-app-primary-20"
+        className="mt-6 flex items-center gap-2 px-4 py-3 rounded-lg bg-cyan-950/30 border border-cyan-500/60"
       >
-        <AlertCircle size={16} className="color-primary-light" />
-        <span className="text-app-tertiary text-sm">No token selected</span>
+        <AlertCircle size={16} className="text-cyan-400" />
+        <span className="text-cyan-300 text-sm">No token selected</span>
       </motion.div>
     </motion.div>
   );
@@ -580,14 +580,14 @@ export const ChartPage: React.FC<ChartPageProps> = ({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="relative w-full rounded-lg overflow-hidden h-full md:h-full min-h-[calc(100vh-4rem)] md:min-h-full bg-gradient-to-br from-app-primary to-app-secondary"
+      className="relative w-full rounded-lg overflow-hidden h-full md:h-full min-h-[calc(100vh-4rem)] md:min-h-full bg-gradient-to-br from-cyan-950 via-gray-900 to-cyan-950 border-2 border-cyan-500/60"
       style={{
         touchAction: 'manipulation',
         WebkitOverflowScrolling: 'touch'
       }}
     >
       {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-app-secondary-80 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-transparent pointer-events-none" />
       
 
       
@@ -598,7 +598,7 @@ export const ChartPage: React.FC<ChartPageProps> = ({
               animate={{ rotate: 360 }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
             >
-              <BarChart size={24} className="color-primary-light" />
+              <BarChart size={24} className="text-cyan-400" />
             </motion.div>
           </div>
         ) : (

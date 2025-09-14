@@ -35,6 +35,11 @@ const executeUnifiedBuy = async (
     const { loadConfigFromCookies } = await import('../Utils');
     const appConfig = loadConfigFromCookies();
 
+    console.log('=== TRADING.TS BUY DEBUG ===');
+    console.log('Config:', config);
+    console.log('Protocol:', protocol);
+    console.log('Wallets:', wallets.length);
+
     // Use provided slippage or fall back to config default
     let finalSlippageBps = slippageBps;
     if (finalSlippageBps === undefined && appConfig?.slippageBps) {
@@ -76,8 +81,12 @@ const executeUnifiedBuy = async (
       singleDelay: finalSingleDelay
     });
 
-    return await executeBuy(wallets, buyConfig);
+    console.log('Calling executeBuy with config:', buyConfig);
+    const result = await executeBuy(wallets, buyConfig);
+    console.log('executeBuy result:', result);
+    return result;
   } catch (error) {
+    console.error('executeUnifiedBuy error:', error);
     return { success: false, error: error.message };
   }
 };

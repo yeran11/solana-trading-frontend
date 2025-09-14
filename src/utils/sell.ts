@@ -1,6 +1,7 @@
 import { Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { loadConfigFromCookies, loadUserFromCookies } from '../Utils';
+import { loadServerConfig } from './serverConfig';
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -84,9 +85,14 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
     const config = loadConfigFromCookies();
     let baseUrl = '';
-    
-    // Check if self-hosted trading server is enabled
-    if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
+
+    // First check localStorage/persistent storage
+    const savedServerUrl = loadServerConfig();
+    if (savedServerUrl) {
+      baseUrl = savedServerUrl.replace(/\/+$/, '');
+    }
+    // Then check if self-hosted trading server is enabled in config
+    else if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
       baseUrl = config.tradingServerUrl.replace(/\/+$/, '');
     } else {
       baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
@@ -121,9 +127,14 @@ const getPartiallyPreparedSellTransactions = async (
   try {
     const config = loadConfigFromCookies();
     let baseUrl = '';
-    
-    // Check if self-hosted trading server is enabled
-    if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
+
+    // First check localStorage/persistent storage
+    const savedServerUrl = loadServerConfig();
+    if (savedServerUrl) {
+      baseUrl = savedServerUrl.replace(/\/+$/, '');
+    }
+    // Then check if self-hosted trading server is enabled in config
+    else if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
       baseUrl = config.tradingServerUrl.replace(/\/+$/, '');
     } else {
       baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';

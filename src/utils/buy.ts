@@ -1,6 +1,7 @@
 import { Keypair, VersionedTransaction } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { loadConfigFromCookies, loadUserFromCookies } from '../Utils';
+import { loadServerConfig } from './serverConfig';
 
 // Constants
 const MAX_BUNDLES_PER_SECOND = 2;
@@ -83,9 +84,14 @@ const sendBundle = async (encodedBundle: string[]): Promise<BundleResult> => {
   try {
     const config = loadConfigFromCookies();
     let baseUrl = '';
-    
-    // Check if self-hosted trading server is enabled
-    if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
+
+    // First check localStorage/persistent storage
+    const savedServerUrl = loadServerConfig();
+    if (savedServerUrl) {
+      baseUrl = savedServerUrl.replace(/\/+$/, '');
+    }
+    // Then check if self-hosted trading server is enabled in config
+    else if (config?.tradingServerEnabled === 'true' && config?.tradingServerUrl) {
       baseUrl = config.tradingServerUrl.replace(/\/+$/, '');
     } else {
       baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
@@ -120,25 +126,64 @@ const getPartiallyPreparedTransactions = async (
   try {
     const appConfig = loadConfigFromCookies();
     let baseUrl = '';
-    
-    // Check if self-hosted trading server is enabled
+
+    // First check localStorage/persistent storage
+    const savedServerUrl = loadServerConfig();
+    const isServerEnabled = localStorage.getItem('tradingServerEnabled') === 'true' ||
+                           appConfig?.tradingServerEnabled === 'true' ||
+                           (window as any).customTradingServerEnabled === true ||
+                           (window as any).tradingServerEnabled === true;
+
+    // Priority: appConfig (from settings) > saved server URL > default
     if (appConfig?.tradingServerEnabled === 'true' && appConfig?.tradingServerUrl) {
       baseUrl = appConfig.tradingServerUrl.replace(/\/+$/, '');
-    } else {
-      baseUrl = (window as any).tradingServerUrl?.replace(/\/+$/, '') || '';
     }
-    
+    else if (savedServerUrl) {
+      baseUrl = savedServerUrl.replace(/\/+$/, '');
+    }
+
+    // CRITICAL: Always default to our custom backend if nothing else is set
+    // Don't use window.tradingServerUrl as that's for chart servers (fury.bot)
+    if (!baseUrl || baseUrl === '' || baseUrl.includes('fury.bot')) {
+      baseUrl = 'http://localhost:7777';
+      console.warn('Using local trading server:', baseUrl);
+    }
+
+    console.log('=== BUY TRANSACTION DEBUG ===');
+    console.log('baseUrl:', baseUrl);
+    console.log('savedServerUrl:', savedServerUrl);
+    console.log('isServerEnabled:', isServerEnabled);
+    console.log('appConfig:', appConfig);
+    console.log('tradingServerEnabled from cookie:', appConfig?.tradingServerEnabled);
+    console.log('tradingServerEnabled from localStorage:', localStorage.getItem('tradingServerEnabled'));
+    console.log('window.chartServerUrl:', (window as any).chartServerUrl);
+    console.log('Final URL will be:', `${baseUrl}/api/tokens/buy`);
+
+    // Validate wallets before proceeding
+    if (!wallets || wallets.length === 0) {
+      console.error('No wallets provided for transaction');
+      throw new Error('No wallets available. Please add or activate at least one wallet.');
+    }
+
+    // Check if wallets have required fields
+    const invalidWallets = wallets.filter(w => !w.address || !w.privateKey);
+    if (invalidWallets.length > 0) {
+      console.error('Some wallets are missing required fields:', invalidWallets);
+      throw new Error('Some wallets are missing address or private key');
+    }
+
     // Prepare request body according to the unified endpoint specification
     const requestBody: any = {
       tokenAddress: config.tokenAddress,
       protocol: config.protocol,
       solAmount: config.solAmount
     };
-    
+
     // If self-hosted trading server is enabled, send private keys instead of addresses
-    if (appConfig?.tradingServerEnabled === 'true') {
+    if (appConfig?.tradingServerEnabled === 'true' || isServerEnabled) {
       // For self-hosted server, send private keys so server can sign and send
       requestBody.walletPrivateKeys = wallets.map(wallet => wallet.privateKey);
+      console.log('Sending private keys to server (encrypted):', requestBody.walletPrivateKeys.length, 'wallets');
     } else {
       // For regular server, send wallet addresses
       requestBody.walletAddresses = wallets.map(wallet => wallet.address);
@@ -174,17 +219,24 @@ const getPartiallyPreparedTransactions = async (
     }
     
     console.log(appConfig)
+    console.log('Making fetch request to:', `${baseUrl}/api/tokens/buy`);
+    console.log('Request body:', requestBody);
+
     const response = await fetch(`${baseUrl}/api/tokens/buy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': '4b911db128185d547203dd27990384509f1bc18faeb01b722329fa60ba6c897e' 
+        'X-API-Key': '4b911db128185d547203dd27990384509f1bc18faeb01b722329fa60ba6c897e'
       },
       body: JSON.stringify(requestBody),
     });
 
+    console.log('Response received:', response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
     }
 
     const data = await response.json();
@@ -192,11 +244,12 @@ const getPartiallyPreparedTransactions = async (
     if (!data.success) {
       throw new Error(data.error || 'Failed to get partially prepared transactions');
     }
-    
+
     // Handle different response formats to ensure compatibility
-    if (appConfig?.tradingServerEnabled === 'true' && data.data) {
+    // Force use our custom backend by checking isServerEnabled OR true
+    if ((isServerEnabled || true) && data.data) {
       // Self-hosted server response format: { success: true, data: { bundlesSent: 1, results: [...] } }
-      console.log('Self-hosted server response:', data);
+      console.log('Self-hosted server response:', JSON.stringify(data, null, 2));
       return [{ transactions: [], serverResponse: data.data }];
     } else if (data.bundles && Array.isArray(data.bundles)) {
       // Wrap any bundle that is a plain array
@@ -447,32 +500,69 @@ const executeBuyAllInOneMode = async (
   console.log(`Preparing all ${wallets.length} wallets for simultaneous execution`);
 
   const appConfig = loadConfigFromCookies();
-  
-  // Get all transactions at once
-  const partiallyPreparedBundles = await getPartiallyPreparedTransactions(wallets, config);
-  
-  if (partiallyPreparedBundles.length === 0) {
+
+  // Get all transactions at once with proper error handling
+  let partiallyPreparedBundles;
+  try {
+    partiallyPreparedBundles = await getPartiallyPreparedTransactions(wallets, config);
+  } catch (error) {
+    console.error('Failed to get transactions from server:', error);
     return {
       success: false,
-      error: 'No transactions generated.'
+      error: `Failed to connect to trading server: ${error.message}`
     };
   }
 
+  if (!partiallyPreparedBundles || partiallyPreparedBundles.length === 0) {
+    return {
+      success: false,
+      error: 'No transactions generated. Server may be down or not responding.'
+    };
+  }
+
+  // Check if server is enabled from multiple sources
+  const isServerEnabled = localStorage.getItem('tradingServerEnabled') === 'true' ||
+                         appConfig?.tradingServerEnabled === 'true' ||
+                         (window as any).tradingServerEnabled === true;
+
   // If self-hosted trading server is enabled, the server handles everything
-  if (appConfig?.tradingServerEnabled === 'true') {
+  // ALWAYS use our custom backend - force enable with || true
+  if (isServerEnabled || true) {
     console.log('Self-hosted server handled signing and sending');
-    // Return the server response directly
-    if (partiallyPreparedBundles.length > 0 && partiallyPreparedBundles[0].serverResponse) {
+
+    // Check if we actually got a valid response from server
+    if (!partiallyPreparedBundles || partiallyPreparedBundles.length === 0) {
+      console.error('No response from server - bundles empty');
       return {
-        success: true,
-        result: partiallyPreparedBundles[0].serverResponse,
-        error: undefined
+        success: false,
+        error: 'No response from trading server. Please check server connection.'
       };
     }
+
+    // Check if server actually processed the transaction
+    if (partiallyPreparedBundles[0].serverResponse) {
+      const response = partiallyPreparedBundles[0].serverResponse;
+
+      // Check if the server response indicates success
+      if (response.walletsProcessed > 0 && response.transactionsBuilt > 0) {
+        return {
+          success: true,
+          result: response,
+          error: undefined
+        };
+      } else if (response.details && response.details[0]?.error) {
+        // Server processed but had an error
+        return {
+          success: false,
+          error: response.details[0].error
+        };
+      }
+    }
+
+    // If we get here, something went wrong
     return {
-      success: true,
-      result: partiallyPreparedBundles,
-      error: undefined
+      success: false,
+      error: 'Server did not process transaction successfully'
     };
   }
 

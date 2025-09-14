@@ -7,7 +7,11 @@ interface ServerConfigProps {
 }
 
 const ServerConfig: React.FC<ServerConfigProps> = ({ onSubmit }) => {
-  const [serverUrl, setServerUrl] = useState('');
+  // Load saved server URL from localStorage on mount
+  const [serverUrl, setServerUrl] = useState(() => {
+    const saved = localStorage.getItem('tradingServerUrl');
+    return saved || '';
+  });
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
 
@@ -38,10 +42,24 @@ const ServerConfig: React.FC<ServerConfigProps> = ({ onSubmit }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     try {
       const formattedUrl = validateAndFormatUrl(serverUrl.trim());
+
+      // Save to localStorage for persistence
+      localStorage.setItem('tradingServerUrl', formattedUrl);
+      localStorage.setItem('tradingServerEnabled', 'true');
+
+      // Also set on window for immediate use
+      (window as any).tradingServerUrl = formattedUrl;
+      (window as any).tradingServerEnabled = true;
+
+      // Save to cookies as backup
+      document.cookie = `tradingServerUrl=${encodeURIComponent(formattedUrl)}; path=/; max-age=31536000`;
+      document.cookie = `tradingServerEnabled=true; path=/; max-age=31536000`;
+
       onSubmit(formattedUrl);
+      showToast('Server URL saved successfully', 'success');
     } catch (error) {
       setError('Please enter a valid URL');
       showToast('Invalid server URL', 'error');

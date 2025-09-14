@@ -202,19 +202,20 @@ export const initStyles = () => {
   }
 
   .split-custom .gutter-horizontal:hover {
-    background-color: var(--color-primary-30);
+    background-color: rgba(0, 255, 255, 0.4);
   }
 
   .split-custom .gutter-horizontal::before,
   .split-custom .gutter-horizontal::after {
     content: "";
     position: absolute;
-    width: 1px;
-    height: 15px;
-    background-color: var(--color-primary-70);
+    width: 2px;
+    height: 20px;
+    background-color: rgba(0, 255, 255, 0.8);
     left: 50%;
     transform: translateX(-50%);
     transition: all 0.3s ease;
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
   }
 
   .split-custom .gutter-horizontal::before {
@@ -227,8 +228,9 @@ export const initStyles = () => {
 
   .split-custom .gutter-horizontal:hover::before,
   .split-custom .gutter-horizontal:hover::after {
-    background-color: var(--color-primary);
-    box-shadow: 0 0 10px var(--color-primary-70);
+    background-color: #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.9), 0 0 5px rgba(0, 255, 255, 0.6);
+    height: 25px;
   }
 
   /* Neo-futuristic table styling */

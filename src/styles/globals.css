@@ -37,15 +37,15 @@
   height: 20px;
   border-radius: 50%;
   background: var(--color-primary);
-  border: 2px solid var(--color-bg-primary);
+  border: 2px solid #00ffff;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(2, 179, 109, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 255, 255, 0.5);
   transition: all 0.2s ease;
 }
 
 .market-cap-slider::-webkit-slider-thumb:hover {
   background: var(--color-primary-light);
-  box-shadow: 0 4px 12px rgba(2, 179, 109, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 255, 255, 0.7);
   transform: scale(1.1);
 }
 
@@ -54,15 +54,15 @@
   height: 20px;
   border-radius: 50%;
   background: var(--color-primary);
-  border: 2px solid var(--color-bg-primary);
+  border: 2px solid #00ffff;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(2, 179, 109, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 255, 255, 0.5);
   transition: all 0.2s ease;
 }
 
 .market-cap-slider::-moz-range-thumb:hover {
   background: var(--color-primary-light);
-  box-shadow: 0 4px 12px rgba(2, 179, 109, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 255, 255, 0.7);
   transform: scale(1.1);
 }
 
@@ -79,7 +79,7 @@
 }
 
 .market-cap-slider:focus {
-  box-shadow: 0 0 0 3px rgba(2, 179, 109, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.2);
 }
 
 @keyframes slideProgress {
@@ -101,23 +101,23 @@
 
   /* Color Palette */
   /* Primary Colors */
-  --color-primary: #02b36d;
-  --color-primary-light: #04d47c;
-  --color-primary-dark: #01a35f;
-  --color-primary-darker: #029359;
+  --color-primary: #00ffff;
+  --color-primary-light: #66ffff;
+  --color-primary-dark: #00cccc;
+  --color-primary-darker: #00aaaa;
   
-  /* Primary with opacity variations */
-  --color-primary-05: rgba(2, 179, 109, 0.05);
-  --color-primary-10: rgba(2, 179, 109, 0.1);
-  --color-primary-15: rgba(2, 179, 109, 0.15);
-  --color-primary-20: rgba(2, 179, 109, 0.2);
-  --color-primary-30: rgba(2, 179, 109, 0.3);
-  --color-primary-40: rgba(2, 179, 109, 0.4);
-  --color-primary-50: rgba(2, 179, 109, 0.5);
-  --color-primary-60: rgba(2, 179, 109, 0.6);
-  --color-primary-70: rgba(2, 179, 109, 0.7);
-  --color-primary-80: rgba(2, 179, 109, 0.8);
-  --color-primary-90: rgba(2, 179, 109, 0.9);
+  /* Primary with opacity variations - Vibrant Cyan */
+  --color-primary-05: rgba(0, 255, 255, 0.08);
+  --color-primary-10: rgba(0, 255, 255, 0.15);
+  --color-primary-15: rgba(0, 255, 255, 0.20);
+  --color-primary-20: rgba(0, 255, 255, 0.25);
+  --color-primary-30: rgba(0, 255, 255, 0.35);
+  --color-primary-40: rgba(0, 255, 255, 0.45);
+  --color-primary-50: rgba(0, 255, 255, 0.55);
+  --color-primary-60: rgba(0, 255, 255, 0.65);
+  --color-primary-70: rgba(0, 255, 255, 0.75);
+  --color-primary-80: rgba(0, 255, 255, 0.85);
+  --color-primary-90: rgba(0, 255, 255, 0.95);
   
   /* Background Colors */
   --color-bg-primary: #050a0e;
@@ -144,14 +144,14 @@
   --color-text-faded: rgba(125, 223, 189, 0.4);
   --color-text-secondary-90: rgba(125, 223, 189, 0.9);
   
-  /* Border Colors */
-  --color-border-primary: var(--color-primary-40);
-  --color-border-secondary: var(--color-primary-20);
-  --color-border-tertiary: var(--color-primary-10);
-  --color-border-hover: var(--color-primary);
+  /* Border Colors - Enhanced Cyan */
+  --color-border-primary: rgba(0, 255, 255, 0.6);
+  --color-border-secondary: rgba(0, 255, 255, 0.4);
+  --color-border-tertiary: rgba(0, 255, 255, 0.3);
+  --color-border-hover: #00ffff;
   
   /* Status Colors */
-  --color-success: #00ff88;
+  --color-success: #00ffff;
   --color-error: #ff305c;
   --color-error-alt: #ff3232;
   --color-warning: #ff6b6b;
@@ -172,20 +172,20 @@
   --color-warning-color: #ff6b6b;
   
   /* Ping Status Colors */
-  --color-ping-good: #10b981;
+  --color-ping-good: #00ffff;
   --color-ping-medium: #f59e0b;
   --color-ping-poor: #ef4444;
   
   /* Ping Status with opacity */
-  --color-ping-good-10: rgba(16, 185, 129, 0.1);
-  --color-ping-good-05: rgba(16, 185, 129, 0.05);
+  --color-ping-good-10: rgba(0, 255, 255, 0.1);
+  --color-ping-good-05: rgba(0, 255, 255, 0.05);
   --color-ping-medium-20: rgba(245, 158, 11, 0.2);
   --color-ping-poor-10: rgba(239, 68, 68, 0.1);
   --color-ping-poor-05: rgba(220, 38, 38, 0.05);
   
-  /* Scrollbar Colors */
-  --color-scrollbar-thumb: rgba(11, 82, 46, 0.5);
-  --color-scrollbar-track: transparent;
+  /* Scrollbar Colors - Vibrant Cyan */
+  --color-scrollbar-thumb: rgba(0, 255, 255, 0.6);
+  --color-scrollbar-track: rgba(0, 255, 255, 0.05);
 }
 
 /* Utility classes for consistent color usage */
@@ -254,7 +254,7 @@
 }
 
 .border-app-primary-40 {
-  border-color: var(--color-primary-40);
+  border-color: rgba(0, 255, 255, 0.55);
 }
 
 .border-app-primary-20 {
@@ -262,11 +262,11 @@
 }
 
 .border-app-primary-70 {
-  border-color: rgba(2, 179, 109, 0.7);
+  border-color: rgba(0, 255, 255, 0.8);
 }
 
 .border-app-primary-80 {
-  border-color: var(--color-primary-80);
+  border-color: rgba(0, 255, 255, 0.9);
 }
 
 /* Text color utilities */
@@ -301,19 +301,19 @@
 }
 
 .hover-border-primary-40:hover {
-  border-color: var(--color-primary-40);
+  border-color: rgba(0, 255, 255, 0.55);
 }
 
 .hover-border-primary-30:hover {
-  border-color: var(--color-primary-30);
+  border-color: rgba(0, 255, 255, 0.45);
 }
 
 .hover-border-primary-50:hover {
-  border-color: rgba(2, 179, 109, 0.5);
+  border-color: rgba(0, 255, 255, 0.65);
 }
 
 .hover-border-primary-60:hover {
-  border-color: var(--color-primary-60);
+  border-color: rgba(0, 255, 255, 0.75);
 }
 
 .hover-border-error-alt:hover {
@@ -381,7 +381,7 @@
 }
 
 .bg-primary-50 {
-  background-color: rgba(2, 179, 109, 0.5);
+  background-color: rgba(0, 255, 255, 0.5);
 }
 
 .bg-primary-60 {
@@ -389,15 +389,15 @@
 }
 
 .bg-primary-05 {
-  background-color: rgba(2, 179, 109, 0.05);
+  background-color: rgba(0, 255, 255, 0.05);
 }
 
 .bg-primary-08 {
-  background-color: rgba(2, 179, 109, 0.08);
+  background-color: rgba(0, 255, 255, 0.08);
 }
 
 .bg-primary-15 {
-  background-color: rgba(2, 179, 109, 0.15);
+  background-color: rgba(0, 255, 255, 0.15);
 }
 
 .bg-app-primary-60 {
@@ -455,11 +455,11 @@
   background-image: linear-gradient(to bottom, var(--color-error-05) 50%, var(--color-error-10) 50%);
 }
 
-/* Cyberpunk grid background */
+/* Cyberpunk grid background - Enhanced Cyan Grid */
 .bg-cyberpunk-grid {
   background-image: 
-    linear-gradient(var(--color-primary-20) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-primary-20) 1px, transparent 1px);
+    linear-gradient(rgba(0, 255, 255, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.3) 1px, transparent 1px);
   background-size: 20px 20px;
   background-position: center center;
 }
@@ -547,27 +547,27 @@
 
 /* Border variants with different opacities */
 .border-app-primary-10 {
-  border-color: var(--color-primary-10);
+  border-color: rgba(0, 255, 255, 0.2);
 }
 
 .border-app-primary-15 {
-  border-color: rgba(2, 179, 109, 0.15);
+  border-color: rgba(0, 255, 255, 0.25);
 }
 
 .border-app-primary-20 {
-  border-color: var(--color-primary-20);
+  border-color: rgba(0, 255, 255, 0.35);
 }
 
 .border-app-primary-30 {
-  border-color: var(--color-primary-30);
+  border-color: rgba(0, 255, 255, 0.45);
 }
 
 .border-primary-50 {
-  border-color: rgba(2, 179, 109, 0.5);
+  border-color: rgba(0, 255, 255, 0.65);
 }
 
 .border-app-primary-60 {
-  border-color: var(--color-primary-60);
+  border-color: rgba(0, 255, 255, 0.75);
 }
 
 .border-app-primary-80 {
@@ -605,13 +605,13 @@
 
 /* Gradient utilities */
 .from-app-primary-05 {
-  --tw-gradient-from: rgba(2, 179, 109, 0.05);
+  --tw-gradient-from: rgba(0, 255, 255, 0.05);
   --tw-gradient-to: rgb(2 179 109 / 0);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
 .to-app-primary-05 {
-  --tw-gradient-to: rgba(2, 179, 109, 0.05);
+  --tw-gradient-to: rgba(0, 255, 255, 0.05);
 }
 
 .from-app-primary-20 {
@@ -660,11 +660,11 @@
 }
 
 .to-primary-90 {
-  --tw-gradient-to: rgba(2, 179, 109, 0.9);
+  --tw-gradient-to: rgba(0, 255, 255, 0.9);
 }
 
 .from-primary-90 {
-  --tw-gradient-from: rgba(2, 179, 109, 0.9);
+  --tw-gradient-from: rgba(0, 255, 255, 0.9);
   --tw-gradient-to: rgb(2 179 109 / 0);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
@@ -674,7 +674,7 @@
 }
 
 .hover-from-primary-90:hover {
-  --tw-gradient-from: rgba(2, 179, 109, 0.9);
+  --tw-gradient-from: rgba(0, 255, 255, 0.9);
 }
 
 .hover-shadow-app-primary-60:hover {
@@ -698,24 +698,24 @@
   --tw-gradient-to: rgba(5, 8, 10, 0.5);
 }
 
-/* Shadow utilities */
+/* Shadow utilities - Enhanced Cyan Glow */
 .shadow-app-primary-15 {
-  --tw-shadow-colored: 0 10px 15px -3px var(--color-primary-15), 0 4px 6px -4px var(--color-primary-15);
+  --tw-shadow-colored: 0 10px 15px -3px rgba(0, 255, 255, 0.25), 0 4px 6px -4px rgba(0, 255, 255, 0.25);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
 .shadow-app-primary-20 {
-  --tw-shadow-colored: 0 10px 15px -3px var(--color-primary-20), 0 4px 6px -4px var(--color-primary-20);
+  --tw-shadow-colored: 0 10px 15px -3px rgba(0, 255, 255, 0.35), 0 4px 6px -4px rgba(0, 255, 255, 0.35);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
 .shadow-app-primary-40 {
-  --tw-shadow-colored: 0 10px 15px -3px var(--color-primary-40), 0 4px 6px -4px var(--color-primary-40);
+  --tw-shadow-colored: 0 10px 15px -3px rgba(0, 255, 255, 0.5), 0 4px 6px -4px rgba(0, 255, 255, 0.5);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
 .shadow-app-primary-60 {
-  --tw-shadow-colored: 0 10px 15px -3px var(--color-primary-60), 0 4px 6px -4px var(--color-primary-60);
+  --tw-shadow-colored: 0 10px 15px -3px rgba(0, 255, 255, 0.7), 0 4px 6px -4px rgba(0, 255, 255, 0.7);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
@@ -744,9 +744,9 @@
   box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.8);
 }
 
-/* Special glow shadow */
+/* Special glow shadow - Enhanced Cyan */
 .shadow-glow-primary {
-  box-shadow: 0 0 10px rgba(2, 179, 109, 0.3);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 0 10px rgba(0, 255, 255, 0.4);
 }
 
 /* Disabled states */

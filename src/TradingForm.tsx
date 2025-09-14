@@ -536,10 +536,10 @@ const TradingCard = ({
             setIsDropdownOpen(!isDropdownOpen);
           }}
           className={`flex items-center justify-between px-1.5 py-0.5 rounded
-                   bg-app-primary-60 text-app-tertiary border border-app-primary-40
-                   hover-bg-primary-20 hover-border-primary-80
+                   bg-cyan-900/30 text-cyan-300 border-2 border-cyan-500/60
+                   hover:bg-cyan-500/20 hover:border-cyan-400
                    transition-all duration-300 text-[10px] font-mono min-w-[60px]
-                   ${isDropdownOpen ? 'shadow-glow-primary' : ''}`}
+                   ${isDropdownOpen ? 'shadow-lg shadow-cyan-400/50' : ''}`}
         >
           <span className="truncate flex items-center">
             {selectedDex === 'auto' ? (
@@ -552,22 +552,22 @@ const TradingCard = ({
             )}
           </span>
           <div className={`transform transition-transform duration-300 ml-0.5 ${isDropdownOpen ? 'rotate-180' : ''}`}>
-            <ChevronDown size={10} className="color-primary" />
+            <ChevronDown size={10} className="text-cyan-400" />
           </div>
         </button>
 
         {isDropdownOpen && (
           <div 
-            className="fixed z-[9999] w-32 mt-1 rounded-md bg-app-primary
-                      border border-app-primary-40 shadow-lg shadow-black-80"
+            className="fixed z-[9999] w-32 mt-1 rounded-md bg-gray-900/95
+                      border-2 border-cyan-500/60 shadow-lg shadow-cyan-400/30"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="py-0.5">
               {dexOptions.filter(dex => dex.value !== selectedDex).map((dex) => (
                 <button
                   key={dex.value}
-                  className="w-full px-2 py-1 text-left text-app-tertiary text-[10px] font-mono
-                         hover-bg-primary-20 transition-colors duration-200 flex items-center gap-1"
+                  className="w-full px-2 py-1 text-left text-cyan-300 text-[10px] font-mono
+                         hover:bg-cyan-500/20 transition-colors duration-200 flex items-center gap-1"
                   onClick={(e) => handleDexSelect(dex.value, e)}
                 >
                   {dex.value === 'auto' ? (
@@ -1089,32 +1089,32 @@ const TradingCard = ({
     >
       {/* Cyberpunk corner accents */}
       <div className="absolute top-0 left-0 w-24 h-24 pointer-events-none">
-        <div className="absolute top-0 left-0 w-px h-8 bg-gradient-to-b from-app-primary-color to-transparent"></div>
-        <div className="absolute top-0 left-0 w-8 h-px bg-gradient-to-r from-app-primary-color to-transparent"></div>
+        <div className="absolute top-0 left-0 w-px h-8 bg-gradient-to-b from-cyan-400 to-transparent"></div>
+        <div className="absolute top-0 left-0 w-8 h-px bg-gradient-to-r from-cyan-400 to-transparent"></div>
       </div>
       <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none">
-        <div className="absolute top-0 right-0 w-px h-8 bg-gradient-to-b from-app-primary-color to-transparent"></div>
-        <div className="absolute top-0 right-0 w-8 h-px bg-gradient-to-l from-app-primary-color to-transparent"></div>
+        <div className="absolute top-0 right-0 w-px h-8 bg-gradient-to-b from-cyan-400 to-transparent"></div>
+        <div className="absolute top-0 right-0 w-8 h-px bg-gradient-to-l from-cyan-400 to-transparent"></div>
       </div>
       <div className="absolute bottom-0 left-0 w-24 h-24 pointer-events-none">
-        <div className="absolute bottom-0 left-0 w-px h-8 bg-gradient-to-t from-app-primary-color to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-8 h-px bg-gradient-to-r from-app-primary-color to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-px h-8 bg-gradient-to-t from-cyan-400 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-8 h-px bg-gradient-to-r from-cyan-400 to-transparent"></div>
       </div>
       <div className="absolute bottom-0 right-0 w-24 h-24 pointer-events-none">
-        <div className="absolute bottom-0 right-0 w-px h-8 bg-gradient-to-t from-app-primary-color to-transparent"></div>
-        <div className="absolute bottom-0 right-0 w-8 h-px bg-gradient-to-l from-app-primary-color to-transparent"></div>
+        <div className="absolute bottom-0 right-0 w-px h-8 bg-gradient-to-t from-cyan-400 to-transparent"></div>
+        <div className="absolute bottom-0 right-0 w-8 h-px bg-gradient-to-l from-cyan-400 to-transparent"></div>
       </div>
 
       {/* Main Tabs - Orders and Trading */}
       {!isFloatingCardOpen && (
-        <div className="flex bg-app-primary-60 border-b border-app-primary-20">
+        <div className="flex bg-cyan-900/30 border-b-2 border-cyan-500/60">
           {/* Orders Tab - Smaller */}
           <button
             onClick={() => setActiveMainTab('orders')}
             className={`px-3 py-2 text-xs font-mono tracking-wider transition-all duration-200 ${
               activeMainTab === 'orders'
-                ? 'bg-app-primary-40 color-primary border-r border-app-primary-60'
-                : 'bg-transparent text-app-secondary-40 hover:text-app-secondary-60 border-r border-app-primary-20'
+                ? 'bg-cyan-500/30 text-cyan-400 border-r-2 border-cyan-400'
+                : 'bg-transparent text-cyan-300/60 hover:text-cyan-300 border-r-2 border-cyan-500/60'
             }`}
           >
             <ClipboardList size={14} />
@@ -1129,8 +1129,8 @@ const TradingCard = ({
               }}
               className={`flex-1 py-3 px-4 text-sm font-mono tracking-wider transition-all duration-200 ${
                 activeMainTab === 'trading' && activeTradeType === 'buy'
-                  ? 'bg-app-primary-color text-black font-medium'
-                  : 'bg-transparent text-app-secondary-60 hover-text-app-secondary'
+                  ? 'bg-cyan-400 text-gray-900 font-medium shadow-lg shadow-cyan-400/50'
+                  : 'bg-transparent text-cyan-300/60 hover:text-cyan-300'
               }`}
             >
               BUY
@@ -1151,15 +1151,15 @@ const TradingCard = ({
           </div>
           
           {/* Wallet Counter */}
-          <div className="flex items-center px-3 py-2 border-l border-app-primary-20">
-            <div className="flex items-center gap-1 text-xs font-mono text-app-secondary-60">
-              <span className="color-primary">{countActiveWallets(wallets)}</span>
+          <div className="flex items-center px-3 py-2 border-l-2 border-cyan-500/60">
+            <div className="flex items-center gap-1 text-xs font-mono text-cyan-300/80">
+              <span className="text-cyan-400">{countActiveWallets(wallets)}</span>
               <svg 
                 width="12" 
                 height="12" 
                 viewBox="0 0 24 24" 
                 fill="none" 
-                className="color-primary"
+                className="text-cyan-400"
               >
                 <path 
                   d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2h18zM3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8H3zm13 4h2v2h-2v-2z" 
@@ -1173,13 +1173,13 @@ const TradingCard = ({
 
       {/* Order Type Tabs - Only show for trading tab */}
       {!isFloatingCardOpen && activeMainTab === 'trading' && (
-        <div className="flex items-center justify-between px-4 py-2 bg-app-primary-40 border-b border-app-primary-10">
+        <div className="flex items-center justify-between px-4 py-2 bg-cyan-900/20 border-b-2 border-cyan-500/60">
           <div className="flex gap-4">
             <button
               onClick={() => setOrderType('market')}
               className={`text-xs font-mono tracking-wider transition-all duration-200 ${
                 orderType === 'market'
-                  ? 'color-primary border-b-2 border-app-primary-color pb-1'
+                  ? 'color-primary border-b-2 border-cyan-400 pb-1'
                   : 'text-app-secondary-60 hover-text-app-secondary pb-1'
               }`}
             >
@@ -1189,7 +1189,7 @@ const TradingCard = ({
               onClick={() => setOrderType('limit')}
               className={`text-xs font-mono tracking-wider transition-all duration-200 ${
                 orderType === 'limit'
-                  ? 'color-primary border-b-2 border-app-primary-color pb-1'
+                  ? 'color-primary border-b-2 border-cyan-400 pb-1'
                   : 'text-app-secondary-60 hover-text-app-secondary pb-1'
               }`}
             >
@@ -1203,7 +1203,7 @@ const TradingCard = ({
               <CustomSelect />
               <button
                 onClick={onOpenFloating}
-                className="p-1.5 rounded hover-bg-primary-20 text-app-secondary-60 hover:color-primary transition-all duration-200"
+                className="p-1.5 rounded hover:bg-cyan-500/20 text-cyan-300/60 hover:text-cyan-400 transition-all duration-200"
                 title="Detach"
               >
                 <Move size={14} />
@@ -1226,14 +1226,14 @@ const TradingCard = ({
                     ACTIVE ORDERS
                   </span>
                   {isLoadingOrders && (
-                    <Loader2 size={12} className="animate-spin color-primary" />
+                    <Loader2 size={12} className="animate-spin text-cyan-400" />
                   )}
                 </div>
                 <div className="flex gap-1">
                   <button
                     onClick={loadActiveOrders}
                     disabled={isLoadingOrders}
-                    className="p-1 bg-app-primary-60 border border-app-primary-40 color-primary hover-bg-primary-20 rounded transition-all duration-200 disabled:opacity-50"
+                    className="p-1 bg-cyan-900/30 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/20 rounded transition-all duration-200 disabled:opacity-50"
                     title="Refresh orders"
                   >
                     <RefreshCw size={12} />
@@ -1245,7 +1245,7 @@ const TradingCard = ({
               {isLoadingOrders ? (
                 <div className="text-center py-8">
                   <div className="flex items-center justify-center gap-2 mb-2">
-                    <Loader2 size={16} className="animate-spin color-primary" />
+                    <Loader2 size={16} className="animate-spin text-cyan-400" />
                     <span className="text-app-secondary-60 text-sm font-mono">Loading orders...</span>
                   </div>
                 </div>
@@ -1410,7 +1410,7 @@ const TradingCard = ({
                     onChange={handleAmountChange}
                     placeholder="0.0"
                     disabled={!tokenAddress || isLoading}
-                    className="w-full px-2 py-2 bg-app-primary-80-alpha border border-app-primary-40 rounded-lg 
+                    className="w-full px-2 py-2 bg-app-primary-80-alpha border-2 border-app-primary-60 rounded-lg 
                              text-app-primary placeholder-app-secondary-60 font-mono text-sm 
                              focus:outline-none focus-border-primary focus:ring-1 focus:ring-app-primary-40 
                              transition-all duration-300 shadow-inner-black-80
@@ -1418,7 +1418,7 @@ const TradingCard = ({
                   />
                   {isLoading && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2 size={16} className="animate-spin color-primary" />
+                      <Loader2 size={16} className="animate-spin text-cyan-400" />
                     </div>
                   )}
                 </div>
@@ -1506,7 +1506,7 @@ const TradingCard = ({
                     type="button"
                     onClick={() => setShowCalendar(!showCalendar)}
                     disabled={!tokenAddress || isCreatingLimitOrder}
-                    className="w-full px-2 py-2 bg-app-primary-80-alpha border border-app-primary-40 rounded-lg 
+                    className="w-full px-2 py-2 bg-app-primary-80-alpha border-2 border-app-primary-60 rounded-lg 
                              text-app-primary placeholder-app-secondary-60 font-mono text-sm 
                              focus:outline-none focus-border-primary focus:ring-1 focus:ring-app-primary-40 
                              transition-all duration-300 shadow-inner-black-80
@@ -1575,10 +1575,10 @@ const TradingCard = ({
                   }}
                   placeholder="0.0"
                   disabled={!tokenAddress || isCreatingLimitOrder}
-                  className="w-full px-2 py-2 bg-app-primary-80-alpha border border-app-primary-40 rounded-lg 
-                           text-app-primary placeholder-app-secondary-60 font-mono text-sm 
-                           focus:outline-none focus-border-primary focus:ring-1 focus:ring-app-primary-40 
-                           transition-all duration-300 shadow-inner-black-80
+                  className="w-full px-2 py-2 bg-cyan-950/40 border-2 border-cyan-500/60 rounded-lg 
+                           text-cyan-300 placeholder:text-cyan-600 font-mono text-sm 
+                           focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/40 
+                           transition-all duration-300 shadow-inner
                            disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -1604,10 +1604,10 @@ const TradingCard = ({
                   }}
                   placeholder="0.0"
                   disabled={true}
-                  className="w-full px-2 py-2 bg-app-primary-80-alpha border border-app-primary-40 rounded-lg 
-                           text-app-primary placeholder-app-secondary-60 font-mono text-sm 
-                           focus:outline-none focus-border-primary focus:ring-1 focus:ring-app-primary-40 
-                           transition-all duration-300 shadow-inner-black-80
+                  className="w-full px-2 py-2 bg-cyan-950/40 border-2 border-cyan-500/60 rounded-lg 
+                           text-cyan-300 placeholder:text-cyan-600 font-mono text-sm 
+                           focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/40 
+                           transition-all duration-300 shadow-inner
                            disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -1633,9 +1633,9 @@ const TradingCard = ({
                       }
                     }}
                     disabled={!tokenAddress || isCreatingLimitOrder || !baseMarketCap}
-                    className="text-xs font-mono color-primary bg-app-primary-90-alpha border border-app-primary-30 rounded px-1 py-0.5 text-right w-16
+                    className="text-xs font-mono text-cyan-400 bg-cyan-950/40 border-2 border-cyan-500/60 rounded px-1 py-0.5 text-right w-16
                              disabled:opacity-50 disabled:cursor-not-allowed
-                             hover:border-app-primary-40 focus:border-app-primary-50 focus:bg-app-primary-80-alpha focus:outline-none
+                             hover:border-cyan-400 focus:border-cyan-300 focus:bg-cyan-900/40 focus:outline-none
                              transition-all duration-200"
                   />
                 </div>
@@ -1654,7 +1654,7 @@ const TradingCard = ({
                   />
                 </div>
                 {baseMarketCap > 0 && (
-                  <div className="bg-primary-10 border border-app-primary-20 rounded-lg p-2">
+                  <div className="bg-cyan-950/30 border-2 border-cyan-500/60 rounded-lg p-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-mono text-app-secondary-60 uppercase">Target Market Cap:</span>
                       <span className="text-xs font-mono color-primary">
@@ -1667,7 +1667,7 @@ const TradingCard = ({
 
               {/* Calculated Amount Display */}
               {((activeTradeType === 'buy' && limitOrderTokenAmount) || (activeTradeType === 'sell' && limitOrderSolAmount)) && (
-                <div className="bg-primary-10 border border-app-primary-20 rounded-lg p-2">
+                <div className="bg-cyan-950/30 border-2 border-cyan-500/60 rounded-lg p-2">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-mono text-app-secondary-60 uppercase">
                       {activeTradeType === 'buy' ? 'Calculated Token Amount:' : 'Calculated SOL Amount:'}
@@ -1681,7 +1681,7 @@ const TradingCard = ({
 
               {/* Price Display */}
               {limitOrderPrice && (
-                <div className="bg-primary-10 border border-app-primary-20 rounded-lg p-2">
+                <div className="bg-cyan-950/30 border-2 border-cyan-500/60 rounded-lg p-2">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-mono text-app-secondary-60 uppercase">Price:</span>
                     <span className="text-xs font-mono color-primary">

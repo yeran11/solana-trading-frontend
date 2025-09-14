@@ -35,7 +35,8 @@ interface ServerInfo {
   ping?: number;
 }
 
-const DEFAULT_REGIONAL_SERVERS: ServerInfo[] = [
+// These are chart/frame servers, NOT trading servers
+const DEFAULT_CHART_SERVERS: ServerInfo[] = [
   { id: 'us', name: 'United States', url: 'https://us.fury.bot/', region: 'US', flag: '🇺🇸' },
   { id: 'de', name: 'Germany', url: 'https://de.fury.bot/', region: 'DE', flag: '🇩🇪' },
 ];
@@ -259,7 +260,7 @@ const Root = () => {
     if (isConnected) {
       setServerUrl(server.url);
       setCurrentServer(server);
-      window.tradingServerUrl = server.url;
+      window.chartServerUrl = server.url;
       window.serverRegion = server.region;
       Cookies.set(SERVER_URL_COOKIE, server.url, { expires: 30 });
       Cookies.set(SERVER_REGION_COOKIE, server.id, { expires: 30 });
@@ -296,7 +297,7 @@ const Root = () => {
         
         setCurrentServer(customServer);
         setServerUrl(url);
-        window.tradingServerUrl = url;
+        window.chartServerUrl = url;
         window.serverRegion = 'Custom';
         Cookies.set(SERVER_URL_COOKIE, url, { expires: 30 });
         Cookies.set(SERVER_REGION_COOKIE, 'custom', { expires: 30 });
@@ -365,7 +366,7 @@ const Root = () => {
       // Always discover all available servers first
       console.log('Discovering all available servers...');
       const allServersWithPing = await Promise.all(
-        DEFAULT_REGIONAL_SERVERS.map(async (server) => {
+        DEFAULT_CHART_SERVERS.map(async (server) => {
           const isConnected = await checkServerConnection(server.url);
           if (!isConnected) {
             return { ...server, ping: Infinity };
@@ -400,7 +401,7 @@ const Root = () => {
           console.log('Saved server is reachable, using it:', savedServer.name);
           setServerUrl(savedUrl);
           setCurrentServer(savedServer);
-          window.tradingServerUrl = savedUrl;
+          window.chartServerUrl = savedUrl;
           window.serverRegion = savedServer.region;
           setIsChecking(false);
           
@@ -423,7 +424,7 @@ const Root = () => {
         console.log('Using best available server:', bestServer.name);
         setServerUrl(bestServer.url);
         setCurrentServer(bestServer);
-        window.tradingServerUrl = bestServer.url;
+        window.chartServerUrl = bestServer.url;
         window.serverRegion = bestServer.region;
         Cookies.set(SERVER_URL_COOKIE, bestServer.url, { expires: 30 });
         Cookies.set(SERVER_REGION_COOKIE, bestServer.id, { expires: 30 });

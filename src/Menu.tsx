@@ -166,7 +166,7 @@ const ServiceSelector = () => {
         >
           <img 
             src={logo} 
-            alt="Raze Bundler" 
+            alt="ARCa" 
             className="h-8 filter drop-shadow-[0_0_8px_var(--color-primary-70)]" 
           />
         </motion.div>
@@ -227,7 +227,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="Launchpad" 
-                      url="https://app.Raze.bot"
+                      url="https://arca.app"
                       description="Launchpad"
                     />
                   </motion.div>
@@ -250,7 +250,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="Docs" 
-                      url="https://docs.Raze.bot"
+                      url="https://docs.arca.app"
                       description="Documentation"
                     />
                   </motion.div>
@@ -269,7 +269,7 @@ const ServiceSelector = () => {
                         </svg>
                       </div>} 
                       label="GitHub" 
-                      url="https://github.com/Razedotbot"
+                      url="https://github.com/ARCa"
                       description="GitHub Repository"
                     />
                   </motion.div>

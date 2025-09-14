@@ -109,7 +109,7 @@ const TRADING_STRATEGIES_COOKIE_KEY = 'tradingStrategies';
 const USER_COOKIE_KEY = 'user';
 
 // Encryption setup
-const ENCRYPTION_KEY = 'raze-bot-wallet-encryption-key';
+const ENCRYPTION_KEY = 'arca-wallet-encryption-key';
 const ENCRYPTED_STORAGE_KEY = 'encrypted_wallets';
 
 // Encryption helper functions
@@ -633,11 +633,52 @@ export const loadWalletsFromCookies = (): WalletType[] => {
 };
 
 export const saveConfigToCookies = (config: ConfigType) => {
-  Cookies.set(CONFIG_COOKIE_KEY, JSON.stringify(config), { expires: 30 });
+  const configString = JSON.stringify(config);
+
+  // Save to cookies for cross-session persistence
+  Cookies.set(CONFIG_COOKIE_KEY, configString, { expires: 30 });
+
+  // Also save to localStorage for better persistence
+  try {
+    localStorage.setItem(CONFIG_COOKIE_KEY, configString);
+
+    // Save trading server settings separately for backward compatibility
+    if (config.tradingServerUrl) {
+      localStorage.setItem('tradingServerUrl', config.tradingServerUrl);
+    }
+    if (config.tradingServerEnabled !== undefined) {
+      localStorage.setItem('tradingServerEnabled', config.tradingServerEnabled);
+    }
+
+    console.log('Settings saved successfully:', {
+      rpcEndpoint: config.rpcEndpoint,
+      tradingServerUrl: config.tradingServerUrl,
+      tradingServerEnabled: config.tradingServerEnabled,
+      bundleMode: config.bundleMode
+    });
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
 };
 
 export const loadConfigFromCookies = (): ConfigType | null => {
-  const savedConfig = Cookies.get(CONFIG_COOKIE_KEY);
+  // Try localStorage first (more reliable)
+  let savedConfig = null;
+  try {
+    savedConfig = localStorage.getItem(CONFIG_COOKIE_KEY);
+  } catch (error) {
+    console.error('Error reading from localStorage:', error);
+  }
+
+  // Fallback to cookies if localStorage doesn't have it
+  if (!savedConfig) {
+    savedConfig = Cookies.get(CONFIG_COOKIE_KEY);
+  }
+
+  // Check localStorage for server settings even if no cookies exist
+  const localServerUrl = localStorage.getItem('tradingServerUrl');
+  const localServerEnabled = localStorage.getItem('tradingServerEnabled');
+
   if (savedConfig) {
     try {
       const config = JSON.parse(savedConfig);
@@ -657,11 +698,22 @@ export const loadConfigFromCookies = (): ConfigType | null => {
         config.batchDelay = '1000'; // Default 1000ms delay between batches
       }
       // Handle backward compatibility for trading server settings
-      if (config.tradingServerEnabled === undefined) {
-        config.tradingServerEnabled = 'false'; // Default to disabled
-      }
-      if (config.tradingServerUrl === undefined) {
-        config.tradingServerUrl = 'localhost:4444'; // Default URL
+      // Check localStorage first for server settings
+      const localServerUrl = localStorage.getItem('tradingServerUrl');
+      const localServerEnabled = localStorage.getItem('tradingServerEnabled');
+
+      // Always use localStorage server settings if they exist (they're more recent)
+      if (localServerUrl && localServerUrl !== 'undefined' && localServerUrl !== 'null') {
+        config.tradingServerUrl = localServerUrl;
+        config.tradingServerEnabled = localServerEnabled || 'true';
+      } else {
+        // Set defaults if not present
+        if (config.tradingServerEnabled === undefined) {
+          config.tradingServerEnabled = 'true'; // Default to enabled
+        }
+        if (config.tradingServerUrl === undefined) {
+          config.tradingServerUrl = 'http://localhost:7777'; // Default URL
+        }
       }
       return config;
     } catch (error) {
@@ -669,6 +721,23 @@ export const loadConfigFromCookies = (): ConfigType | null => {
       return null;
     }
   }
+
+  // If no config in cookies/localStorage but we have server settings in localStorage, create a minimal config
+  if (localServerUrl && localServerUrl !== 'undefined' && localServerUrl !== 'null') {
+    return {
+      rpcEndpoint: 'https://api.mainnet-beta.solana.com',
+      walletName: '',
+      user: '',
+      slippageBps: '100',
+      transactionFee: '0.001',
+      bundleMode: 'batch' as const,
+      singleDelay: '200',
+      batchDelay: '1000',
+      tradingServerEnabled: localServerEnabled || 'true',
+      tradingServerUrl: localServerUrl
+    };
+  }
+
   return null;
 };
 export const formatTokenBalance = (balance: number | undefined): string => {
